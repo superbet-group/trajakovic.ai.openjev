@@ -1,0 +1,37 @@
+[tools]
+python = "3.12"
+
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.startOpenJev]
+description = "Start the OpenJev server (MLX) in the background"
+run = "./startOpenJev"
+
+[tasks.stopOpenJev]
+description = "Stop the OpenJev server"
+run = "./stopOpenJev"
+
+[tasks.logsOpenJev]
+description = "Follow the OpenJev server log"
+run = "./logsOpenJev"
+
+[tasks.statusOpenJev]
+description = "Check whether the OpenJev server is answering"
+run = "curl -s -m 2 http://127.0.0.1:8080/v1/models || echo 'not running'"
+
+[tasks.benchmarkOpenJev]
+description = "Benchmark a running OpenJev server: 100 labelled questions, latency + accuracy"
+run = ".venv/bin/python benchmark.py"
+
+[tasks.startOpenJevDebug]
+description = "Restart the OpenJev server with OPENJEV_LOG_LEVEL=debug (logs request and response bodies)"
+run = "./stopOpenJev; OPENJEV_LOG_LEVEL=debug ./startOpenJev"
+
+[tasks.ui]
+description = "OpenJev UI on http://127.0.0.1:8090 (serves ui/static, proxies /v1/* to OpenJev)"
+run = ".venv/bin/python ui/server.py"
+
+[tasks.uiTest]
+description = "Tests for the OpenJev UI proxy"
+run = ".venv/bin/python -m pytest ui/tests -q"

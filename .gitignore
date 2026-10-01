@@ -15,3 +15,6 @@ skills-lock.json
 
 # a library does not pin a resolved environment
 uv.lock
+.openjev.log
+.openjev.pid
+.playwright-mcp/

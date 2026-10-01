@@ -1,0 +1,1250 @@
+{
+ "use_case": "tool-skill-selection",
+ "cases": [
+  {
+   "id": "sel-01",
+   "description": "Pitch deck request picks pptx",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: make me a pitch deck for our seed round, 10 slides, investor-friendly",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "pptx"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-02",
+   "description": "Unrelated chit-chat abstains",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: what's a good name for a golden retriever puppy?",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "none"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-03",
+   "description": "Failing test log picks debugging",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: pytest tests/test_billing.py::test_refund is failing with KeyError: 'currency' since yesterday, no idea why. Traceback: File billing/refund.py line 42, in refund_amount: rate = RATES[order['currency']]",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "systematic-debugging"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-04",
+   "description": "PR link review",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: can you look over PR #482 and tell me if anything looks risky before I merge",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice_in": [
+       "pr-review",
+       "security-review"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-05",
+   "description": "noul any_skill_needed positive",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: turn this quarterly revenue CSV into a chart with a trendline",
+    "questions": {
+     "any_skill_needed": {
+      "type": "noul",
+      "instructions": "Does a specialized skill from this roster clearly match the user prompt, so it should be loaded? Roster: pdf: Read, extract, merge, split or fill PDF files; xlsx: Create or edit Excel spreadsheets, formulas, pivot tables and charts; docx: Create or edit Word documents; pptx: Create slide decks and pitch decks in PowerPoint format; frontend-design: Build web UI components, landing pages and dashboards with good visual design; systematic-debugging: Investigate a bug, failing test or unexpected behavior before proposing fixes; test-driven-development: Write failing tests first when implementing a feature or bugfix; pr-review: Review a pull request diff for bugs, style and risks; git-worktree: Create and manage git worktrees for parallel branches; slack-messaging: Draft and send Slack messages and announcements; sql-query: Write and optimize SQL queries against a data warehouse; dataviz: Create charts, graphs and data visualizations; security-review: Audit pending code changes for security vulnerabilities; openspec-propose: Propose a new change with design, specs and tasks; api-docs: Generate OpenAPI reference documentation for HTTP endpoints; docker-compose: Write and debug Dockerfiles and docker-compose stacks; release-notes: Summarize merged commits into user-facing release notes; incident-audit: Reconstruct a production incident timeline and write a postmortem"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "any_skill_needed": {
+      "noul_gte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-06",
+   "description": "noul any_skill_needed negative",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: explain the difference between a mutex and a semaphore",
+    "questions": {
+     "any_skill_needed": {
+      "type": "noul",
+      "instructions": "Does a specialized skill from this roster clearly match the user prompt, so it should be loaded? Roster: pdf: Read, extract, merge, split or fill PDF files; xlsx: Create or edit Excel spreadsheets, formulas, pivot tables and charts; docx: Create or edit Word documents; pptx: Create slide decks and pitch decks in PowerPoint format; frontend-design: Build web UI components, landing pages and dashboards with good visual design; systematic-debugging: Investigate a bug, failing test or unexpected behavior before proposing fixes; test-driven-development: Write failing tests first when implementing a feature or bugfix; pr-review: Review a pull request diff for bugs, style and risks; git-worktree: Create and manage git worktrees for parallel branches; slack-messaging: Draft and send Slack messages and announcements; sql-query: Write and optimize SQL queries against a data warehouse; dataviz: Create charts, graphs and data visualizations; security-review: Audit pending code changes for security vulnerabilities; openspec-propose: Propose a new change with design, specs and tasks; api-docs: Generate OpenAPI reference documentation for HTTP endpoints; docker-compose: Write and debug Dockerfiles and docker-compose stacks; release-notes: Summarize merged commits into user-facing release notes; incident-audit: Reconstruct a production incident timeline and write a postmortem"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "any_skill_needed": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-07",
+   "description": "Keyword trap: 'slide' in sliding window algorithm must not pick pptx",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: implement a sliding window maximum in O(n) using a deque, in Python",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "none"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-08",
+   "description": "Ambiguous-but-decidable: SQL for warehouse metrics",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: give me a query that shows weekly active users by country from the events table in Snowflake, and make it fast on 4B rows",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "sql-query"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-09",
+   "description": "Multi-question: per-tool is_needed noul flags, one positive one negative",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: fix the flaky checkout test and then post a summary of the fix in #eng-checkout",
+    "questions": {
+     "needs_debugging": {
+      "type": "noul",
+      "instructions": "Is the tool 'systematic-debugging' (Investigate a bug, failing test or unexpected behavior before proposing fixes) needed to complete this user prompt?"
+     },
+     "needs_slack": {
+      "type": "noul",
+      "instructions": "Is the tool 'slack-messaging' (Draft and send Slack messages and announcements) needed to complete this user prompt?"
+     },
+     "needs_pptx": {
+      "type": "noul",
+      "instructions": "Is the tool 'pptx' (Create slide decks and pitch decks in PowerPoint format) needed to complete this user prompt?"
+     },
+     "needs_docker": {
+      "type": "noul",
+      "instructions": "Is the tool 'docker-compose' (Write and debug Dockerfiles and docker-compose stacks) needed to complete this user prompt?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "needs_debugging": {
+      "noul_gte": 0.7
+     },
+     "needs_slack": {
+      "noul_gte": 0.7
+     },
+     "needs_pptx": {
+      "noul_lte": 0.3
+     },
+     "needs_docker": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-10",
+   "description": "Ticket-style prompt: release notes from commit list",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: Tag v2.4.0 is cut. Here are the 37 commits since v2.3.0 (feat: bulk export, fix: timezone bug, chore: bump deps...). Write what we tell customers.",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "release-notes"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-11",
+   "description": "Near-miss negative: generic coding with docs-adjacent words",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: rename the variable `userDoc` to `userRecord` across the repo and update the comments",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     },
+     "any": {
+      "type": "noul",
+      "instructions": "Does a specialized skill from this roster clearly match the user prompt? Roster: pdf: Read, extract, merge, split or fill PDF files; xlsx: Create or edit Excel spreadsheets, formulas, pivot tables and charts; docx: Create or edit Word documents; pptx: Create slide decks and pitch decks in PowerPoint format; frontend-design: Build web UI components, landing pages and dashboards with good visual design; systematic-debugging: Investigate a bug, failing test or unexpected behavior before proposing fixes; test-driven-development: Write failing tests first when implementing a feature or bugfix; pr-review: Review a pull request diff for bugs, style and risks; git-worktree: Create and manage git worktrees for parallel branches; slack-messaging: Draft and send Slack messages and announcements; sql-query: Write and optimize SQL queries against a data warehouse; dataviz: Create charts, graphs and data visualizations; security-review: Audit pending code changes for security vulnerabilities; openspec-propose: Propose a new change with design, specs and tasks; api-docs: Generate OpenAPI reference documentation for HTTP endpoints; docker-compose: Write and debug Dockerfiles and docker-compose stacks; release-notes: Summarize merged commits into user-facing release notes; incident-audit: Reconstruct a production incident timeline and write a postmortem"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "none"
+     },
+     "any": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-12",
+   "description": "Second read on top 3 after a coarse pick: narrowed roster with none still picks correctly",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: we got paged at 3am, checkout was down for 40 minutes, I need the timeline and root cause written up for the review meeting",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    },
+    "samples": 3
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "incident-audit"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-13",
+   "description": "think extension on a subtle multi-part prompt (spreadsheet vs chart vs SQL)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: Finance sent an .xlsx with 12 monthly tabs; consolidate them into one summary sheet with a SUMIF per cost center.",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "systematic-debugging": "Investigate a bug, failing test or unexpected behavior before proposing fixes",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    },
+    "think": 256
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "xlsx"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-14",
+   "description": "Option-cap: 62-option roster still picks the right id and validates against roster",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: make me a pitch deck for our seed round",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "skill-000": "Handles category 0 tasks unrelated to typical coding work, e.g. topic-0",
+       "skill-001": "Handles category 1 tasks unrelated to typical coding work, e.g. topic-1",
+       "skill-002": "Handles category 2 tasks unrelated to typical coding work, e.g. topic-2",
+       "skill-003": "Handles category 3 tasks unrelated to typical coding work, e.g. topic-3",
+       "skill-004": "Handles category 4 tasks unrelated to typical coding work, e.g. topic-4",
+       "skill-005": "Handles category 5 tasks unrelated to typical coding work, e.g. topic-5",
+       "skill-006": "Handles category 6 tasks unrelated to typical coding work, e.g. topic-6",
+       "skill-007": "Handles category 7 tasks unrelated to typical coding work, e.g. topic-7",
+       "skill-008": "Handles category 8 tasks unrelated to typical coding work, e.g. topic-8",
+       "skill-009": "Handles category 9 tasks unrelated to typical coding work, e.g. topic-9",
+       "skill-010": "Handles category 10 tasks unrelated to typical coding work, e.g. topic-10",
+       "skill-011": "Handles category 11 tasks unrelated to typical coding work, e.g. topic-11",
+       "skill-012": "Handles category 12 tasks unrelated to typical coding work, e.g. topic-12",
+       "skill-013": "Handles category 13 tasks unrelated to typical coding work, e.g. topic-13",
+       "skill-014": "Handles category 14 tasks unrelated to typical coding work, e.g. topic-14",
+       "skill-015": "Handles category 15 tasks unrelated to typical coding work, e.g. topic-15",
+       "skill-016": "Handles category 16 tasks unrelated to typical coding work, e.g. topic-16",
+       "skill-017": "Handles category 17 tasks unrelated to typical coding work, e.g. topic-17",
+       "skill-018": "Handles category 18 tasks unrelated to typical coding work, e.g. topic-18",
+       "skill-019": "Handles category 19 tasks unrelated to typical coding work, e.g. topic-19",
+       "skill-020": "Handles category 20 tasks unrelated to typical coding work, e.g. topic-20",
+       "skill-021": "Handles category 21 tasks unrelated to typical coding work, e.g. topic-21",
+       "skill-022": "Handles category 22 tasks unrelated to typical coding work, e.g. topic-22",
+       "skill-023": "Handles category 23 tasks unrelated to typical coding work, e.g. topic-23",
+       "skill-024": "Handles category 24 tasks unrelated to typical coding work, e.g. topic-24",
+       "skill-025": "Handles category 25 tasks unrelated to typical coding work, e.g. topic-25",
+       "skill-026": "Handles category 26 tasks unrelated to typical coding work, e.g. topic-26",
+       "skill-027": "Handles category 27 tasks unrelated to typical coding work, e.g. topic-27",
+       "skill-028": "Handles category 28 tasks unrelated to typical coding work, e.g. topic-28",
+       "skill-029": "Handles category 29 tasks unrelated to typical coding work, e.g. topic-29",
+       "skill-030": "Handles category 30 tasks unrelated to typical coding work, e.g. topic-30",
+       "skill-031": "Handles category 31 tasks unrelated to typical coding work, e.g. topic-31",
+       "skill-032": "Handles category 32 tasks unrelated to typical coding work, e.g. topic-32",
+       "skill-033": "Handles category 33 tasks unrelated to typical coding work, e.g. topic-33",
+       "skill-034": "Handles category 34 tasks unrelated to typical coding work, e.g. topic-34",
+       "skill-035": "Handles category 35 tasks unrelated to typical coding work, e.g. topic-35",
+       "skill-036": "Handles category 36 tasks unrelated to typical coding work, e.g. topic-36",
+       "skill-037": "Handles category 37 tasks unrelated to typical coding work, e.g. topic-37",
+       "skill-038": "Handles category 38 tasks unrelated to typical coding work, e.g. topic-38",
+       "skill-039": "Handles category 39 tasks unrelated to typical coding work, e.g. topic-39",
+       "skill-040": "Handles category 40 tasks unrelated to typical coding work, e.g. topic-40",
+       "skill-041": "Handles category 41 tasks unrelated to typical coding work, e.g. topic-41",
+       "skill-042": "Handles category 42 tasks unrelated to typical coding work, e.g. topic-42",
+       "skill-043": "Handles category 43 tasks unrelated to typical coding work, e.g. topic-43",
+       "skill-044": "Handles category 44 tasks unrelated to typical coding work, e.g. topic-44",
+       "skill-045": "Handles category 45 tasks unrelated to typical coding work, e.g. topic-45",
+       "skill-046": "Handles category 46 tasks unrelated to typical coding work, e.g. topic-46",
+       "skill-047": "Handles category 47 tasks unrelated to typical coding work, e.g. topic-47",
+       "skill-048": "Handles category 48 tasks unrelated to typical coding work, e.g. topic-48",
+       "skill-049": "Handles category 49 tasks unrelated to typical coding work, e.g. topic-49",
+       "skill-050": "Handles category 50 tasks unrelated to typical coding work, e.g. topic-50",
+       "skill-051": "Handles category 51 tasks unrelated to typical coding work, e.g. topic-51",
+       "skill-052": "Handles category 52 tasks unrelated to typical coding work, e.g. topic-52",
+       "skill-053": "Handles category 53 tasks unrelated to typical coding work, e.g. topic-53",
+       "skill-054": "Handles category 54 tasks unrelated to typical coding work, e.g. topic-54",
+       "skill-055": "Handles category 55 tasks unrelated to typical coding work, e.g. topic-55",
+       "skill-056": "Handles category 56 tasks unrelated to typical coding work, e.g. topic-56",
+       "skill-057": "Handles category 57 tasks unrelated to typical coding work, e.g. topic-57",
+       "skill-058": "Handles category 58 tasks unrelated to typical coding work, e.g. topic-58",
+       "skill-059": "Handles category 59 tasks unrelated to typical coding work, e.g. topic-59",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "pptx"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-15",
+   "description": "Option-cap: 62-option roster, unrelated prompt abstains",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: thanks, that all looks good!",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "skill-000": "Handles category 0 tasks unrelated to typical coding work, e.g. topic-0",
+       "skill-001": "Handles category 1 tasks unrelated to typical coding work, e.g. topic-1",
+       "skill-002": "Handles category 2 tasks unrelated to typical coding work, e.g. topic-2",
+       "skill-003": "Handles category 3 tasks unrelated to typical coding work, e.g. topic-3",
+       "skill-004": "Handles category 4 tasks unrelated to typical coding work, e.g. topic-4",
+       "skill-005": "Handles category 5 tasks unrelated to typical coding work, e.g. topic-5",
+       "skill-006": "Handles category 6 tasks unrelated to typical coding work, e.g. topic-6",
+       "skill-007": "Handles category 7 tasks unrelated to typical coding work, e.g. topic-7",
+       "skill-008": "Handles category 8 tasks unrelated to typical coding work, e.g. topic-8",
+       "skill-009": "Handles category 9 tasks unrelated to typical coding work, e.g. topic-9",
+       "skill-010": "Handles category 10 tasks unrelated to typical coding work, e.g. topic-10",
+       "skill-011": "Handles category 11 tasks unrelated to typical coding work, e.g. topic-11",
+       "skill-012": "Handles category 12 tasks unrelated to typical coding work, e.g. topic-12",
+       "skill-013": "Handles category 13 tasks unrelated to typical coding work, e.g. topic-13",
+       "skill-014": "Handles category 14 tasks unrelated to typical coding work, e.g. topic-14",
+       "skill-015": "Handles category 15 tasks unrelated to typical coding work, e.g. topic-15",
+       "skill-016": "Handles category 16 tasks unrelated to typical coding work, e.g. topic-16",
+       "skill-017": "Handles category 17 tasks unrelated to typical coding work, e.g. topic-17",
+       "skill-018": "Handles category 18 tasks unrelated to typical coding work, e.g. topic-18",
+       "skill-019": "Handles category 19 tasks unrelated to typical coding work, e.g. topic-19",
+       "skill-020": "Handles category 20 tasks unrelated to typical coding work, e.g. topic-20",
+       "skill-021": "Handles category 21 tasks unrelated to typical coding work, e.g. topic-21",
+       "skill-022": "Handles category 22 tasks unrelated to typical coding work, e.g. topic-22",
+       "skill-023": "Handles category 23 tasks unrelated to typical coding work, e.g. topic-23",
+       "skill-024": "Handles category 24 tasks unrelated to typical coding work, e.g. topic-24",
+       "skill-025": "Handles category 25 tasks unrelated to typical coding work, e.g. topic-25",
+       "skill-026": "Handles category 26 tasks unrelated to typical coding work, e.g. topic-26",
+       "skill-027": "Handles category 27 tasks unrelated to typical coding work, e.g. topic-27",
+       "skill-028": "Handles category 28 tasks unrelated to typical coding work, e.g. topic-28",
+       "skill-029": "Handles category 29 tasks unrelated to typical coding work, e.g. topic-29",
+       "skill-030": "Handles category 30 tasks unrelated to typical coding work, e.g. topic-30",
+       "skill-031": "Handles category 31 tasks unrelated to typical coding work, e.g. topic-31",
+       "skill-032": "Handles category 32 tasks unrelated to typical coding work, e.g. topic-32",
+       "skill-033": "Handles category 33 tasks unrelated to typical coding work, e.g. topic-33",
+       "skill-034": "Handles category 34 tasks unrelated to typical coding work, e.g. topic-34",
+       "skill-035": "Handles category 35 tasks unrelated to typical coding work, e.g. topic-35",
+       "skill-036": "Handles category 36 tasks unrelated to typical coding work, e.g. topic-36",
+       "skill-037": "Handles category 37 tasks unrelated to typical coding work, e.g. topic-37",
+       "skill-038": "Handles category 38 tasks unrelated to typical coding work, e.g. topic-38",
+       "skill-039": "Handles category 39 tasks unrelated to typical coding work, e.g. topic-39",
+       "skill-040": "Handles category 40 tasks unrelated to typical coding work, e.g. topic-40",
+       "skill-041": "Handles category 41 tasks unrelated to typical coding work, e.g. topic-41",
+       "skill-042": "Handles category 42 tasks unrelated to typical coding work, e.g. topic-42",
+       "skill-043": "Handles category 43 tasks unrelated to typical coding work, e.g. topic-43",
+       "skill-044": "Handles category 44 tasks unrelated to typical coding work, e.g. topic-44",
+       "skill-045": "Handles category 45 tasks unrelated to typical coding work, e.g. topic-45",
+       "skill-046": "Handles category 46 tasks unrelated to typical coding work, e.g. topic-46",
+       "skill-047": "Handles category 47 tasks unrelated to typical coding work, e.g. topic-47",
+       "skill-048": "Handles category 48 tasks unrelated to typical coding work, e.g. topic-48",
+       "skill-049": "Handles category 49 tasks unrelated to typical coding work, e.g. topic-49",
+       "skill-050": "Handles category 50 tasks unrelated to typical coding work, e.g. topic-50",
+       "skill-051": "Handles category 51 tasks unrelated to typical coding work, e.g. topic-51",
+       "skill-052": "Handles category 52 tasks unrelated to typical coding work, e.g. topic-52",
+       "skill-053": "Handles category 53 tasks unrelated to typical coding work, e.g. topic-53",
+       "skill-054": "Handles category 54 tasks unrelated to typical coding work, e.g. topic-54",
+       "skill-055": "Handles category 55 tasks unrelated to typical coding work, e.g. topic-55",
+       "skill-056": "Handles category 56 tasks unrelated to typical coding work, e.g. topic-56",
+       "skill-057": "Handles category 57 tasks unrelated to typical coding work, e.g. topic-57",
+       "skill-058": "Handles category 58 tasks unrelated to typical coding work, e.g. topic-58",
+       "skill-059": "Handles category 59 tasks unrelated to typical coding work, e.g. topic-59",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "none"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-16",
+   "description": "Error: choice with no options is a 400",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: anything",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {}
+     }
+    }
+   },
+   "expect": {
+    "answers": {},
+    "status": 400
+   }
+  },
+  {
+   "id": "sel-17",
+   "description": "Error boundary: 256 options is a 400 (cap is 255); MCP layer must pre-filter roster",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: anything",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "s0": "desc 0",
+       "s1": "desc 1",
+       "s2": "desc 2",
+       "s3": "desc 3",
+       "s4": "desc 4",
+       "s5": "desc 5",
+       "s6": "desc 6",
+       "s7": "desc 7",
+       "s8": "desc 8",
+       "s9": "desc 9",
+       "s10": "desc 10",
+       "s11": "desc 11",
+       "s12": "desc 12",
+       "s13": "desc 13",
+       "s14": "desc 14",
+       "s15": "desc 15",
+       "s16": "desc 16",
+       "s17": "desc 17",
+       "s18": "desc 18",
+       "s19": "desc 19",
+       "s20": "desc 20",
+       "s21": "desc 21",
+       "s22": "desc 22",
+       "s23": "desc 23",
+       "s24": "desc 24",
+       "s25": "desc 25",
+       "s26": "desc 26",
+       "s27": "desc 27",
+       "s28": "desc 28",
+       "s29": "desc 29",
+       "s30": "desc 30",
+       "s31": "desc 31",
+       "s32": "desc 32",
+       "s33": "desc 33",
+       "s34": "desc 34",
+       "s35": "desc 35",
+       "s36": "desc 36",
+       "s37": "desc 37",
+       "s38": "desc 38",
+       "s39": "desc 39",
+       "s40": "desc 40",
+       "s41": "desc 41",
+       "s42": "desc 42",
+       "s43": "desc 43",
+       "s44": "desc 44",
+       "s45": "desc 45",
+       "s46": "desc 46",
+       "s47": "desc 47",
+       "s48": "desc 48",
+       "s49": "desc 49",
+       "s50": "desc 50",
+       "s51": "desc 51",
+       "s52": "desc 52",
+       "s53": "desc 53",
+       "s54": "desc 54",
+       "s55": "desc 55",
+       "s56": "desc 56",
+       "s57": "desc 57",
+       "s58": "desc 58",
+       "s59": "desc 59",
+       "s60": "desc 60",
+       "s61": "desc 61",
+       "s62": "desc 62",
+       "s63": "desc 63",
+       "s64": "desc 64",
+       "s65": "desc 65",
+       "s66": "desc 66",
+       "s67": "desc 67",
+       "s68": "desc 68",
+       "s69": "desc 69",
+       "s70": "desc 70",
+       "s71": "desc 71",
+       "s72": "desc 72",
+       "s73": "desc 73",
+       "s74": "desc 74",
+       "s75": "desc 75",
+       "s76": "desc 76",
+       "s77": "desc 77",
+       "s78": "desc 78",
+       "s79": "desc 79",
+       "s80": "desc 80",
+       "s81": "desc 81",
+       "s82": "desc 82",
+       "s83": "desc 83",
+       "s84": "desc 84",
+       "s85": "desc 85",
+       "s86": "desc 86",
+       "s87": "desc 87",
+       "s88": "desc 88",
+       "s89": "desc 89",
+       "s90": "desc 90",
+       "s91": "desc 91",
+       "s92": "desc 92",
+       "s93": "desc 93",
+       "s94": "desc 94",
+       "s95": "desc 95",
+       "s96": "desc 96",
+       "s97": "desc 97",
+       "s98": "desc 98",
+       "s99": "desc 99",
+       "s100": "desc 100",
+       "s101": "desc 101",
+       "s102": "desc 102",
+       "s103": "desc 103",
+       "s104": "desc 104",
+       "s105": "desc 105",
+       "s106": "desc 106",
+       "s107": "desc 107",
+       "s108": "desc 108",
+       "s109": "desc 109",
+       "s110": "desc 110",
+       "s111": "desc 111",
+       "s112": "desc 112",
+       "s113": "desc 113",
+       "s114": "desc 114",
+       "s115": "desc 115",
+       "s116": "desc 116",
+       "s117": "desc 117",
+       "s118": "desc 118",
+       "s119": "desc 119",
+       "s120": "desc 120",
+       "s121": "desc 121",
+       "s122": "desc 122",
+       "s123": "desc 123",
+       "s124": "desc 124",
+       "s125": "desc 125",
+       "s126": "desc 126",
+       "s127": "desc 127",
+       "s128": "desc 128",
+       "s129": "desc 129",
+       "s130": "desc 130",
+       "s131": "desc 131",
+       "s132": "desc 132",
+       "s133": "desc 133",
+       "s134": "desc 134",
+       "s135": "desc 135",
+       "s136": "desc 136",
+       "s137": "desc 137",
+       "s138": "desc 138",
+       "s139": "desc 139",
+       "s140": "desc 140",
+       "s141": "desc 141",
+       "s142": "desc 142",
+       "s143": "desc 143",
+       "s144": "desc 144",
+       "s145": "desc 145",
+       "s146": "desc 146",
+       "s147": "desc 147",
+       "s148": "desc 148",
+       "s149": "desc 149",
+       "s150": "desc 150",
+       "s151": "desc 151",
+       "s152": "desc 152",
+       "s153": "desc 153",
+       "s154": "desc 154",
+       "s155": "desc 155",
+       "s156": "desc 156",
+       "s157": "desc 157",
+       "s158": "desc 158",
+       "s159": "desc 159",
+       "s160": "desc 160",
+       "s161": "desc 161",
+       "s162": "desc 162",
+       "s163": "desc 163",
+       "s164": "desc 164",
+       "s165": "desc 165",
+       "s166": "desc 166",
+       "s167": "desc 167",
+       "s168": "desc 168",
+       "s169": "desc 169",
+       "s170": "desc 170",
+       "s171": "desc 171",
+       "s172": "desc 172",
+       "s173": "desc 173",
+       "s174": "desc 174",
+       "s175": "desc 175",
+       "s176": "desc 176",
+       "s177": "desc 177",
+       "s178": "desc 178",
+       "s179": "desc 179",
+       "s180": "desc 180",
+       "s181": "desc 181",
+       "s182": "desc 182",
+       "s183": "desc 183",
+       "s184": "desc 184",
+       "s185": "desc 185",
+       "s186": "desc 186",
+       "s187": "desc 187",
+       "s188": "desc 188",
+       "s189": "desc 189",
+       "s190": "desc 190",
+       "s191": "desc 191",
+       "s192": "desc 192",
+       "s193": "desc 193",
+       "s194": "desc 194",
+       "s195": "desc 195",
+       "s196": "desc 196",
+       "s197": "desc 197",
+       "s198": "desc 198",
+       "s199": "desc 199",
+       "s200": "desc 200",
+       "s201": "desc 201",
+       "s202": "desc 202",
+       "s203": "desc 203",
+       "s204": "desc 204",
+       "s205": "desc 205",
+       "s206": "desc 206",
+       "s207": "desc 207",
+       "s208": "desc 208",
+       "s209": "desc 209",
+       "s210": "desc 210",
+       "s211": "desc 211",
+       "s212": "desc 212",
+       "s213": "desc 213",
+       "s214": "desc 214",
+       "s215": "desc 215",
+       "s216": "desc 216",
+       "s217": "desc 217",
+       "s218": "desc 218",
+       "s219": "desc 219",
+       "s220": "desc 220",
+       "s221": "desc 221",
+       "s222": "desc 222",
+       "s223": "desc 223",
+       "s224": "desc 224",
+       "s225": "desc 225",
+       "s226": "desc 226",
+       "s227": "desc 227",
+       "s228": "desc 228",
+       "s229": "desc 229",
+       "s230": "desc 230",
+       "s231": "desc 231",
+       "s232": "desc 232",
+       "s233": "desc 233",
+       "s234": "desc 234",
+       "s235": "desc 235",
+       "s236": "desc 236",
+       "s237": "desc 237",
+       "s238": "desc 238",
+       "s239": "desc 239",
+       "s240": "desc 240",
+       "s241": "desc 241",
+       "s242": "desc 242",
+       "s243": "desc 243",
+       "s244": "desc 244",
+       "s245": "desc 245",
+       "s246": "desc 246",
+       "s247": "desc 247",
+       "s248": "desc 248",
+       "s249": "desc 249",
+       "s250": "desc 250",
+       "s251": "desc 251",
+       "s252": "desc 252",
+       "s253": "desc 253",
+       "s254": "desc 254",
+       "s255": "desc 255",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {},
+    "status": 400,
+    "body_contains": "at most 255"
+   }
+  },
+  {
+   "id": "sel-18",
+   "description": "Option-cap: 180-skill roster plus none (181 options) picks security-review",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: before I merge this branch, check whether the new login endpoint has injection or auth bypass problems",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+      "criteria": {
+       "skill-000": "Handles category 0 tasks such as topic-0 reporting",
+       "skill-001": "Handles category 1 tasks such as topic-1 reporting",
+       "skill-002": "Handles category 2 tasks such as topic-2 reporting",
+       "skill-003": "Handles category 3 tasks such as topic-3 reporting",
+       "skill-004": "Handles category 4 tasks such as topic-4 reporting",
+       "skill-005": "Handles category 5 tasks such as topic-5 reporting",
+       "skill-006": "Handles category 6 tasks such as topic-6 reporting",
+       "skill-007": "Handles category 7 tasks such as topic-7 reporting",
+       "skill-008": "Handles category 8 tasks such as topic-8 reporting",
+       "skill-009": "Handles category 9 tasks such as topic-9 reporting",
+       "skill-010": "Handles category 10 tasks such as topic-10 reporting",
+       "skill-011": "Handles category 11 tasks such as topic-11 reporting",
+       "skill-012": "Handles category 12 tasks such as topic-12 reporting",
+       "skill-013": "Handles category 13 tasks such as topic-13 reporting",
+       "skill-014": "Handles category 14 tasks such as topic-14 reporting",
+       "skill-015": "Handles category 15 tasks such as topic-15 reporting",
+       "skill-016": "Handles category 16 tasks such as topic-16 reporting",
+       "skill-017": "Handles category 17 tasks such as topic-17 reporting",
+       "skill-018": "Handles category 18 tasks such as topic-18 reporting",
+       "skill-019": "Handles category 19 tasks such as topic-19 reporting",
+       "skill-020": "Handles category 20 tasks such as topic-20 reporting",
+       "skill-021": "Handles category 21 tasks such as topic-21 reporting",
+       "skill-022": "Handles category 22 tasks such as topic-22 reporting",
+       "skill-023": "Handles category 23 tasks such as topic-23 reporting",
+       "skill-024": "Handles category 24 tasks such as topic-24 reporting",
+       "skill-025": "Handles category 25 tasks such as topic-25 reporting",
+       "skill-026": "Handles category 26 tasks such as topic-26 reporting",
+       "skill-027": "Handles category 27 tasks such as topic-27 reporting",
+       "skill-028": "Handles category 28 tasks such as topic-28 reporting",
+       "skill-029": "Handles category 29 tasks such as topic-29 reporting",
+       "skill-030": "Handles category 30 tasks such as topic-30 reporting",
+       "skill-031": "Handles category 31 tasks such as topic-31 reporting",
+       "skill-032": "Handles category 32 tasks such as topic-32 reporting",
+       "skill-033": "Handles category 33 tasks such as topic-33 reporting",
+       "skill-034": "Handles category 34 tasks such as topic-34 reporting",
+       "skill-035": "Handles category 35 tasks such as topic-35 reporting",
+       "skill-036": "Handles category 36 tasks such as topic-36 reporting",
+       "skill-037": "Handles category 37 tasks such as topic-37 reporting",
+       "skill-038": "Handles category 38 tasks such as topic-38 reporting",
+       "skill-039": "Handles category 39 tasks such as topic-39 reporting",
+       "skill-040": "Handles category 40 tasks such as topic-40 reporting",
+       "skill-041": "Handles category 41 tasks such as topic-41 reporting",
+       "skill-042": "Handles category 42 tasks such as topic-42 reporting",
+       "skill-043": "Handles category 43 tasks such as topic-43 reporting",
+       "skill-044": "Handles category 44 tasks such as topic-44 reporting",
+       "skill-045": "Handles category 45 tasks such as topic-45 reporting",
+       "skill-046": "Handles category 46 tasks such as topic-46 reporting",
+       "skill-047": "Handles category 47 tasks such as topic-47 reporting",
+       "skill-048": "Handles category 48 tasks such as topic-48 reporting",
+       "skill-049": "Handles category 49 tasks such as topic-49 reporting",
+       "skill-050": "Handles category 50 tasks such as topic-50 reporting",
+       "skill-051": "Handles category 51 tasks such as topic-51 reporting",
+       "skill-052": "Handles category 52 tasks such as topic-52 reporting",
+       "skill-053": "Handles category 53 tasks such as topic-53 reporting",
+       "skill-054": "Handles category 54 tasks such as topic-54 reporting",
+       "skill-055": "Handles category 55 tasks such as topic-55 reporting",
+       "skill-056": "Handles category 56 tasks such as topic-56 reporting",
+       "skill-057": "Handles category 57 tasks such as topic-57 reporting",
+       "skill-058": "Handles category 58 tasks such as topic-58 reporting",
+       "skill-059": "Handles category 59 tasks such as topic-59 reporting",
+       "skill-060": "Handles category 60 tasks such as topic-60 reporting",
+       "skill-061": "Handles category 61 tasks such as topic-61 reporting",
+       "skill-062": "Handles category 62 tasks such as topic-62 reporting",
+       "skill-063": "Handles category 63 tasks such as topic-63 reporting",
+       "skill-064": "Handles category 64 tasks such as topic-64 reporting",
+       "skill-065": "Handles category 65 tasks such as topic-65 reporting",
+       "skill-066": "Handles category 66 tasks such as topic-66 reporting",
+       "skill-067": "Handles category 67 tasks such as topic-67 reporting",
+       "skill-068": "Handles category 68 tasks such as topic-68 reporting",
+       "skill-069": "Handles category 69 tasks such as topic-69 reporting",
+       "skill-070": "Handles category 70 tasks such as topic-70 reporting",
+       "skill-071": "Handles category 71 tasks such as topic-71 reporting",
+       "skill-072": "Handles category 72 tasks such as topic-72 reporting",
+       "skill-073": "Handles category 73 tasks such as topic-73 reporting",
+       "skill-074": "Handles category 74 tasks such as topic-74 reporting",
+       "skill-075": "Handles category 75 tasks such as topic-75 reporting",
+       "skill-076": "Handles category 76 tasks such as topic-76 reporting",
+       "skill-077": "Handles category 77 tasks such as topic-77 reporting",
+       "skill-078": "Handles category 78 tasks such as topic-78 reporting",
+       "skill-079": "Handles category 79 tasks such as topic-79 reporting",
+       "skill-080": "Handles category 80 tasks such as topic-80 reporting",
+       "skill-081": "Handles category 81 tasks such as topic-81 reporting",
+       "skill-082": "Handles category 82 tasks such as topic-82 reporting",
+       "skill-083": "Handles category 83 tasks such as topic-83 reporting",
+       "skill-084": "Handles category 84 tasks such as topic-84 reporting",
+       "skill-085": "Handles category 85 tasks such as topic-85 reporting",
+       "skill-086": "Handles category 86 tasks such as topic-86 reporting",
+       "skill-087": "Handles category 87 tasks such as topic-87 reporting",
+       "skill-088": "Handles category 88 tasks such as topic-88 reporting",
+       "skill-089": "Handles category 89 tasks such as topic-89 reporting",
+       "skill-090": "Handles category 90 tasks such as topic-90 reporting",
+       "skill-091": "Handles category 91 tasks such as topic-91 reporting",
+       "skill-092": "Handles category 92 tasks such as topic-92 reporting",
+       "skill-093": "Handles category 93 tasks such as topic-93 reporting",
+       "skill-094": "Handles category 94 tasks such as topic-94 reporting",
+       "skill-095": "Handles category 95 tasks such as topic-95 reporting",
+       "skill-096": "Handles category 96 tasks such as topic-96 reporting",
+       "skill-097": "Handles category 97 tasks such as topic-97 reporting",
+       "skill-098": "Handles category 98 tasks such as topic-98 reporting",
+       "skill-099": "Handles category 99 tasks such as topic-99 reporting",
+       "skill-100": "Handles category 100 tasks such as topic-100 reporting",
+       "skill-101": "Handles category 101 tasks such as topic-101 reporting",
+       "skill-102": "Handles category 102 tasks such as topic-102 reporting",
+       "skill-103": "Handles category 103 tasks such as topic-103 reporting",
+       "skill-104": "Handles category 104 tasks such as topic-104 reporting",
+       "skill-105": "Handles category 105 tasks such as topic-105 reporting",
+       "skill-106": "Handles category 106 tasks such as topic-106 reporting",
+       "skill-107": "Handles category 107 tasks such as topic-107 reporting",
+       "skill-108": "Handles category 108 tasks such as topic-108 reporting",
+       "skill-109": "Handles category 109 tasks such as topic-109 reporting",
+       "skill-110": "Handles category 110 tasks such as topic-110 reporting",
+       "skill-111": "Handles category 111 tasks such as topic-111 reporting",
+       "skill-112": "Handles category 112 tasks such as topic-112 reporting",
+       "skill-113": "Handles category 113 tasks such as topic-113 reporting",
+       "skill-114": "Handles category 114 tasks such as topic-114 reporting",
+       "skill-115": "Handles category 115 tasks such as topic-115 reporting",
+       "skill-116": "Handles category 116 tasks such as topic-116 reporting",
+       "skill-117": "Handles category 117 tasks such as topic-117 reporting",
+       "skill-118": "Handles category 118 tasks such as topic-118 reporting",
+       "skill-119": "Handles category 119 tasks such as topic-119 reporting",
+       "skill-120": "Handles category 120 tasks such as topic-120 reporting",
+       "skill-121": "Handles category 121 tasks such as topic-121 reporting",
+       "skill-122": "Handles category 122 tasks such as topic-122 reporting",
+       "skill-123": "Handles category 123 tasks such as topic-123 reporting",
+       "skill-124": "Handles category 124 tasks such as topic-124 reporting",
+       "skill-125": "Handles category 125 tasks such as topic-125 reporting",
+       "skill-126": "Handles category 126 tasks such as topic-126 reporting",
+       "skill-127": "Handles category 127 tasks such as topic-127 reporting",
+       "skill-128": "Handles category 128 tasks such as topic-128 reporting",
+       "skill-129": "Handles category 129 tasks such as topic-129 reporting",
+       "skill-130": "Handles category 130 tasks such as topic-130 reporting",
+       "skill-131": "Handles category 131 tasks such as topic-131 reporting",
+       "skill-132": "Handles category 132 tasks such as topic-132 reporting",
+       "skill-133": "Handles category 133 tasks such as topic-133 reporting",
+       "skill-134": "Handles category 134 tasks such as topic-134 reporting",
+       "skill-135": "Handles category 135 tasks such as topic-135 reporting",
+       "skill-136": "Handles category 136 tasks such as topic-136 reporting",
+       "skill-137": "Handles category 137 tasks such as topic-137 reporting",
+       "skill-138": "Handles category 138 tasks such as topic-138 reporting",
+       "skill-139": "Handles category 139 tasks such as topic-139 reporting",
+       "skill-140": "Handles category 140 tasks such as topic-140 reporting",
+       "skill-141": "Handles category 141 tasks such as topic-141 reporting",
+       "skill-142": "Handles category 142 tasks such as topic-142 reporting",
+       "skill-143": "Handles category 143 tasks such as topic-143 reporting",
+       "skill-144": "Handles category 144 tasks such as topic-144 reporting",
+       "skill-145": "Handles category 145 tasks such as topic-145 reporting",
+       "skill-146": "Handles category 146 tasks such as topic-146 reporting",
+       "skill-147": "Handles category 147 tasks such as topic-147 reporting",
+       "skill-148": "Handles category 148 tasks such as topic-148 reporting",
+       "skill-149": "Handles category 149 tasks such as topic-149 reporting",
+       "skill-150": "Handles category 150 tasks such as topic-150 reporting",
+       "skill-151": "Handles category 151 tasks such as topic-151 reporting",
+       "skill-152": "Handles category 152 tasks such as topic-152 reporting",
+       "skill-153": "Handles category 153 tasks such as topic-153 reporting",
+       "skill-154": "Handles category 154 tasks such as topic-154 reporting",
+       "skill-155": "Handles category 155 tasks such as topic-155 reporting",
+       "skill-156": "Handles category 156 tasks such as topic-156 reporting",
+       "skill-157": "Handles category 157 tasks such as topic-157 reporting",
+       "skill-158": "Handles category 158 tasks such as topic-158 reporting",
+       "skill-159": "Handles category 159 tasks such as topic-159 reporting",
+       "skill-160": "Handles category 160 tasks such as topic-160 reporting",
+       "skill-161": "Handles category 161 tasks such as topic-161 reporting",
+       "skill-162": "Handles category 162 tasks such as topic-162 reporting",
+       "skill-163": "Handles category 163 tasks such as topic-163 reporting",
+       "skill-164": "Handles category 164 tasks such as topic-164 reporting",
+       "skill-165": "Handles category 165 tasks such as topic-165 reporting",
+       "skill-166": "Handles category 166 tasks such as topic-166 reporting",
+       "skill-167": "Handles category 167 tasks such as topic-167 reporting",
+       "skill-168": "Handles category 168 tasks such as topic-168 reporting",
+       "skill-169": "Handles category 169 tasks such as topic-169 reporting",
+       "skill-170": "Handles category 170 tasks such as topic-170 reporting",
+       "skill-171": "Handles category 171 tasks such as topic-171 reporting",
+       "skill-172": "Handles category 172 tasks such as topic-172 reporting",
+       "skill-173": "Handles category 173 tasks such as topic-173 reporting",
+       "skill-174": "Handles category 174 tasks such as topic-174 reporting",
+       "skill-175": "Handles category 175 tasks such as topic-175 reporting",
+       "skill-176": "Handles category 176 tasks such as topic-176 reporting",
+       "skill-177": "Handles category 177 tasks such as topic-177 reporting",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice": "security-review"
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-19",
+   "description": "Hard, marginal (P(none)~0.41 vs P(pdf)~0.36, confidence ~0.57): tangential words (chart, PDF) in a plain code fix; must abstain thanks to the activity-IS-the-skill instruction",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: our PDF export button throws a 500 because the `render_chart()` helper returns None; add a null check there",
+    "questions": {
+     "skill": {
+      "type": "choice",
+      "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt? Pick a skill only if the activity the user wants done IS what the skill does; a topic word appearing in a code change (pdf, chart) does not count. Otherwise pick none.",
+      "criteria": {
+       "pdf": "Read, extract, merge, split or fill PDF files",
+       "xlsx": "Create or edit Excel spreadsheets, formulas, pivot tables and charts",
+       "docx": "Create or edit Word documents",
+       "pptx": "Create slide decks and pitch decks in PowerPoint format",
+       "frontend-design": "Build web UI components, landing pages and dashboards with good visual design",
+       "test-driven-development": "Write failing tests first when implementing a feature or bugfix",
+       "pr-review": "Review a pull request diff for bugs, style and risks",
+       "git-worktree": "Create and manage git worktrees for parallel branches",
+       "slack-messaging": "Draft and send Slack messages and announcements",
+       "sql-query": "Write and optimize SQL queries against a data warehouse",
+       "dataviz": "Create charts, graphs and data visualizations",
+       "security-review": "Audit pending code changes for security vulnerabilities",
+       "openspec-propose": "Propose a new change with design, specs and tasks",
+       "api-docs": "Generate OpenAPI reference documentation for HTTP endpoints",
+       "docker-compose": "Write and debug Dockerfiles and docker-compose stacks",
+       "release-notes": "Summarize merged commits into user-facing release notes",
+       "incident-audit": "Reconstruct a production incident timeline and write a postmortem",
+       "none": "No skill from the roster applies; answer directly without loading any skill"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "skill": {
+      "choice_in": [
+       "none"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "sel-20",
+   "description": "Threshold gate: is_needed for docker-compose on a Compose error log",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User prompt: docker compose up fails: 'service api depends on undefined service db: invalid compose project'. compose.yaml has services: api, cache.",
+    "questions": {
+     "needs_docker": {
+      "type": "noul",
+      "instructions": "Is the tool 'docker-compose' (Write and debug Dockerfiles and docker-compose stacks) needed to complete this user prompt?"
+     },
+     "needs_sql": {
+      "type": "noul",
+      "instructions": "Is the tool 'sql-query' (Write and optimize SQL queries against a data warehouse) needed to complete this user prompt?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "needs_docker": {
+      "noul_gte": 0.7
+     },
+     "needs_sql": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  }
+ ]
+}

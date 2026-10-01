@@ -1,0 +1,563 @@
+{
+ "use_case": "16-claim-grounding-check",
+ "cases": [
+  {
+   "id": "claim-01-quote-verbatim-present",
+   "description": "noul: quote is word for word in the excerpt but the excerpt is hard-wrapped with markdown bold and double spaces, so a naive string compare would miss it (positive, formatting-normalized)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SOURCE EXCERPT (README.md):\nRequests are retried up to three times with exponential\nbackoff. **Only idempotent methods** (GET, HEAD, PUT,\nDELETE) are retried  automatically; POST is never retried.\n\nQUOTE TO CHECK: \"Only idempotent methods (GET, HEAD, PUT, DELETE) are retried automatically.\"",
+    "questions": {
+     "verbatim": {
+      "type": "noul",
+      "instructions": "Ignoring line breaks, extra spaces and markdown formatting marks, does the SOURCE EXCERPT contain the QUOTE TO CHECK word for word, with no changed, added or dropped words or numbers?",
+      "criteria": {
+       "true": "the same words in the same order appear in the excerpt",
+       "false": "the quote differs from the excerpt in at least one word, number or method name"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "verbatim": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-02-fabricated-quote-altered",
+   "description": "noul: near-miss quote, identical except one method swapped (DELETE replaced by POST); tests that a single-token alteration is caught. In production code a normalized substring match rejects this before any model call; here we test the semantic backstop",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SOURCE EXCERPT (README.md):\nRequests are retried up to three times with exponential\nbackoff. **Only idempotent methods** (GET, HEAD, PUT,\nDELETE) are retried  automatically; POST is never retried.\n\nQUOTE TO CHECK: \"Only idempotent methods (GET, HEAD, PUT, POST) are retried automatically.\"",
+    "questions": {
+     "verbatim": {
+      "type": "noul",
+      "instructions": "Ignoring line breaks, extra spaces and markdown formatting marks, does the SOURCE EXCERPT contain the QUOTE TO CHECK word for word, with no changed, added or dropped words or numbers?",
+      "criteria": {
+       "true": "the same words in the same order appear in the excerpt",
+       "false": "the quote differs from the excerpt in at least one word, number or method name"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "verbatim": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-03-changelog-supported",
+   "description": "choice: changelog bullet matches the diff (default timeout 30->45, retries added)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CHANGELOG BULLET: \"HttpClient now retries failed requests and accepts a `retries` argument (default 3).\"\n\nDIFF (src/http/client.py):\n-    def __init__(self, base_url, timeout=30):\n+    def __init__(self, base_url, timeout=45, retries=3):\n         self.base_url = base_url\n         self.timeout = timeout\n+        self.retries = retries\n",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "Judging only from the DIFF, does it support, contradict, or say nothing about the CHANGELOG BULLET?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "choice": "supports",
+      "prob_gte": {
+       "supports": 0.7
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-04-changelog-contradicted-number",
+   "description": "choice: bullet claims timeout raised to 60s but the diff sets 45",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CHANGELOG BULLET: \"Default request timeout increased from 30s to 60s.\"\n\nDIFF (src/http/client.py):\n-    def __init__(self, base_url, timeout=30):\n+    def __init__(self, base_url, timeout=45, retries=3):\n         self.base_url = base_url\n         self.timeout = timeout\n+        self.retries = retries\n",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "Judging only from the DIFF, does it support, contradict, or say nothing about the CHANGELOG BULLET?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "choice": "contradicts",
+      "prob_gte": {
+       "contradicts": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-05-changelog-contradicted-direction",
+   "description": "choice: bullet says a flag was added, the diff removes it",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CHANGELOG BULLET: \"Added a `--legacy-output` flag to the report command.\"\n\nDIFF (cli/main.py):\n-@click.option(\"--legacy-output\", is_flag=True, help=\"Use the old table format\")\n-def report(legacy_output):\n+def report():\n     rows = load_rows()\n-    if legacy_output:\n-        print_table(rows)\n-        return\n     print_json(rows)\n",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "Judging only from the DIFF, does it support, contradict, or say nothing about the CHANGELOG BULLET?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "choice": "contradicts",
+      "prob_gte": {
+       "contradicts": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-06-silent-source-says-nothing",
+   "description": "choice: bullet about caching, diff touches only timeout/retries",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CHANGELOG BULLET: \"Responses are now cached in memory for 5 minutes.\"\n\nDIFF (src/http/client.py):\n-    def __init__(self, base_url, timeout=30):\n+    def __init__(self, base_url, timeout=45, retries=3):\n         self.base_url = base_url\n         self.timeout = timeout\n+        self.retries = retries\n",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "Judging only from the DIFF, does it support, contradict, or say nothing about the CHANGELOG BULLET?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "choice": "says_nothing",
+      "prob_gte": {
+       "says_nothing": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-07-citation-supported",
+   "description": "choice: LLM-written citation claim vs abstract (supported)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CLAIM IN DRAFT: \"Adding daily walking to metformin lowered HbA1c more than metformin alone in a blinded randomized trial.\"\n\nABSTRACT: We conducted a double-blind randomized controlled trial of 412 adults with type 2 diabetes, comparing 12 weeks of metformin plus daily 30-minute walking against metformin alone. HbA1c fell by 0.9 percentage points in the walking group versus 0.3 in controls (p<0.001). No serious adverse events were reported.",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "Judging only from the ABSTRACT, does it support, contradict, or say nothing about the CLAIM IN DRAFT?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "choice": "supports",
+      "prob_gte": {
+       "supports": 0.7
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-08-citation-contradicted",
+   "description": "choice: draft says significant benefit, abstract reports non-significant",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CLAIM IN DRAFT: \"Acupuncture significantly reduced chronic low back pain compared with sham treatment at 12 weeks.\"\n\nABSTRACT: In this randomized trial of 240 patients with chronic low back pain, acupuncture did not produce a statistically significant reduction in pain scores compared with sham acupuncture at 12 weeks (mean difference -0.4 points, 95% CI -1.1 to 0.3, p=0.27).",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "Judging only from the ABSTRACT, does it support, contradict, or say nothing about the CLAIM IN DRAFT?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "choice": "contradicts",
+      "prob_gte": {
+       "contradicts": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-09-citation-unrelated-outcome",
+   "description": "choice: draft claims a mortality effect the abstract never measures",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CLAIM IN DRAFT: \"The walking intervention reduced cardiovascular mortality.\"\n\nABSTRACT: We conducted a double-blind randomized controlled trial of 412 adults with type 2 diabetes, comparing 12 weeks of metformin plus daily 30-minute walking against metformin alone. HbA1c fell by 0.9 percentage points in the walking group versus 0.3 in controls (p<0.001). No serious adverse events were reported.",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "Judging only from the ABSTRACT, does it support, contradict, or say nothing about the CLAIM IN DRAFT?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "choice": "says_nothing",
+      "prob_gte": {
+       "says_nothing": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-10-screen-include-multi",
+   "description": "multi-question inclusion screening: RCT, adults, T2D, reports HbA1c (all true)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "INCLUSION CRITERIA: randomized controlled trial; adult participants; type 2 diabetes; HbA1c reported as an outcome.\n\nCANDIDATE PAPER:\nABSTRACT: We conducted a double-blind randomized controlled trial of 412 adults with type 2 diabetes, comparing 12 weeks of metformin plus daily 30-minute walking against metformin alone. HbA1c fell by 0.9 percentage points in the walking group versus 0.3 in controls (p<0.001). No serious adverse events were reported.",
+    "questions": {
+     "rct": {
+      "type": "noul",
+      "instructions": "Is the study a randomized controlled trial?",
+      "criteria": {
+       "true": "the paper describes random allocation to groups",
+       "false": "the paper is observational, non-randomized, or not a trial"
+      }
+     },
+     "adults": {
+      "type": "noul",
+      "instructions": "Are the participants adults?",
+      "criteria": {
+       "true": "participants are adults",
+       "false": "participants are children or animals or not described"
+      }
+     },
+     "t2d": {
+      "type": "noul",
+      "instructions": "Are the participants people with type 2 diabetes?",
+      "criteria": {
+       "true": "participants have type 2 diabetes",
+       "false": "participants have another or no condition"
+      }
+     },
+     "hba1c": {
+      "type": "noul",
+      "instructions": "Does the paper report HbA1c as an outcome?",
+      "criteria": {
+       "true": "HbA1c results are reported",
+       "false": "HbA1c is not reported"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "rct": {
+      "noul_gte": 0.85
+     },
+     "adults": {
+      "noul_gte": 0.85
+     },
+     "t2d": {
+      "noul_gte": 0.85
+     },
+     "hba1c": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-11-screen-exclude-animal",
+   "description": "exclusion screening: mouse study must be excluded, the human-participants question is false",
+   "request": {
+    "model": "openjev-latest",
+    "state": "EXCLUSION CRITERIA: animal studies; in vitro studies; case reports.\n\nCANDIDATE PAPER:\nABSTRACT: Male C57BL/6 mice fed a high-fat diet were given metformin for 8 weeks. Treated mice showed improved glucose tolerance and reduced hepatic lipid accumulation compared with untreated controls.",
+    "questions": {
+     "human": {
+      "type": "noul",
+      "instructions": "Were the study participants human beings?",
+      "criteria": {
+       "true": "the study enrolled human participants",
+       "false": "the study used animals or cell cultures"
+      }
+     },
+     "animal": {
+      "type": "noul",
+      "instructions": "Is this an animal study?",
+      "criteria": {
+       "true": "the subjects were animals",
+       "false": "the subjects were not animals"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "human": {
+      "noul_lte": 0.1
+     },
+     "animal": {
+      "noul_gte": 0.9
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-12-summary-grounded",
+   "description": "groundedness: faithful summary (positive)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SOURCE (incident report):\nOn 2026-03-04 the payments API returned 5xx errors for 22 minutes (14:05-14:27 UTC). Root cause: a connection-pool limit lowered from 200 to 20 in a config change. The change was reverted by the on-call engineer. About 1,300 checkout attempts failed.\n\nSUMMARY TO CHECK:\nA config change cut the payments API connection-pool limit from 200 to 20, causing 5xx errors for 22 minutes. The on-call engineer reverted it; roughly 1,300 checkouts failed.",
+    "questions": {
+     "grounded": {
+      "type": "noul",
+      "instructions": "Is every factual statement in the SUMMARY TO CHECK supported by the SOURCE? Consider numbers, causes and durations.",
+      "criteria": {
+       "true": "all statements are supported by the source",
+       "false": "at least one statement is unsupported or contradicts the source"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "grounded": {
+      "noul_gte": 0.75
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-13-summary-hallucinated-cause",
+   "description": "groundedness: summary invents a database failover cause and 3-hour duration",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SOURCE (incident report):\nOn 2026-03-04 the payments API returned 5xx errors for 22 minutes (14:05-14:27 UTC). Root cause: a connection-pool limit lowered from 200 to 20 in a config change. The change was reverted by the on-call engineer. About 1,300 checkout attempts failed.\n\nSUMMARY TO CHECK:\nA database failover caused the payments API to return 5xx errors for about 3 hours. About 1,300 checkouts failed.",
+    "questions": {
+     "grounded": {
+      "type": "noul",
+      "instructions": "Is every factual statement in the SUMMARY TO CHECK supported by the SOURCE? Consider numbers, causes and durations.",
+      "criteria": {
+       "true": "all statements are supported by the source",
+       "false": "at least one statement is unsupported or contradicts the source"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "grounded": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-14-batch-bullets-think-samples",
+   "description": "extension: 3 bullets checked in one request with think+samples on the borderline set (supported / contradicted / silent)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "DIFF (cli/main.py and src/http/client.py):\nDIFF (src/http/client.py):\n-    def __init__(self, base_url, timeout=30):\n+    def __init__(self, base_url, timeout=45, retries=3):\n         self.base_url = base_url\n         self.timeout = timeout\n+        self.retries = retries\n\nDIFF (cli/main.py):\n-@click.option(\"--legacy-output\", is_flag=True, help=\"Use the old table format\")\n-def report(legacy_output):\n+def report():\n     rows = load_rows()\n-    if legacy_output:\n-        print_table(rows)\n-        return\n     print_json(rows)\n\nCHANGELOG BULLETS:\nA. HttpClient gains a `retries` option.\nB. Added a `--legacy-output` flag.\nC. Added Windows ARM64 wheels.",
+    "questions": {
+     "A": {
+      "type": "choice",
+      "instructions": "Judging only from the DIFF, does it support, contradict, or say nothing about bullet A?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     },
+     "B": {
+      "type": "choice",
+      "instructions": "Judging only from the DIFF, does it support, contradict, or say nothing about bullet B?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     },
+     "C": {
+      "type": "choice",
+      "instructions": "Judging only from the DIFF, does it support, contradict, or say nothing about bullet C?",
+      "criteria": {
+       "supports": "the source text states or clearly entails the claim",
+       "contradicts": "the source text states something that conflicts with the claim",
+       "says_nothing": "the source text does not address the claim at all"
+      }
+     }
+    },
+    "think": 256,
+    "samples": 2
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "A": {
+      "choice": "supports"
+     },
+     "B": {
+      "choice": "contradicts"
+     },
+     "C": {
+      "choice": "says_nothing"
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-15-error-choice-without-criteria",
+   "description": "error case: choice question missing criteria must be rejected (422) so the MCP layer validates before sending",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CLAIM: x\nSOURCE: y",
+    "questions": {
+     "v": {
+      "type": "choice",
+      "instructions": "supports, contradicts or says nothing?"
+     }
+    }
+   },
+   "expect": {
+    "status": 422
+   }
+  },
+  {
+   "id": "claim-16-compound-half-supported",
+   "description": "hard: two-part claim, second half unsupported; grounded noul must be low (split-claim rule)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SOURCE (incident report):\nOn 2026-03-04 the payments API returned 5xx errors for 22 minutes (14:05-14:27 UTC). Root cause: a connection-pool limit lowered from 200 to 20 in a config change. The change was reverted by the on-call engineer. About 1,300 checkout attempts failed.\n\nSUMMARY TO CHECK:\nThe outage lasted 22 minutes and was caused by a lowered connection-pool limit. Engineers also added a new alert to prevent recurrence.",
+    "questions": {
+     "grounded": {
+      "type": "noul",
+      "instructions": "Is every factual statement in the SUMMARY TO CHECK supported by the SOURCE? Consider numbers, causes and durations.",
+      "criteria": {
+       "true": "all statements are supported by the source",
+       "false": "at least one statement is unsupported or contradicts the source"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "grounded": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-17-overstated-scope",
+   "description": "hard: source says 'usually', bullet says 'always'; overstatement must not count as supported",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SOURCE (docs):\nThe importer usually finishes in under a minute for files below 50 MB; larger files may take several minutes.\n\nCLAIM: The importer always finishes in under a minute.",
+    "questions": {
+     "v": {
+      "type": "noul",
+      "instructions": "Is the CLAIM fully supported by the SOURCE, without any stronger wording than the source uses?",
+      "criteria": {
+       "true": "the source states this with the same strength",
+       "false": "the claim is stronger than the source or unsupported"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "v": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "claim-18-summary-swapped-number",
+   "description": "hard: summary swaps 22 minutes to 2 minutes",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SOURCE (incident report):\nOn 2026-03-04 the payments API returned 5xx errors for 22 minutes (14:05-14:27 UTC). Root cause: a connection-pool limit lowered from 200 to 20 in a config change. The change was reverted by the on-call engineer. About 1,300 checkout attempts failed.\n\nSUMMARY TO CHECK:\nA config change cut the payments API connection-pool limit from 200 to 20, causing 5xx errors for 2 minutes. The change was reverted; about 1,300 checkouts failed.",
+    "questions": {
+     "grounded": {
+      "type": "noul",
+      "instructions": "Is every factual statement in the SUMMARY TO CHECK supported by the SOURCE? Consider numbers, causes and durations.",
+      "criteria": {
+       "true": "all statements are supported by the source",
+       "false": "at least one statement is unsupported or contradicts the source"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "grounded": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  }
+ ]
+}

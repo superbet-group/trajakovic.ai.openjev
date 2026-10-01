@@ -1,0 +1,777 @@
+{
+ "use_case": "20-taxonomy-classification",
+ "cases": [
+  {
+   "id": "tax-01-root-backend",
+   "description": "Root level of an issue taxonomy: a Python traceback goes to backend.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Traceback (most recent call last):\n  File \"orders/service.py\", line 88, in create_order\n    row = cursor.fetchone()[0]\npsycopg2.errors.UniqueViolation: duplicate key value violates unique constraint \"orders_idempotency_key_key\"\nPOST /v1/orders returned 500 for retried client requests.",
+    "questions": {
+     "area": {
+      "type": "choice",
+      "instructions": "Which top-level area of the codebase does this issue belong to?",
+      "criteria": {
+       "backend": "server-side code, APIs, business logic, database access",
+       "frontend": "browser UI, rendering, CSS, client-side JavaScript",
+       "mobile": "iOS or Android app code",
+       "data": "pipelines, ETL, analytics, warehouses, ML training",
+       "infra": "deployment, CI/CD, cloud resources, networking, containers",
+       "security": "vulnerabilities, authentication weaknesses, secrets exposure",
+       "other": "none of the above or not enough information"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "area": {
+      "choice": "backend",
+      "prob_gte": {
+       "backend": 0.7
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-02-second-level-database",
+   "description": "Second level, after the root chose backend: pick the child among six.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Traceback (most recent call last):\n  File \"orders/service.py\", line 88, in create_order\n    row = cursor.fetchone()[0]\npsycopg2.errors.UniqueViolation: duplicate key value violates unique constraint \"orders_idempotency_key_key\"\nPOST /v1/orders returned 500 for retried client requests.",
+    "questions": {
+     "sub": {
+      "type": "choice",
+      "instructions": "This is a backend issue. Which backend subcategory is the primary owner of the fix?",
+      "criteria": {
+       "api": "HTTP endpoints, request validation, serialization",
+       "database": "queries, migrations, schema, connection pools",
+       "auth": "login, sessions, tokens, permissions",
+       "queue": "background jobs, message brokers, workers",
+       "cache": "cache invalidation, Redis, memoization",
+       "other_backend": "a backend problem that fits none of the listed children"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "sub": {
+      "choice_in": [
+       "database",
+       "api"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-03-root-frontend",
+   "description": "Root level: CSS/browser text goes to frontend, not other candidates.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "On Safari 16 the checkout button overlaps the order summary when the viewport is narrower than 600px. Looks like a flex-wrap issue in checkout.css. Chrome is fine. Screenshot attached.",
+    "questions": {
+     "area": {
+      "type": "choice",
+      "instructions": "Which top-level area does this issue belong to?",
+      "criteria": {
+       "backend": "server-side code, APIs, business logic, database access",
+       "frontend": "browser UI, rendering, CSS, client-side JavaScript",
+       "mobile": "iOS or Android app code",
+       "data": "pipelines, ETL, analytics, warehouses, ML training",
+       "infra": "deployment, CI/CD, cloud resources, networking, containers",
+       "security": "vulnerabilities, authentication weaknesses, secrets exposure",
+       "other": "none of the above or not enough information"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "area": {
+      "choice": "frontend",
+      "prob_gte": {
+       "frontend": 0.8
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-04-form-types-15",
+   "description": "Classify a document among 15 form types (medium cardinality).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Wage and Tax Statement 2023. Employer's name: Acme Corp. Box 1 Wages, tips, other compensation: 84,210.00. Box 2 Federal income tax withheld: 12,450.00. Box 12 code D 401(k) elective deferrals. Employee's SSN ending 4417.",
+    "questions": {
+     "form": {
+      "type": "choice",
+      "instructions": "Which form type is this document?",
+      "criteria": {
+       "W-2": "wage and tax statement issued by an employer to an employee",
+       "W-4": "employee's withholding certificate",
+       "W-9": "request for taxpayer identification number",
+       "1099-NEC": "nonemployee compensation paid to a contractor",
+       "1099-INT": "interest income from a bank",
+       "1099-DIV": "dividends and distributions",
+       "1099-B": "broker proceeds from securities sales",
+       "1098": "mortgage interest statement",
+       "1040": "individual income tax return",
+       "1040-ES": "estimated tax payment voucher",
+       "Schedule C": "profit or loss from a sole proprietorship",
+       "Schedule D": "capital gains and losses summary",
+       "4868": "application for automatic extension of time to file",
+       "8822": "change of address form",
+       "SS-4": "application for an employer identification number"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "form": {
+      "choice": "W-2",
+      "prob_gte": {
+       "W-2": 0.85
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-05-form-1099nec-vs-w2",
+   "description": "Hard but decidable: contractor pay statement must not be W-2.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Form 1099-NEC (2023). Payer: Brightside Media LLC. Recipient: Jordan Pike (sole proprietor). Box 1 Nonemployee compensation: 18,500.00. Box 4 Federal income tax withheld: 0.00. Recipient's TIN ending 9032.",
+    "questions": {
+     "form": {
+      "type": "choice",
+      "instructions": "Which form type is this document?",
+      "criteria": {
+       "W-2": "wage and tax statement issued by an employer to an employee",
+       "1099-NEC": "nonemployee compensation paid to a contractor",
+       "1099-INT": "interest income from a bank",
+       "1099-DIV": "dividends and distributions",
+       "1098": "mortgage interest statement",
+       "W-9": "request for taxpayer identification number"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "form": {
+      "choice": "1099-NEC",
+      "prob_gte": {
+       "1099-NEC": 0.85
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-06-beam-batch-ambiguous",
+   "description": "Beam search in one request: root plus both plausible children batched. Input touches frontend and backend; root and the true-branch leaf are asserted, the counterfactual branch is only required to answer (it is flat, 0.48 max, by design: beam scoring multiplies it by the small root probability).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Users report the product list page shows stale prices for up to 10 minutes after a price change. The React component fetches /api/products on mount. The API sets Cache-Control: max-age=600 and the Redis layer also memoizes the catalog for 10 minutes.",
+    "questions": {
+     "root": {
+      "type": "choice",
+      "instructions": "Which top-level area is the most likely owner of the fix?",
+      "criteria": {
+       "backend": "server-side code, APIs, business logic, database access",
+       "frontend": "browser UI, rendering, CSS, client-side JavaScript",
+       "mobile": "iOS or Android app code",
+       "data": "pipelines, ETL, analytics, warehouses, ML training",
+       "infra": "deployment, CI/CD, cloud resources, networking, containers",
+       "security": "vulnerabilities, authentication weaknesses, secrets exposure",
+       "other": "none of the above or not enough information"
+      }
+     },
+     "if_backend": {
+      "type": "choice",
+      "instructions": "Assuming the owner is backend, which backend subcategory owns the fix?",
+      "criteria": {
+       "api": "HTTP endpoints, request validation, serialization",
+       "database": "queries, migrations, schema, connection pools",
+       "auth": "login, sessions, tokens, permissions",
+       "queue": "background jobs, message brokers, workers",
+       "cache": "cache invalidation, Redis, memoization",
+       "other_backend": "a backend problem that fits none of the listed children"
+      }
+     },
+     "if_frontend": {
+      "type": "choice",
+      "instructions": "Assuming the owner is frontend, which frontend subcategory owns the fix?",
+      "criteria": {
+       "rendering": "layout, CSS, visual display of already-correct data",
+       "state": "client-side state management and data-fetching logic",
+       "build": "bundler, transpilation, assets",
+       "browser_cache": "HTTP caching headers as seen by the browser, service workers",
+       "other_frontend": "a frontend problem that fits none of these"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "root": {
+      "choice": "backend",
+      "prob_gte": {
+       "backend": 0.5
+      }
+     },
+     "if_backend": {
+      "choice": "cache",
+      "prob_gte": {
+       "cache": 0.5
+      }
+     },
+     "if_frontend": {}
+    }
+   }
+  },
+  {
+   "id": "tax-07-parent-fallback",
+   "description": "Confidence gate with broader-parent fallback: a backend issue that matches no listed child must land in other_backend, not a wrong leaf.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "After upgrading the service from Python 3.9 to 3.12 the build fails: ModuleNotFoundError: No module named 'distutils' raised from setup.py.",
+    "questions": {
+     "sub": {
+      "type": "choice",
+      "instructions": "This is a backend issue. Which backend subcategory best describes it? Choose other_backend if no listed child clearly fits.",
+      "criteria": {
+       "api": "HTTP endpoints, request validation, serialization",
+       "database": "queries, migrations, schema, connection pools",
+       "auth": "login, sessions, tokens, permissions",
+       "queue": "background jobs, message brokers, workers",
+       "cache": "cache invalidation, Redis, memoization",
+       "other_backend": "a backend problem that fits none of the listed children"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "sub": {
+      "choice": "other_backend",
+      "prob_gte": {
+       "other_backend": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-08-vague-goes-other",
+   "description": "Vague ticket must stop at the broad parent 'other' at the root instead of guessing a subtree.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "it doesnt work, please fix asap",
+    "questions": {
+     "area": {
+      "type": "choice",
+      "instructions": "Which top-level area does this issue belong to? Choose other if the text does not contain enough information to tell.",
+      "criteria": {
+       "backend": "server-side code, APIs, business logic, database access",
+       "frontend": "browser UI, rendering, CSS, client-side JavaScript",
+       "mobile": "iOS or Android app code",
+       "data": "pipelines, ETL, analytics, warehouses, ML training",
+       "infra": "deployment, CI/CD, cloud resources, networking, containers",
+       "security": "vulnerabilities, authentication weaknesses, secrets exposure",
+       "other": "none of the above or not enough information"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "area": {
+      "choice": "other",
+      "prob_gte": {
+       "other": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-09-subtree-gate-noul-yes",
+   "description": "Coarse-to-fine pruning with a noul: does the issue belong to the security subtree.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "SQL injection in /search: passing q=' OR 1=1 -- returns every user record. Reproduced on staging; user emails and password hashes are exposed.",
+    "questions": {
+     "in_security": {
+      "type": "noul",
+      "instructions": "Does this issue belong under the security category?",
+      "criteria": {
+       "true": "the issue is a vulnerability or exposes sensitive data",
+       "false": "the issue is not a security matter"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "in_security": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-10-subtree-gate-noul-no",
+   "description": "Negative pruning: a visual bug is not under security.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "The primary button on the settings page has 2px too little padding on the left in dark mode. Cosmetic only.",
+    "questions": {
+     "in_security": {
+      "type": "noul",
+      "instructions": "Does this issue belong under the security category?",
+      "criteria": {
+       "true": "the issue is a vulnerability or exposes sensitive data",
+       "false": "the issue is not a security matter"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "in_security": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-11-forty-options",
+   "description": "High cardinality: 40 flat options (well under the caps) with a clear answer.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "import pandas as pd\ndf = pd.read_csv('sales.csv')\nprint(df.groupby('region')['revenue'].sum().sort_values(ascending=False).head(5))",
+    "questions": {
+     "lib": {
+      "type": "choice",
+      "instructions": "Which Python library does this code depend on for its core work?",
+      "criteria": {
+       "pandas": "the Python library pandas",
+       "numpy": "the Python library numpy",
+       "scipy": "the Python library scipy",
+       "matplotlib": "the Python library matplotlib",
+       "seaborn": "the Python library seaborn",
+       "plotly": "the Python library plotly",
+       "scikit-learn": "the Python library scikit-learn",
+       "xgboost": "the Python library xgboost",
+       "lightgbm": "the Python library lightgbm",
+       "pytorch": "the Python library pytorch",
+       "tensorflow": "the Python library tensorflow",
+       "keras": "the Python library keras",
+       "jax": "the Python library jax",
+       "transformers": "the Python library transformers",
+       "spacy": "the Python library spacy",
+       "nltk": "the Python library nltk",
+       "gensim": "the Python library gensim",
+       "opencv": "the Python library opencv",
+       "pillow": "the Python library pillow",
+       "scikit-image": "the Python library scikit-image",
+       "flask": "the Python library flask",
+       "django": "the Python library django",
+       "fastapi": "the Python library fastapi",
+       "tornado": "the Python library tornado",
+       "aiohttp": "the Python library aiohttp",
+       "requests": "the Python library requests",
+       "httpx": "the Python library httpx",
+       "sqlalchemy": "the Python library sqlalchemy",
+       "psycopg2": "the Python library psycopg2",
+       "pymongo": "the Python library pymongo",
+       "redis-py": "the Python library redis-py",
+       "celery": "the Python library celery",
+       "pytest": "the Python library pytest",
+       "hypothesis": "the Python library hypothesis",
+       "black": "the Python library black",
+       "ruff": "the Python library ruff",
+       "mypy": "the Python library mypy",
+       "pydantic": "the Python library pydantic",
+       "click": "the Python library click",
+       "rich": "the Python library rich"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "lib": {
+      "choice": "pandas",
+      "prob_gte": {
+       "pandas": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-12-120-options-descriptions",
+   "description": "Criteria-as-descriptions at 120 options (above the 52 HF cap, below 128/255). Only one option is semantically meaningful for the text besides filler.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Sony WH-1000XM5 over-ear wireless headphones with active noise cancelling, 30 hour battery, Bluetooth 5.2.",
+    "questions": {
+     "cat": {
+      "type": "choice",
+      "instructions": "Which catalog category should this product be listed in?",
+      "criteria": {
+       "cat_000": "catalog category number 0",
+       "cat_001": "catalog category number 1",
+       "cat_002": "catalog category number 2",
+       "cat_003": "catalog category number 3",
+       "cat_004": "catalog category number 4",
+       "cat_005": "catalog category number 5",
+       "cat_006": "catalog category number 6",
+       "cat_007": "catalog category number 7",
+       "cat_008": "catalog category number 8",
+       "cat_009": "catalog category number 9",
+       "cat_010": "catalog category number 10",
+       "cat_011": "catalog category number 11",
+       "cat_012": "catalog category number 12",
+       "cat_013": "catalog category number 13",
+       "cat_014": "catalog category number 14",
+       "cat_015": "catalog category number 15",
+       "cat_016": "catalog category number 16",
+       "cat_017": "catalog category number 17",
+       "cat_018": "catalog category number 18",
+       "cat_019": "catalog category number 19",
+       "cat_020": "catalog category number 20",
+       "cat_021": "catalog category number 21",
+       "cat_022": "catalog category number 22",
+       "cat_023": "catalog category number 23",
+       "cat_024": "catalog category number 24",
+       "cat_025": "catalog category number 25",
+       "cat_026": "catalog category number 26",
+       "cat_027": "catalog category number 27",
+       "cat_028": "catalog category number 28",
+       "cat_029": "catalog category number 29",
+       "cat_030": "catalog category number 30",
+       "cat_031": "catalog category number 31",
+       "cat_032": "catalog category number 32",
+       "cat_033": "catalog category number 33",
+       "cat_034": "catalog category number 34",
+       "cat_035": "catalog category number 35",
+       "cat_036": "catalog category number 36",
+       "cat_037": "catalog category number 37",
+       "cat_038": "catalog category number 38",
+       "cat_039": "catalog category number 39",
+       "cat_040": "catalog category number 40",
+       "cat_041": "catalog category number 41",
+       "cat_042": "wireless noise-cancelling headphones and earbuds",
+       "cat_043": "catalog category number 43",
+       "cat_044": "catalog category number 44",
+       "cat_045": "catalog category number 45",
+       "cat_046": "catalog category number 46",
+       "cat_047": "catalog category number 47",
+       "cat_048": "catalog category number 48",
+       "cat_049": "catalog category number 49",
+       "cat_050": "catalog category number 50",
+       "cat_051": "catalog category number 51",
+       "cat_052": "catalog category number 52",
+       "cat_053": "catalog category number 53",
+       "cat_054": "catalog category number 54",
+       "cat_055": "catalog category number 55",
+       "cat_056": "catalog category number 56",
+       "cat_057": "catalog category number 57",
+       "cat_058": "catalog category number 58",
+       "cat_059": "catalog category number 59",
+       "cat_060": "catalog category number 60",
+       "cat_061": "catalog category number 61",
+       "cat_062": "catalog category number 62",
+       "cat_063": "catalog category number 63",
+       "cat_064": "catalog category number 64",
+       "cat_065": "catalog category number 65",
+       "cat_066": "catalog category number 66",
+       "cat_067": "catalog category number 67",
+       "cat_068": "catalog category number 68",
+       "cat_069": "catalog category number 69",
+       "cat_070": "catalog category number 70",
+       "cat_071": "catalog category number 71",
+       "cat_072": "catalog category number 72",
+       "cat_073": "catalog category number 73",
+       "cat_074": "catalog category number 74",
+       "cat_075": "catalog category number 75",
+       "cat_076": "catalog category number 76",
+       "cat_077": "kitchen knives and cutlery sets",
+       "cat_078": "catalog category number 78",
+       "cat_079": "catalog category number 79",
+       "cat_080": "catalog category number 80",
+       "cat_081": "catalog category number 81",
+       "cat_082": "catalog category number 82",
+       "cat_083": "catalog category number 83",
+       "cat_084": "catalog category number 84",
+       "cat_085": "catalog category number 85",
+       "cat_086": "catalog category number 86",
+       "cat_087": "catalog category number 87",
+       "cat_088": "catalog category number 88",
+       "cat_089": "catalog category number 89",
+       "cat_090": "catalog category number 90",
+       "cat_091": "catalog category number 91",
+       "cat_092": "catalog category number 92",
+       "cat_093": "catalog category number 93",
+       "cat_094": "catalog category number 94",
+       "cat_095": "catalog category number 95",
+       "cat_096": "catalog category number 96",
+       "cat_097": "catalog category number 97",
+       "cat_098": "catalog category number 98",
+       "cat_099": "catalog category number 99",
+       "cat_100": "catalog category number 100",
+       "cat_101": "children's board games and puzzles",
+       "cat_102": "catalog category number 102",
+       "cat_103": "catalog category number 103",
+       "cat_104": "catalog category number 104",
+       "cat_105": "catalog category number 105",
+       "cat_106": "catalog category number 106",
+       "cat_107": "catalog category number 107",
+       "cat_108": "catalog category number 108",
+       "cat_109": "catalog category number 109",
+       "cat_110": "catalog category number 110",
+       "cat_111": "catalog category number 111",
+       "cat_112": "catalog category number 112",
+       "cat_113": "catalog category number 113",
+       "cat_114": "catalog category number 114",
+       "cat_115": "catalog category number 115",
+       "cat_116": "catalog category number 116",
+       "cat_117": "catalog category number 117",
+       "cat_118": "catalog category number 118",
+       "cat_119": "catalog category number 119"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "cat": {
+      "choice": "cat_042",
+      "prob_gte": {
+       "cat_042": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-13-think-samples-ambiguous",
+   "description": "Extension: think + samples on a hard root-level decision (infra vs security).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Our GitHub Actions deploy job printed the production AWS_SECRET_ACCESS_KEY in plain text in the build log, which is readable by all contractors. The job itself succeeded.",
+    "questions": {
+     "area": {
+      "type": "choice",
+      "instructions": "Which top-level area should own the fix?",
+      "criteria": {
+       "backend": "server-side code, APIs, business logic, database access",
+       "frontend": "browser UI, rendering, CSS, client-side JavaScript",
+       "mobile": "iOS or Android app code",
+       "data": "pipelines, ETL, analytics, warehouses, ML training",
+       "infra": "deployment, CI/CD, cloud resources, networking, containers",
+       "security": "vulnerabilities, authentication weaknesses, secrets exposure",
+       "other": "none of the above or not enough information"
+      }
+     }
+    },
+    "think": 256,
+    "samples": 2
+   },
+   "expect": {
+    "answers": {
+     "area": {
+      "choice_in": [
+       "security",
+       "infra"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-14-multiq-two-docs",
+   "description": "Multi-question request: two independent documents classified in one call with the same tree.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "DOC A: 'Petition for change of address. Old address: 12 Elm St. New address: 90 Oak Ave. Effective 1 March.'\nDOC B: 'Form 1098 Mortgage Interest Statement 2023. Lender: First Harbor Bank. Box 1 mortgage interest received from payer: 9,840.00.'",
+    "questions": {
+     "doc_a": {
+      "type": "choice",
+      "instructions": "Which form type is DOC A?",
+      "criteria": {
+       "8822": "change of address form",
+       "1098": "mortgage interest statement",
+       "W-2": "wage and tax statement",
+       "1040": "individual income tax return"
+      }
+     },
+     "doc_b": {
+      "type": "choice",
+      "instructions": "Which form type is DOC B?",
+      "criteria": {
+       "8822": "change of address form",
+       "1098": "mortgage interest statement",
+       "W-2": "wage and tax statement",
+       "1040": "individual income tax return"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "doc_a": {
+      "choice": "8822",
+      "prob_gte": {
+       "8822": 0.8
+      }
+     },
+     "doc_b": {
+      "choice": "1098",
+      "prob_gte": {
+       "1098": 0.8
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-15-patent-section",
+   "description": "Patent abstract to a CPC-like section (top level of a classification tree).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "A lithium-ion battery cell comprising a silicon-graphite composite anode, a nickel-rich cathode, and a solid polymer electrolyte layer, wherein the electrolyte suppresses dendrite growth and enables charging at 4C without capacity loss.",
+    "questions": {
+     "section": {
+      "type": "choice",
+      "instructions": "Which section of the patent classification does this abstract belong to?",
+      "criteria": {
+       "A": "human necessities: agriculture, food, medical",
+       "B": "performing operations, transporting",
+       "C": "chemistry and metallurgy",
+       "D": "textiles and paper",
+       "E": "fixed constructions, building",
+       "F": "mechanical engineering, lighting, heating, weapons",
+       "G": "physics, instruments, computing",
+       "H": "electricity: batteries, semiconductors, electric circuits"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "section": {
+      "choice": "H",
+      "prob_gte": {
+       "H": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-16-root-mobile",
+   "description": "Root level: an iOS crash report goes to mobile.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "App crashes on launch on iOS 17.2 with EXC_BAD_ACCESS in AppDelegate.application(_:didFinishLaunchingWithOptions:). Only affects TestFlight build 4.8.1 on iPhone 12. Android build is fine.",
+    "questions": {
+     "area": {
+      "type": "choice",
+      "instructions": "Which top-level area does this issue belong to?",
+      "criteria": {
+       "backend": "server-side code, APIs, business logic, database access",
+       "frontend": "browser UI, rendering, CSS, client-side JavaScript",
+       "mobile": "iOS or Android app code",
+       "data": "pipelines, ETL, analytics, warehouses, ML training",
+       "infra": "deployment, CI/CD, cloud resources, networking, containers",
+       "security": "vulnerabilities, authentication weaknesses, secrets exposure",
+       "other": "none of the above or not enough information"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "area": {
+      "choice": "mobile",
+      "prob_gte": {
+       "mobile": 0.7
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-17-second-level-infra-kubernetes",
+   "description": "Second level under infra: a failing readiness probe belongs to kubernetes, not ci_cd or networking.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "After deploying chart v2.3 the api pods stay in CrashLoopBackOff. kubectl describe shows: Readiness probe failed: HTTP probe failed with statuscode 503, and the Helm values set initialDelaySeconds: 2 while the app needs 30s to start.",
+    "questions": {
+     "sub": {
+      "type": "choice",
+      "instructions": "This is an infra issue. Which infra subcategory owns the fix? Choose other_infra if no listed child clearly fits.",
+      "criteria": {
+       "ci_cd": "build pipelines, GitHub Actions, release automation",
+       "kubernetes": "pods, Helm charts, probes, resource limits, cluster workloads",
+       "networking": "DNS, load balancers, firewalls, TLS certificates",
+       "cloud_resources": "cloud accounts, buckets, IAM roles, managed services",
+       "other_infra": "an infra problem that fits none of the listed children"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "sub": {
+      "choice": "kubernetes",
+      "prob_gte": {
+       "kubernetes": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "tax-18-known-limitation-worker-word",
+   "description": "KNOWN LIMITATION: a memory leak in an image-resize 'worker' is pulled to queue (P=1.0) despite other_backend being the right parent; the word worker dominates. Rich other_backend description gives only 0.52 vs queue 0.48, so it is not reliable.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "The image-resize worker in our Python service leaks native memory from Pillow; the container grows 2GB per day and gets OOMKilled every night.",
+    "questions": {
+     "sub": {
+      "type": "choice",
+      "instructions": "This is a backend issue. Which backend subcategory best describes it? Choose other_backend if no listed child clearly fits.",
+      "criteria": {
+       "api": "HTTP endpoints, request validation, serialization",
+       "database": "queries, migrations, schema, connection pools",
+       "auth": "login, sessions, tokens, permissions",
+       "queue": "background jobs, message brokers, workers",
+       "cache": "cache invalidation, Redis, memoization",
+       "other_backend": "a backend problem that fits none of the listed children"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "sub": {
+      "choice": "other_backend",
+      "prob_gte": {
+       "other_backend": 0.5
+      }
+     }
+    }
+   }
+  }
+ ]
+}

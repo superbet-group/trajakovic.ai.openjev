@@ -1,0 +1,645 @@
+{
+ "use_case": "10-nl-to-typed-call",
+ "cases": [
+  {
+   "id": "nl-01-finance-plot",
+   "description": "Canonical example: sentence to function name plus Literal window plus bool flag.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "User request: plot rolling correlation nvda spy 1 month",
+    "questions": {
+     "function": {
+      "type": "choice",
+      "instructions": "Which function should be called for the user request?",
+      "criteria": {
+       "plot_rolling_correlation": "chart the rolling correlation between two tickers",
+       "plot_price_history": "chart the price history of one ticker",
+       "run_backtest": "backtest a trading strategy",
+       "get_quote": "return the latest price of a ticker"
+      }
+     },
+     "window": {
+      "type": "choice",
+      "instructions": "Which value of the `window` parameter does the user request imply?",
+      "criteria": {
+       "1d": "one day",
+       "1w": "one week",
+       "1m": "one month",
+       "1y": "one year"
+      }
+     },
+     "log_scale": {
+      "type": "noul",
+      "instructions": "Did the user explicitly ask for a logarithmic axis?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "function": {
+      "choice": "plot_rolling_correlation",
+      "confidence_gte": 0.8
+     },
+     "window": {
+      "choice": "1m",
+      "confidence_gte": 0.8
+     },
+     "log_scale": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-02-smarthome-light",
+   "description": "Smart-home dispatch: function and room enum from a casual sentence.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Voice command: dim the lights in the kitchen, it's too bright in here",
+    "questions": {
+     "function": {
+      "type": "choice",
+      "instructions": "Which smart-home function does the command invoke?",
+      "criteria": {
+       "set_temperature": "change the thermostat target",
+       "set_light": "turn a light on, off or dim it",
+       "lock_door": "lock or unlock a door",
+       "play_media": "play music or video",
+       "no_match": "none of the other functions applies"
+      }
+     },
+     "room": {
+      "type": "choice",
+      "instructions": "Which room does the command target?",
+      "criteria": {
+       "living_room": "living room",
+       "kitchen": "kitchen",
+       "bedroom": "bedroom",
+       "garage": "garage"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "function": {
+      "choice": "set_light",
+      "confidence_gte": 0.8
+     },
+     "room": {
+      "choice": "kitchen",
+      "confidence_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-03-smarthome-lock",
+   "description": "Different function, room implied by a word (garage door).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Voice command: did I leave the garage door unlocked? lock it please",
+    "questions": {
+     "function": {
+      "type": "choice",
+      "instructions": "Which smart-home function does the command invoke?",
+      "criteria": {
+       "set_temperature": "change the thermostat target",
+       "set_light": "turn a light on, off or dim it",
+       "lock_door": "lock or unlock a door",
+       "play_media": "play music or video",
+       "no_match": "none of the other functions applies"
+      }
+     },
+     "room": {
+      "type": "choice",
+      "instructions": "Which room does the command target?",
+      "criteria": {
+       "living_room": "living room",
+       "kitchen": "kitchen",
+       "bedroom": "bedroom",
+       "garage": "garage"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "function": {
+      "choice": "lock_door",
+      "confidence_gte": 0.7
+     },
+     "room": {
+      "choice": "garage"
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-04-out-of-scope",
+   "description": "Error-prone case: request matches no function; the no_match option must win, so code can refuse instead of guessing.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Voice command: what's the weather going to be like in Zagreb tomorrow?",
+    "questions": {
+     "function": {
+      "type": "choice",
+      "instructions": "Which smart-home function does the command invoke? Pick no_match if none fits.",
+      "criteria": {
+       "set_temperature": "change the thermostat target",
+       "set_light": "turn a light on, off or dim it",
+       "lock_door": "lock or unlock a door",
+       "play_media": "play music or video",
+       "no_match": "none of the other functions applies"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "function": {
+      "choice": "no_match",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-05-cli-verb-env",
+   "description": "CLI front end: verb plus env enum from prose, with two bool flags (one true, one false).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "chat: hey can you roll back the payments service in staging to the last release, and wait until it's healthy before you come back to me",
+    "questions": {
+     "verb": {
+      "type": "choice",
+      "instructions": "Which CLI subcommand does the user want?",
+      "criteria": {
+       "restart": "restart running instances",
+       "scale": "change the replica count",
+       "rollback": "revert to the previous release",
+       "logs": "print logs",
+       "delete": "remove a resource"
+      }
+     },
+     "env": {
+      "type": "choice",
+      "instructions": "Which environment is targeted?",
+      "criteria": {
+       "dev": "development environment",
+       "staging": "staging environment",
+       "prod": "production environment"
+      }
+     },
+     "wait": {
+      "type": "noul",
+      "instructions": "Does the user ask the command to block until the rollout is healthy?"
+     },
+     "force": {
+      "type": "noul",
+      "instructions": "Does the user ask to bypass safety checks or force the operation?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "verb": {
+      "choice": "rollback",
+      "confidence_gte": 0.8
+     },
+     "env": {
+      "choice": "staging",
+      "confidence_gte": 0.8
+     },
+     "wait": {
+      "noul_gte": 0.8
+     },
+     "force": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-06-dry-run",
+   "description": "Safety flag: user says show first and do not actually change anything, so dry_run must be true.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "chat: clean up the merged feature branches on origin but just list what you would remove, don't touch anything yet",
+    "questions": {
+     "dry_run": {
+      "type": "noul",
+      "instructions": "Does the user want a preview only, with no changes made?"
+     },
+     "include_remote": {
+      "type": "noul",
+      "instructions": "Does the request cover branches on the remote, not just local ones?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dry_run": {
+      "noul_gte": 0.85
+     },
+     "include_remote": {
+      "noul_gte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-07-dry-run-negative",
+   "description": "Negative twin of nl-06: user explicitly wants it executed.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "chat: yes go ahead and actually delete the stale local branches now, I reviewed the list",
+    "questions": {
+     "dry_run": {
+      "type": "noul",
+      "instructions": "Does the user want a preview only, with no changes made?"
+     },
+     "include_remote": {
+      "type": "noul",
+      "instructions": "Does the request cover branches on the remote, not just local ones?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dry_run": {
+      "noul_lte": 0.15
+     },
+     "include_remote": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-08-ambiguous-recurring",
+   "description": "Hard but decidable: 'every Monday' implies scheduling, not a one-off send. Cadence enum resolved together.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "ticket comment: can someone email me the churn numbers for last quarter every Monday morning? thanks",
+    "questions": {
+     "function": {
+      "type": "choice",
+      "instructions": "Which function does the request need?",
+      "criteria": {
+       "send_report_now": "send a report immediately, once",
+       "schedule_report": "set up a recurring report on a schedule",
+       "cancel_schedule": "remove an existing recurring report"
+      }
+     },
+     "cadence": {
+      "type": "choice",
+      "instructions": "Which cadence value does the request imply?",
+      "criteria": {
+       "once": "a single time",
+       "daily": "every day",
+       "weekly": "every week",
+       "monthly": "every month"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "function": {
+      "choice": "schedule_report",
+      "confidence_gte": 0.6
+     },
+     "cadence": {
+      "choice": "weekly",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-09-format-flags",
+   "description": "Export command: format enum from prose and two bool flags with opposite truth values.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Slack: export last month's invoices as a spreadsheet please, include the archived ones too, no need to zip it",
+    "questions": {
+     "format": {
+      "type": "choice",
+      "instructions": "Which output format value does the user request?",
+      "criteria": {
+       "csv": "comma separated values, spreadsheet",
+       "json": "JSON",
+       "pdf": "PDF document"
+      }
+     },
+     "include_archived": {
+      "type": "noul",
+      "instructions": "Does the user ask to include archived records?"
+     },
+     "compress": {
+      "type": "noul",
+      "instructions": "Does the user ask for the output to be compressed or zipped?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "format": {
+      "choice": "csv",
+      "confidence_gte": 0.5
+     },
+     "include_archived": {
+      "noul_gte": 0.85
+     },
+     "compress": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-10-many-options",
+   "description": "Edge: 30 function names as options; choice must still find the exact one without inventing names.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Please put a hold on my corporate card, I think I lost it on the train.",
+    "questions": {
+     "function": {
+      "type": "choice",
+      "instructions": "Which function does the user request?",
+      "criteria": {
+       "create_invoice": "create invoice",
+       "void_invoice": "void invoice",
+       "refund_payment": "refund payment",
+       "list_customers": "list customers",
+       "merge_customers": "merge customers",
+       "export_ledger": "export ledger",
+       "reconcile_bank_feed": "reconcile bank feed",
+       "update_tax_rate": "update tax rate",
+       "archive_project": "archive project",
+       "restore_project": "restore project",
+       "create_user": "create user",
+       "deactivate_user": "deactivate user",
+       "reset_password": "reset password",
+       "rotate_api_key": "rotate api key",
+       "list_webhooks": "list webhooks",
+       "replay_webhook": "replay webhook",
+       "upload_receipt": "upload receipt",
+       "approve_expense": "approve expense",
+       "reject_expense": "reject expense",
+       "set_budget": "set budget",
+       "close_period": "close period",
+       "reopen_period": "reopen period",
+       "generate_payslip": "generate payslip",
+       "add_employee": "add employee",
+       "list_audit_log": "list audit log",
+       "download_statement": "download statement",
+       "freeze_card": "freeze card",
+       "unfreeze_card": "unfreeze card",
+       "change_plan": "change plan",
+       "cancel_subscription": "cancel subscription"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "function": {
+      "choice": "freeze_card",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-11-samples-consistency",
+   "description": "Extension: samples=4 averaging on a terse, ordinal-ish argument; result must still be the exact enum value.",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 4,
+    "state": "chat: show me the logs for the api pod but only the scary stuff, errors and worse",
+    "questions": {
+     "level": {
+      "type": "choice",
+      "instructions": "Which minimum log level should the command filter on?",
+      "criteria": {
+       "debug": "everything including debug",
+       "info": "info and above",
+       "warn": "warnings and above",
+       "error": "errors and above (error, fatal)"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "level": {
+      "choice": "error",
+      "confidence_gte": 0.5
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-12-sequential-dependent",
+   "description": "Extension: sequential=true so the later argument questions see the earlier function choice.",
+   "request": {
+    "model": "openjev-latest",
+    "sequential": true,
+    "state": "chat: scale the checkout service in prod up to handle the sale, then tell me when it's done",
+    "questions": {
+     "verb": {
+      "type": "choice",
+      "instructions": "Which CLI subcommand does the user want?",
+      "criteria": {
+       "restart": "restart running instances",
+       "scale": "change the replica count",
+       "rollback": "revert to the previous release",
+       "logs": "print logs",
+       "delete": "remove a resource"
+      }
+     },
+     "env": {
+      "type": "choice",
+      "instructions": "Which environment is targeted?",
+      "criteria": {
+       "dev": "development environment",
+       "staging": "staging environment",
+       "prod": "production environment"
+      }
+     },
+     "wait": {
+      "type": "noul",
+      "instructions": "Does the user ask to be told or blocked until it is finished?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "verb": {
+      "choice": "scale"
+     },
+     "env": {
+      "choice": "prod"
+     },
+     "wait": {
+      "noul_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-13-multilingual",
+   "description": "Edge: non-English (Croatian) command still maps to closed-set values.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Glasovna naredba: ugasi svjetlo u spava\u0107oj sobi",
+    "questions": {
+     "function": {
+      "type": "choice",
+      "instructions": "Which smart-home function does the command invoke?",
+      "criteria": {
+       "set_temperature": "change the thermostat target",
+       "set_light": "turn a light on, off or dim it",
+       "lock_door": "lock or unlock a door",
+       "play_media": "play music or video",
+       "no_match": "none of the other functions applies"
+      }
+     },
+     "room": {
+      "type": "choice",
+      "instructions": "Which room does the command target?",
+      "criteria": {
+       "living_room": "living room",
+       "kitchen": "kitchen",
+       "bedroom": "bedroom",
+       "garage": "garage"
+      }
+     },
+     "turn_on": {
+      "type": "noul",
+      "instructions": "Should the light end up switched on (not off)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "function": {
+      "choice": "set_light"
+     },
+     "room": {
+      "choice": "bedroom"
+     },
+     "turn_on": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-14-error-unknown-type",
+   "description": "Error case for the MCP layer: an invalid question type returns 400 api_usage_error, must not be treated as an answer.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "anything",
+    "questions": {
+     "q": {
+      "type": "enum",
+      "instructions": "pick"
+     }
+    }
+   },
+   "expect": {
+    "status": 400,
+    "body_contains": "api_usage_error"
+   }
+  },
+  {
+   "id": "nl-15-error-empty-options",
+   "description": "Error case: a choice built from an empty Literal (bad signature) gives 400; MCP must validate options before calling.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "anything",
+    "questions": {
+     "q": {
+      "type": "choice",
+      "instructions": "pick",
+      "criteria": {}
+     }
+    }
+   },
+   "expect": {
+    "status": 400,
+    "body_contains": "at least one choice"
+   }
+  },
+  {
+   "id": "nl-16-negated-flag-rephrased",
+   "description": "Hard: 'leave archived out' inside a compound sentence. The polarity-flipped noul 'exclude' and a 3-option choice both get it right; the plain 'include' noul did not (P=0.987 for the wrong side).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "chat: export invoices as csv, and don't bother zipping them, but do leave archived out",
+    "questions": {
+     "exclude_archived": {
+      "type": "noul",
+      "instructions": "Does the user ask to exclude archived records?"
+     },
+     "archived_policy": {
+      "type": "choice",
+      "instructions": "What should happen to archived records?",
+      "criteria": {
+       "include": "archived records are exported",
+       "exclude": "archived records are left out",
+       "unspecified": "not mentioned"
+      }
+     },
+     "compress": {
+      "type": "noul",
+      "instructions": "Does the user ask for the output to be compressed or zipped?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "exclude_archived": {
+      "noul_gte": 0.9
+     },
+     "archived_policy": {
+      "choice": "exclude"
+     },
+     "compress": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "nl-17-implicit-enum",
+   "description": "Implicit argument: 'for the dog walker' implies unlock, never stated as a verb.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Voice command: let the dog walker in through the front door",
+    "questions": {
+     "action": {
+      "type": "choice",
+      "instructions": "Which action value does the command imply?",
+      "criteria": {
+       "lock": "lock the door",
+       "unlock": "unlock the door",
+       "none": "no door action"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "action": {
+      "choice": "unlock",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  }
+ ]
+}

@@ -16,6 +16,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import secrets
 import time
 from contextlib import asynccontextmanager
@@ -125,6 +126,33 @@ def log_invalid(request, parts, status=422):
     log.warning("%s %s %s", status, getattr(request.state, "request_id", "-"), "; ".join(parts) or "invalid request")
 
 
+LOG_BODY_CHARS = int(os.environ.get("OPENJEV_LOG_BODY_CHARS", "20000"))
+
+
+def redact(value):
+    """A body for the debug log: image bytes become a size marker, everything else stays."""
+    if isinstance(value, str):
+        if value.startswith("data:image"):
+            return f"<{value.split(';', 1)[0]} base64, {len(value)} chars>"
+        return value
+    if isinstance(value, dict):
+        return {k: (f"<base64, {len(v)} chars>" if k == "base64" and isinstance(v, str) else redact(v))
+                for k, v in value.items()}
+    if isinstance(value, list):
+        return [redact(v) for v in value]
+    return value
+
+
+def body_for_log(raw):
+    """Raw request/response bytes as one log line: JSON re-encoded with images redacted,
+    anything else as text, capped at OPENJEV_LOG_BODY_CHARS."""
+    try:
+        text = json.dumps(redact(json.loads(raw)), ensure_ascii=False)
+    except ValueError:
+        text = raw.decode("utf-8", "replace")
+    return text if len(text) <= LOG_BODY_CHARS else f"{text[:LOG_BODY_CHARS]}... [{len(text) - LOG_BODY_CHARS} more chars]"
+
+
 TRIM_DEPTH, TRIM_ITEMS, TRIM_CHARS = 4, 20, 500
 
 
@@ -167,6 +195,7 @@ def create_app(settings=None, tokenizer=None):
 
     @asynccontextmanager
     async def lifespan(app):
+        log.info("starting: backend=%s model=%s routes=%s", settings.backend, model_version, sorted(settings.model_routes))
         app.state.routes = httpx.AsyncClient(timeout=httpx.Timeout(settings.forward_timeout, connect=5.0))
         if encoder:
             from .encoders import ENGINES
@@ -223,10 +252,22 @@ def create_app(settings=None, tokenizer=None):
                 return denied
         spent = [0]
         model_ns.set(spent)
+        debug = log.isEnabledFor(logging.DEBUG) and request.url.path.startswith("/v1/")
+        if debug and request.method == "POST":
+            log.debug("%s request  %s %s", rid, request.url.path, body_for_log(await request.body()))
         started = time.perf_counter_ns()
         response = await call_next(request)
         total_ms = (time.perf_counter_ns() - started) / 1e6
         model_ms = spent[0] / 1e6
+        if debug and response.headers.get("content-type", "").startswith("application/json"):
+            # a JSON answer is small and complete; a stream (chat SSE) is left alone
+            raw = b"".join([chunk async for chunk in response.body_iterator])
+            log.debug("%s response %s %s", rid, response.status_code, body_for_log(raw))
+            response = Response(raw, status_code=response.status_code, headers=dict(response.headers),
+                                media_type=response.media_type)
+        info = getattr(request.state, "log_info", "")
+        log.info("%s %s %s -> %s total=%.0fms model=%.0fms%s", rid, request.method, request.url.path,
+                 response.status_code, total_ms, model_ms, f" {info}" if info else "")
         response.headers["server-timing"] = (
             f"model;dur={model_ms:.1f}, server;dur={max(0.0, total_ms - model_ms):.1f}, total;dur={total_ms:.1f}")
         response.headers["x-typesafe-request-id"] = rid
@@ -254,6 +295,8 @@ def create_app(settings=None, tokenizer=None):
             return semantic_error(("body", "questions"),
                                   f"at most {settings.max_questions} questions per request", request)
         questions = {k: q.model_dump() for k, q in req.questions.items()}
+        request.state.log_info = (f"model={req.model} questions={len(questions)} images={len(req.images or [])} "
+                                  f"state_chars={len(json.dumps(req.state))}")
         options = {"steps": req.steps, "samples": req.samples, "think": req.think, "sequential": req.sequential}
         engine = request.app.state.engine
         try:
@@ -270,6 +313,7 @@ def create_app(settings=None, tokenizer=None):
             return error(529, "overloaded_error", str(e), {"retry-after": "1"})
         except httpx.HTTPError as e:
             return error(503, "api_error", f"inference backend unavailable: {type(e).__name__}", {"retry-after": "2"})
+        request.state.log_info += f" input_tokens={input_tokens} thought_tokens={thought_tokens}"
         # output_tokens stays 0 as in Jev's contract unless a thought was generated
         return {"model": model_version, "answers": answers,
                 "usage": {"input_tokens": input_tokens, "output_tokens": thought_tokens}}

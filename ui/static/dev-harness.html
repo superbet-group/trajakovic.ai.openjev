@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenJev UI · C dev harness</title>
+  <link rel="icon" href="/favicon.svg">
+  <!-- Builder C dev harness: mounts C's modules against B's real core with two swaps:
+       an in-memory store (never touches the real ojui IndexedDB) and a mocked OpenJev fetch. -->
+  <script type="importmap">
+    { "imports": { "/js/core/store.js": "/dev/store-mock.js" } }
+  </script>
+  <script>
+    (function () { var t = new URLSearchParams(location.search).get('theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); })();
+  </script>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/viz.css">
+  <style>
+    .dh-home { padding: 20px 24px 60px; max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+    .dh-sec { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+    .dh-sec > h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-faint); }
+    .dh-nav { display: flex; flex-direction: column; gap: 4px; padding: 14px; }
+    .dh-nav a, .dh-nav button { text-align: left; }
+    .dh-top { display: flex; align-items: center; gap: 10px; padding: 0 16px; min-height: 52px; }
+    .dh-pre { max-height: 180px; overflow: auto; font-size: 11px; margin: 0; background: var(--bg-sunken); padding: 8px; border-radius: 7px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <div id="app" class="app">
+    <aside id="sidebar" class="sidebar"></aside>
+    <main id="main" class="main">
+      <header id="topbar" class="topbar"></header>
+      <div id="banner" class="banner" hidden></div>
+      <section id="view" class="view"></section>
+    </main>
+    <aside id="drawer" class="drawer" hidden></aside>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <script type="module" src="/dev/harness.js"></script>
+</body>
+</html>
