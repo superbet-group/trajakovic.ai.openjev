@@ -488,7 +488,7 @@
    "description": "GitHub-token-shaped literal is flagged under the same placeholder-aware definition",
    "request": {
     "model": "openjev-latest",
-    "state": "+token = \"ghp_16C7e42F292c6912E7710c838347Ae178B4a\"\n",
+    "state": "+token = \"ghp_REDACTED_EXAMPLE_TOKEN\"\n",
     "questions": {
      "secret": {
       "type": "noul",

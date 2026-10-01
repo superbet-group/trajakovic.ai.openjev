@@ -171,7 +171,7 @@ REAL_DEF="Does the added code contain a real, working-looking credential written
 add("secrets-placeholder-not-flagged","Placeholder value must not be flagged (block-on-high-precision). Before: 'hardcoded credential such as an API key written as a string literal' scored 0.874 on YOUR_API_KEY_HERE; after: definition excludes placeholders",
  {"state":'+API_KEY = "YOUR_API_KEY_HERE"\n',"questions":{"secret":noul(REAL_DEF)}},{"secret":{"noul_lte":0.1}})
 add("secrets-real-token-flagged","GitHub-token-shaped literal is flagged under the same placeholder-aware definition",
- {"state":'+token = "ghp_16C7e42F292c6912E7710c838347Ae178B4a"\n',"questions":{"secret":noul(REAL_DEF),"placeholder":noul("Is the string assigned to token an obvious placeholder rather than a real secret?")}},
+ {"state":'+token = "ghp_REDACTED_EXAMPLE_TOKEN"\n',"questions":{"secret":noul(REAL_DEF),"placeholder":noul("Is the string assigned to token an obvious placeholder rather than a real secret?")}},
  {"secret":{"noul_gte":0.85},"placeholder":{"noul_lte":0.15}})
 add("swallow-flag-only","Swallow variant: exception only flips a boolean, no logging, no info kept; three literal claims",
  {"state":'''def sync_all(items):
