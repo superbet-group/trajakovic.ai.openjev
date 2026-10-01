@@ -6,7 +6,7 @@ import { registerView } from '/js/core/router.js';
 import { on } from '/js/core/bus.js';
 import { getConversation } from '/js/core/store.js';
 import { toast } from '/js/core/toast.js';
-import { mountTemplatesView, renderTemplateStrip as _strip, TEMPLATES, getTemplate as _getTemplate } from '/js/jev/templates.js';
+import { mountTemplatesView, renderTemplateStrip as _strip, TEMPLATES, getTemplate as _getTemplate, allTemplates as _allTemplates, openInBatch as _openInBatch } from '/js/jev/templates.js';
 import { mountBatchView } from '/js/jev/batch.js';
 import { mountStatsView, renderConversationStats as _convStats } from '/js/jev/stats.js';
 import { mountCompareView } from '/js/jev/compare.js';
@@ -15,7 +15,7 @@ import { registerJevSlashCommands } from '/js/jev/slashCommands.js';
 import { mountQuestionEditor as _mountQE } from '/js/jev/questionEditor.js';
 import { mountJsonEditor as _mountJE, loadJsonEditorLib } from '/js/jev/jsonedit.js';
 import { validateQuestions as _validate } from '/js/jev/validate.js';
-import { renderResult as _renderResult, renderTurnMeta as _renderTurnMeta } from '/js/jev/renderers.js';
+import { renderResult as _renderResult, renderTurnMeta as _renderTurnMeta, turnToMarkdown as _turnToMarkdown } from '/js/jev/renderers.js';
 import { buildSnippet as _buildSnippet } from '/js/jev/snippets.js';
 
 let inited = false;
@@ -50,9 +50,17 @@ export function renderConversationStats(conversation, ctx = {}) { return _convSt
 export function renderTemplateStrip(el, opts = {}) { return _strip(el, opts); }
 export function openInspector(args) { return _openInspector(args); }
 export function buildSnippet(kind, turn, config) { return _buildSnippet(kind, turn, config); }
+/** Hand a template-shaped job to #/batch (one-shot; see CONTRACT 3.10 for the handoff object). */
+export function openInBatch(t) { return _openInBatch(t); }
+/** A finished System One turn as Markdown (the v2 card's "Copy as text"): state, an answers
+ *  table and a model / token line. ctx.turnIndex numbers the heading. */
+export function turnToMarkdown(turn, ctx = {}) { return _turnToMarkdown(turn, ctx); }
 /** Template data (integrator addition): B's chat "Judge with System One" reads the 'rubric' questions. */
 export const templates = TEMPLATES;
+/** Built-in or user template by id (hidden built-ins included). */
 export function getTemplate(id) { return _getTemplate(id); }
+/** User templates (newest first), then the visible built-ins. */
+export function allTemplates(o) { return _allTemplates(o); }
 
 const TYPE_META = {
   noul: { label: 'yes / no', color: 'var(--type-noul)', description: 'A yes/no question. Answer: P(yes) in 0..1. Optional criteria {true, false} say what yes and no mean.' },

@@ -1,5 +1,5 @@
 // core/modal.js — modal dialogs in #modal-root, plus confirm/prompt helpers (builder B).
-// Modals stack; Esc and a backdrop click close the top one. Focus returns to the opener.
+// Modals stack; Esc and a backdrop click close the top one (unless beforeClose vetoes). Focus returns to the opener.
 
 import { h } from '/js/core/dom.js';
 import { icon } from '/js/core/icons.js';
@@ -8,19 +8,22 @@ const stack = [];
 
 window.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && stack.length) {
+    // Esc inside an open dropdown belongs to the dropdown (menuButton closes itself)
+    const wrap = ev.target?.closest?.('.qb-menu-wrap');
+    if (wrap && wrap.querySelector('.qb-menu:not([hidden])')) return;
     ev.preventDefault();
     ev.stopPropagation();
-    stack[stack.length - 1].close();
+    stack[stack.length - 1].tryClose();
   }
 }, true);
 
 export function isModalOpen() { return stack.length > 0; }
-export function closeTopModal() { stack[stack.length - 1]?.close(); }
+export function closeTopModal() { stack[stack.length - 1]?.tryClose(); }
 
-export function openModal({ title, body, actions = [], wide = false, onClose, className = '' } = {}) {
+export function openModal({ title, body, actions = [], wide = false, onClose, beforeClose, className = '' } = {}) {
   const root = document.getElementById('modal-root') || document.body;
   const opener = document.activeElement;
-  let closed = false;
+  let closed = false, asking = false;
   const handle = { close };
   const footer = actions.length ? h('div', { class: 'modal-foot' },
     actions.map((a) => h('button', {
@@ -33,19 +36,32 @@ export function openModal({ title, body, actions = [], wide = false, onClose, cl
   const dlg = h('div', { class: ['modal', wide && 'wide', className], role: 'dialog', 'aria-modal': 'true', 'aria-label': typeof title === 'string' ? title : 'Dialog' },
     h('div', { class: 'modal-head' },
       h('div', { class: 'modal-title' }, title || ''),
-      h('button', { class: 'icon-btn', title: 'Close (Esc)', 'aria-label': 'Close', onClick: () => close() }, icon('x'))),
+      h('button', { class: 'icon-btn', title: 'Close (Esc)', 'aria-label': 'Close', onClick: () => tryClose() }, icon('x'))),
     h('div', { class: 'modal-body' }, body || null),
     footer);
   const backdrop = h('div', { class: 'modal-backdrop' }, dlg);
-  backdrop.addEventListener('mousedown', (ev) => { if (ev.target === backdrop) close(); });
+  backdrop.addEventListener('mousedown', (ev) => { if (ev.target === backdrop) tryClose(); });
   root.appendChild(backdrop);
   requestAnimationFrame(() => backdrop.classList.add('show'));
-  const entry = { close };
+  const entry = { close, tryClose };
   stack.push(entry);
   setTimeout(() => {
     const f = dlg.querySelector('[autofocus], input:not([type=checkbox]):not([disabled]), textarea, select, .btn.primary');
     (f || dlg.querySelector('button'))?.focus();
   }, 30);
+
+  // Esc, backdrop and the X button ask beforeClose first; false keeps the modal open
+  async function tryClose() {
+    if (closed || asking) return;
+    if (beforeClose) {
+      asking = true;
+      let ok = true;
+      try { ok = (await beforeClose()) !== false; } catch (err) { console.warn('[modal] beforeClose failed', err); }
+      asking = false;
+      if (!ok) return;
+    }
+    close();
+  }
 
   function close() {
     if (closed) return;

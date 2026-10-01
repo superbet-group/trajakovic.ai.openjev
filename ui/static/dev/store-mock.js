@@ -8,7 +8,7 @@ const P = 'ojui.dev.';
 export const DEFAULT_SETTINGS = Object.freeze({
   theme: 'dark', defaultModel: 'openjev-latest', defaultOptions: { steps: null, samples: null, think: null, sequential: false },
   chatModel: 'diffusiongemma-26b', chatMaxTokens: 1024, chatSystemPrompt: '', pricePerMInput: 0.2, pricePerMOutput: 0.8, currency: '$',
-  authOverride: '', clearStateOnSend: false, jsonEditorMode: 'tree', questionEditorTab: 'builder', showRawByDefault: false, autoRetryOverloaded: true,
+  authOverride: '', clearStateOnSend: false, clearStateOn: 'answer', threadLayout: 'v2', jsonEditorMode: 'tree', questionEditorTab: 'builder', showRawByDefault: false, autoRetryOverloaded: true,
 });
 const ls = {
   get(k, d) { try { const r = localStorage.getItem(P + k); return r === null ? d : JSON.parse(r); } catch { return d; } },
@@ -87,6 +87,36 @@ export function addToTotals(r) {
   totals.imageCount += r.imageCount || 0; totals.estImageTokens += r.estImageTokens || 0; totals.questions += r.questionCount || 0;
 }
 export function resetTotals() { totals = emptyTotals(); }
+
+// user templates: same six exports and event as store.js, under the ojui.dev. prefix
+let tpl = null;
+function tplData() { if (!tpl) { const r = ls.get('templates', null); tpl = { v: 1, items: Array.isArray(r?.items) ? r.items : [], hidden: Array.isArray(r?.hidden) ? r.hidden : [] }; } return tpl; }
+function tplCommit(next, op, tid) { tpl = next; ls.set('templates', next); emit('oj:templates-changed', { op, id: tid }); return true; }
+export function listUserTemplates() { return tplData().items.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(clone); }
+export function getUserTemplate(tid) { const t = tplData().items.find((x) => x.id === tid); return t ? clone(t) : null; }
+export function saveUserTemplate(t) {
+  const title = String(t?.title ?? '').trim().slice(0, 80);
+  if (!title) throw new Error('Template title is required');
+  if (!t.questions || typeof t.questions !== 'object' || !Object.keys(t.questions).length) throw new Error('Template needs at least one question');
+  const data = tplData();
+  const prev = t.id ? data.items.find((x) => x.id === t.id) : null;
+  if (!prev && data.items.length >= 200) throw new Error('At most 200 templates: delete one first');
+  const now = Date.now();
+  const opts = Object.fromEntries(Object.entries(t.options || {}).filter(([k, v]) => k !== 'model' && v !== null && v !== undefined && v !== false));
+  const saved = clone({ ...t, id: prev ? prev.id : (t.id || id('tpl')), title, category: String(t.category ?? '').trim().toLowerCase() || 'mine',
+    description: String(t.description ?? ''), stateIsJson: !!t.stateIsJson, state: t.stateIsJson ? t.state : String(t.state ?? ''),
+    batchStates: (t.batchStates || []).slice(0, 1000).map(String), builtin: false, createdAt: prev?.createdAt || now, updatedAt: now });
+  if (Object.keys(opts).length) saved.options = opts; else delete saved.options;
+  tplCommit({ ...data, items: prev ? data.items.map((x) => (x.id === prev.id ? saved : x)) : [...data.items, saved] }, 'put', saved.id);
+  return clone(saved);
+}
+export function deleteUserTemplate(tid) { const data = tplData(); if (!data.items.some((x) => x.id === tid)) return false; return tplCommit({ ...data, items: data.items.filter((x) => x.id !== tid) }, 'delete', tid); }
+export function getHiddenTemplateIds() { return tplData().hidden.slice(); }
+export function setTemplateHidden(tid, hidden) {
+  const data = tplData();
+  if (!!hidden === data.hidden.includes(tid)) return true;
+  return tplCommit({ ...data, hidden: hidden ? [...data.hidden, tid] : data.hidden.filter((x) => x !== tid) }, 'hide', tid);
+}
 
 // harness helper: seed a conversation directly
 export function __putConversation(c) { convs.set(c.id, clone(c)); lastConv = c.id; }

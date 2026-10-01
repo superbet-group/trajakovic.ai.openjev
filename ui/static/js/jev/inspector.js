@@ -224,7 +224,8 @@ async function reproTab(host, turn, conversation) {
   const box = el('div', {}, el('div', { class: 'skeleton insp-skel' }));
   host.append(box);
   let recs = [];
-  try { recs = (await listRequests({ since: 0, limit: 5000 })).filter((r) => r.bodyHash === turn.bodyHash); } catch (e) { box.textContent = `Could not read the request log: ${e.message || e}`; return; }
+  try { recs = (await listRequests({ since: 0, limit: 5000 })).filter((r) => r.bodyHash === turn.bodyHash); } catch (e) { if (!box.isConnected) return; box.textContent = `Could not read the request log: ${e.message || e}`; return; }
+  if (!box.isConnected) return;  // the inspector was re-mounted or closed while the log loaded
   box.textContent = '';
   let mine = null;
   try { if (turn.response?.answers) mine = summarizeAnswers(turn.response.answers, turn.request?.questions || {}); } catch { mine = null; }
@@ -250,33 +251,35 @@ async function reproTab(host, turn, conversation) {
     }))));
 }
 
+/** Mount the inspector tabs for a turn into root (the drawer, or the batch state detail).
+ *  tab picks the first tab (default: the last one used); onTab(name) reports tab clicks. → cleanup (destroys the JSON editors). */
+export function mountInspector(root, { turn, conversation = null, tab, onTab } = {}) {
+  const cleanups = [];
+  const tabs = el('div', { class: 'tabs insp-tabs' });
+  const body = el('div', { class: 'insp-body' });
+  root.append(el('div', { class: 'insp' }, tabs, body));
+  const show = (name) => {
+    lastTab = name;
+    try { onTab?.(name); } catch { /* ignore */ }
+    while (cleanups.length) { try { cleanups.pop()(); } catch { /* ignore */ } }
+    body.textContent = '';
+    tabs.textContent = '';
+    for (const t of TABS) tabs.appendChild(el('button', { class: ['tab', t === name && 'active'], type: 'button', onclick: () => show(t) }, t));
+    if (name === 'Request') requestTab(body, turn, cleanups);
+    else if (name === 'Response') responseTab(body, turn, cleanups);
+    else if (name === 'Timing') timingTab(body, turn);
+    else if (name === 'Snippets') snippetsTab(body, turn);
+    else if (name === 'Canvas') canvasTab(body, turn);
+    else if (name === 'Repro') reproTab(body, turn, conversation);
+  };
+  show(tab && TABS.includes(tab) ? tab : (TABS.includes(lastTab) ? lastTab : 'Request'));
+  return () => { while (cleanups.length) { try { cleanups.pop()(); } catch { /* ignore */ } } };
+}
+
 /** Open the inspector drawer for a turn. */
 export function openInspector({ conversation = null, turn } = {}) {
   if (!turn) return;
   const idx = conversation?.turns ? conversation.turns.findIndex((t) => t.id === turn.id) : -1;
   const title = `Inspect ${idx >= 0 ? `#${idx + 1} · ` : ''}${turn.kind === 'chat' ? 'chat' : 'systemone'} · ${turn.status}`;
-  openDrawer({
-    title,
-    render(root) {
-      const cleanups = [];
-      const tabs = el('div', { class: 'tabs insp-tabs' });
-      const body = el('div', { class: 'insp-body' });
-      root.append(el('div', { class: 'insp' }, tabs, body));
-      const show = (name) => {
-        lastTab = name;
-        while (cleanups.length) { try { cleanups.pop()(); } catch { /* ignore */ } }
-        body.textContent = '';
-        tabs.textContent = '';
-        for (const t of TABS) tabs.appendChild(el('button', { class: ['tab', t === name && 'active'], type: 'button', onclick: () => show(t) }, t));
-        if (name === 'Request') requestTab(body, turn, cleanups);
-        else if (name === 'Response') responseTab(body, turn, cleanups);
-        else if (name === 'Timing') timingTab(body, turn);
-        else if (name === 'Snippets') snippetsTab(body, turn);
-        else if (name === 'Canvas') canvasTab(body, turn);
-        else if (name === 'Repro') reproTab(body, turn, conversation);
-      };
-      show(TABS.includes(lastTab) ? lastTab : 'Request');
-      return () => { while (cleanups.length) { try { cleanups.pop()(); } catch { /* ignore */ } } };
-    },
-  });
+  openDrawer({ title, render: (root) => mountInspector(root, { turn, conversation }) });
 }

@@ -5,7 +5,7 @@
 import { h, clear, debounce } from '/js/core/dom.js';
 import { emit, on } from '/js/core/bus.js';
 import { toast } from '/js/core/toast.js';
-import { registerView, hasView, setViewFailure } from '/js/core/router.js';
+import { registerView, hasView, setViewFailure, navigate } from '/js/core/router.js';
 import { openDrawer } from '/js/core/drawer.js';
 import { getConversation } from '/js/core/store.js';
 import { fmtInt, fmtMs, shortId } from '/js/core/format.js';
@@ -265,6 +265,8 @@ export const J = {
   renderTemplateStrip: call('renderTemplateStrip', () => null),
   openInspector: call('openInspector', fallbackInspector),
   buildSnippet: call('buildSnippet', fallbackSnippet),
+  openInBatch: call('openInBatch', () => navigate('#/batch')),
+  turnToMarkdown: call('turnToMarkdown', (t) => JSON.stringify({ state: t?.request?.state, answers: t?.response?.answers }, null, 2)),
   get questionTypes() {
     return mod?.questionTypes || [
       { type: 'noul', label: 'noul', color: 'var(--type-noul)', description: 'yes / no → P(yes)' },

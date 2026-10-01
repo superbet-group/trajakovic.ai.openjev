@@ -1,6 +1,6 @@
-// core/store.js — persistence (builder B): settings + totals in localStorage (sync), and
-// conversations + the request log in IndexedDB `ojui` v1, mirrored in memory so reads
-// are cheap and read-modify-write never races. Falls back to memory + localStorage.
+// core/store.js — persistence (builder B): settings, totals and user templates in localStorage
+// (sync), and conversations + the request log in IndexedDB `ojui` v1, mirrored in memory so
+// reads are cheap and read-modify-write never races. Falls back to memory + localStorage.
 
 import { emit } from '/js/core/bus.js';
 import { uid } from '/js/core/format.js';
@@ -10,7 +10,9 @@ const TOTALS_KEY = 'ojui.totals.v1';
 const LAST_CONV_KEY = 'ojui.lastConv';
 const LAYOUT_KEY = 'ojui.layout.v1';
 const FALLBACK_KEY = 'ojui.fallback.conversations.v1';
+const TEMPLATES_KEY = 'ojui.templates.v1';
 const MAX_REQUESTS = 5000;
+const MAX_USER_TEMPLATES = 200;
 
 export const DEFAULT_SETTINGS = Object.freeze({
   theme: 'system',
@@ -23,7 +25,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   pricePerMOutput: 0,
   currency: '$',
   authOverride: '',
-  clearStateOnSend: false,
+  clearStateOnSend: false,   // deprecated: migrated to clearStateOn by mergeSettings
+  clearStateOn: 'answer',    // 'answer' | 'send' | 'never'
+  threadLayout: 'v2',        // 'v2' | 'classic'
   jsonEditorMode: 'tree',
   questionEditorTab: 'builder',
   showRawByDefault: false,
@@ -45,8 +49,11 @@ function lsSet(key, value) {
 let settingsCache = null;
 
 function mergeSettings(raw) {
-  const s = { ...DEFAULT_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
-  s.defaultOptions = { ...DEFAULT_SETTINGS.defaultOptions, ...((raw && raw.defaultOptions) || {}) };
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const s = { ...DEFAULT_SETTINGS, ...r };
+  s.defaultOptions = { ...DEFAULT_SETTINGS.defaultOptions, ...(r.defaultOptions || {}) };
+  // a new key, so a saved clearStateOnSend:false does not pin the old behaviour; true carries over
+  if (r.clearStateOn === undefined && r.clearStateOnSend === true) s.clearStateOn = 'send';
   return s;
 }
 
@@ -232,6 +239,11 @@ export async function initStore() {
     for (const conv of lsGet(FALLBACK_KEY, []) || []) if (conv && conv.id) convs.set(conv.id, normalizeConversation(conv));
   }
   try { window.addEventListener('pagehide', flushPendingWrites); } catch { /* ignore */ }
+  try {
+    window.addEventListener('storage', (e) => {
+      if (e.key === TEMPLATES_KEY) { tplCache = null; emit('oj:templates-changed', { op: 'sync' }); }
+    });
+  } catch { /* ignore */ }
   return { fallback: usingFallback };
 }
 
@@ -411,7 +423,9 @@ export { stripImagesDeep };
 
 export async function exportConversations(ids) {
   const list = ids === 'all' || !ids ? [...convs.values()] : ids.map((id) => convs.get(id)).filter(Boolean);
-  return { format: 'ojui-export', version: 1, exportedAt: Date.now(), app: 'openjev-ui', conversations: list.map(clone) };
+  const out = { format: 'ojui-export', version: 1, exportedAt: Date.now(), app: 'openjev-ui', conversations: list.map(clone) };
+  if (ids === 'all') out.templates = listUserTemplates();
+  return out;
 }
 
 export async function importConversations(file) {
@@ -435,7 +449,100 @@ export async function importConversations(file) {
     imported++;
   }
   if (imported) emit('oj:conversations-changed', {});
+  // user templates ride along in a full export; ids already here are kept as they are
+  if (file && Array.isArray(file.templates)) {
+    for (const t of file.templates) {
+      if (!t || typeof t !== 'object' || (t.id && getUserTemplate(t.id))) continue;
+      try { saveUserTemplate(t); } catch (err) { console.warn('[store] template import skipped', err); }
+    }
+  }
   return { imported, skipped };
+}
+
+// ---------------------------------------------------------------- user templates
+// localStorage, not IndexedDB: templates carry no image data, and bumping the IDB version
+// would block (and push into fallback) any second tab still open on v1.
+let tplCache = null;  // {v: 1, items: UserTemplate[], hidden: string[]} (hidden = built-in ids)
+
+function tplData() {
+  if (!tplCache) {
+    const raw = lsGet(TEMPLATES_KEY, null);
+    tplCache = {
+      v: 1,
+      items: Array.isArray(raw?.items) ? raw.items.filter((t) => t && typeof t === 'object' && t.id) : [],
+      hidden: Array.isArray(raw?.hidden) ? raw.hidden.filter((x) => typeof x === 'string') : [],
+    };
+  }
+  return tplCache;
+}
+
+// write first, then swap the cache, so a failed write never leaves memory ahead of storage
+function tplCommit(next, op, id) {
+  if (!lsSet(TEMPLATES_KEY, next)) return false;
+  tplCache = next;
+  emit('oj:templates-changed', { op, id });
+  return true;
+}
+
+export function listUserTemplates() {
+  try { return tplData().items.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(clone); } catch { return []; }
+}
+
+export function getUserTemplate(id) {
+  try { const t = tplData().items.find((x) => x.id === id); return t ? clone(t) : null; } catch { return null; }
+}
+
+export function saveUserTemplate(t) {
+  const title = String(t?.title ?? '').trim().slice(0, 80);
+  if (!title) throw new Error('Template title is required');
+  if (!t.questions || typeof t.questions !== 'object' || Array.isArray(t.questions) || !Object.keys(t.questions).length) {
+    throw new Error('Template needs at least one question');
+  }
+  const data = tplData();
+  const prev = t.id ? data.items.find((x) => x.id === t.id) : null;
+  if (!prev && data.items.length >= MAX_USER_TEMPLATES) throw new Error(`At most ${MAX_USER_TEMPLATES} templates: delete one first`);
+  const now = Date.now();
+  const opts = {};
+  for (const k of ['steps', 'samples', 'think', 'sequential']) if (t.options?.[k] !== null && t.options?.[k] !== undefined && t.options?.[k] !== false) opts[k] = t.options[k];
+  const saved = clone({
+    ...t,
+    id: prev ? prev.id : (t.id || uid('tpl')),
+    title,
+    category: String(t.category ?? '').trim().toLowerCase() || 'mine',
+    description: String(t.description ?? ''),
+    stateIsJson: !!t.stateIsJson,
+    state: t.stateIsJson ? t.state : String(t.state ?? ''),
+    batchStates: (Array.isArray(t.batchStates) ? t.batchStates : []).slice(0, 1000).map(String),
+    builtin: false,
+    createdAt: prev?.createdAt || t.createdAt || now,
+    updatedAt: now,
+  });
+  if (Object.keys(opts).length) saved.options = opts; else delete saved.options;
+  if (!['lines', 'blocks', 'jsonl'].includes(saved.batchFormat)) delete saved.batchFormat;
+  const items = prev ? data.items.map((x) => (x.id === prev.id ? saved : x)) : [...data.items, saved];
+  if (!tplCommit({ ...data, items }, 'put', saved.id)) throw new Error('Storage full: template not saved');
+  return clone(saved);
+}
+
+export function deleteUserTemplate(id) {
+  try {
+    const data = tplData();
+    if (!data.items.some((x) => x.id === id)) return false;
+    return tplCommit({ ...data, items: data.items.filter((x) => x.id !== id) }, 'delete', id);
+  } catch { return false; }
+}
+
+export function getHiddenTemplateIds() {
+  try { return tplData().hidden.slice(); } catch { return []; }
+}
+
+export function setTemplateHidden(id, hidden) {
+  try {
+    const data = tplData();
+    const has = data.hidden.includes(id);
+    if (!!hidden === has) return true;
+    return tplCommit({ ...data, hidden: hidden ? [...data.hidden, id] : data.hidden.filter((x) => x !== id) }, 'hide', id);
+  } catch { return false; }
 }
 
 // ---------------------------------------------------------------- request log

@@ -7,8 +7,10 @@ Run with `mise run ui` (see ui/README.md and ui/CONTRACT.md section 2).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import mimetypes
 import os
+import signal
 import socket
 import sys
 import threading
@@ -24,6 +26,7 @@ from fastapi.responses import JSONResponse
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
+from uvicorn.server import HANDLED_SIGNALS
 
 UI_VERSION = "0.1.0"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -364,6 +367,58 @@ def _banner(ui_url: str, openjev_url: str, api_key: str, origin_secret: str, ok:
     return "\n".join(lines)
 
 
+class _Server(uvicorn.Server):
+    """uvicorn.Server that shuts down quietly on Ctrl+C / SIGTERM.
+
+    A terminal Ctrl+C reaches this process twice (process group + mise forwarding). Stock uvicorn
+    takes the second one as "force quit", which skips the lifespan shutdown, then re-raises the
+    captured signals, which raises KeyboardInterrupt inside the loop and cancels the parked
+    lifespan task (logged as an ERROR traceback). Here a repeat within 1 s is the same press,
+    signals are never re-raised (so SIGTERM exits 0, not 143), and the lifespan always shuts down.
+    """
+    SAME_PRESS_S = 1.0
+
+    def __init__(self, config: uvicorn.Config):
+        super().__init__(config)
+        self._first_signal_at = 0.0
+
+    def handle_exit(self, sig, frame) -> None:
+        now = time.monotonic()
+        if not self.should_exit:
+            self._first_signal_at = now
+            self.should_exit = True
+        elif sig == signal.SIGINT and now - self._first_signal_at >= self.SAME_PRESS_S:
+            self.force_exit = True  # a real second Ctrl+C: stop waiting for open connections
+
+    @contextlib.contextmanager
+    def capture_signals(self):
+        if threading.current_thread() is not threading.main_thread():
+            yield
+            return
+        original = {sig: signal.signal(sig, self.handle_exit) for sig in HANDLED_SIGNALS}
+        try:
+            yield
+        finally:
+            for sig, handler in original.items():
+                signal.signal(sig, handler)
+        # unlike uvicorn, no signal.raise_signal() here: main() returns normally
+
+    async def _wait_tasks_to_complete(self) -> None:
+        # log_level is "warning", so uvicorn's own "waiting for connections" notice is invisible;
+        # say why shutdown is pending (not from handle_exit: stderr writes in a handler can re-enter)
+        n = len(self.server_state.connections)
+        if n and not self.force_exit:
+            print(f"ojui: waiting for {n} open request(s) to finish; press Ctrl+C again to force quit",
+                  file=sys.stderr, flush=True)
+        await super()._wait_tasks_to_complete()
+
+    async def shutdown(self, sockets=None) -> None:
+        await super().shutdown(sockets)
+        done = getattr(getattr(self, "lifespan", None), "shutdown_event", None)
+        if self.force_exit and done is not None and not done.is_set():
+            await self.lifespan.shutdown()  # uvicorn skips it on force_exit; run it so httpx closes
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description="OpenJev UI: static SPA + proxy to OpenJev")
     ap.add_argument("--host", default=os.environ.get("UI_HOST", "127.0.0.1"))
@@ -389,12 +444,22 @@ def main(argv: list[str] | None = None) -> None:
     # Loopback bind: only loopback Host headers (blocks DNS rebinding). Other binds: the user opted in.
     allowed = LOOPBACK_HOSTS if args.host.lower() in LOOPBACK_HOSTS else None
     app = create_app(openjev_url, api_key=api_key, origin_secret=origin_secret, allowed_hosts=allowed)
+    srv = _Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning"))
     if args.open:
-        threading.Timer(1.0, webbrowser.open, args=(ui_url,)).start()
+        def _open_when_up() -> None:  # fire and forget: wait until the socket is bound, then open the tab
+            for _ in range(100):
+                if srv.started:
+                    webbrowser.open(ui_url)
+                    return
+                time.sleep(0.1)
+        threading.Thread(target=_open_when_up, daemon=True).start()
     try:
-        uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
-    except KeyboardInterrupt:
+        srv.run()
+    except KeyboardInterrupt:  # safety net: a signal landing after the handlers were restored
         pass
+    if not srv.started:
+        sys.exit(3)  # uvicorn's STARTUP_FAILURE (e.g. the bind failed); it already logged why
+    print("\nojui: stopped", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -1,13 +1,17 @@
-// Templates (builder C): 13 realistic OpenJev request templates with batch states, the
-// generated 'demo-shapes' image, the #/templates gallery view and the welcome-screen strip.
+// Templates (builder C): 13 read-only built-in OpenJev request templates with batch states,
+// the user's own templates (store.js, localStorage), the generated 'demo-shapes' image, the
+// #/templates gallery (create / edit / duplicate / delete / hide) and the welcome-screen strip.
 // Loading a template goes through the oj:composer-load event, never through B's app code.
 
 import { el, trunc, hashParts } from '/js/jev/util.js';
 import { typeCounts } from '/js/jev/validate.js';
-import { emit } from '/js/core/bus.js';
+import { emit, on } from '/js/core/bus.js';
 import { icon } from '/js/core/icons.js';
 import { navigate } from '/js/core/router.js';
 import { uid } from '/js/core/format.js';
+import { listUserTemplates, getUserTemplate, deleteUserTemplate, getHiddenTemplateIds, setTemplateHidden } from '/js/core/store.js';
+import { confirmDialog } from '/js/core/modal.js';
+import { toast } from '/js/core/toast.js';
 
 const LANGS = {
   english: 'English', spanish: 'Spanish', french: 'French', german: 'German', italian: 'Italian', portuguese: 'Portuguese',
@@ -316,7 +320,26 @@ export const TEMPLATES = [
   },
 ];
 
-export const CATEGORIES = [...new Set(TEMPLATES.map((t) => t.category))];
+// ---------------------------------------------------------------- built-ins + user templates
+
+const safe = (f, d) => { try { return f(); } catch { return d; } };
+const asBuiltin = (t) => ({ ...t, builtin: true });
+
+/** User templates first (newest first), then built-ins; hidden built-ins only with includeHidden. */
+export function allTemplates({ includeHidden = false } = {}) {
+  const hidden = includeHidden ? [] : safe(getHiddenTemplateIds, []);
+  return [...safe(listUserTemplates, []), ...TEMPLATES.filter((t) => !hidden.includes(t.id)).map(asBuiltin)];
+}
+
+/** Unique categories of the visible templates, 'mine' first when present. */
+export function categories() {
+  const cats = [...new Set(allTemplates().map((t) => t.category).filter(Boolean))];
+  return cats.includes('mine') ? ['mine', ...cats.filter((c) => c !== 'mine')] : cats;
+}
+
+export function isUserTemplate(t) { return t?.builtin === false; }
+
+const openEditor = async (o) => { const { openTemplateEditor } = await import('/js/jev/templateEditor.js'); return openTemplateEditor(o); };
 
 // ---------------------------------------------------------------- demo image
 
@@ -341,13 +364,18 @@ export async function demoShapesImage() {
 
 // ---------------------------------------------------------------- loading
 
-export function getTemplate(id) { return TEMPLATES.find((t) => t.id === id) || null; }
+/** Built-ins first (hidden ones too: batch boot needs 'sentiment', the chat Judge 'rubric'), then user templates. */
+export function getTemplate(id) {
+  const b = TEMPLATES.find((t) => t.id === id);
+  return b ? asBuiltin(b) : safe(() => getUserTemplate(id), null);
+}
 
 /** Fuzzy lookup: exact id, id prefix, id/title substring, then subsequence. */
 export function findTemplate(query) {
   const q = String(query || '').trim().toLowerCase();
   if (!q) return null;
-  const by = (f) => TEMPLATES.find(f);
+  const all = allTemplates({ includeHidden: true });
+  const by = (f) => all.find(f);
   return by((t) => t.id === q) || by((t) => t.id.startsWith(q)) || by((t) => t.id.includes(q) || t.title.toLowerCase().includes(q))
     || by((t) => { let i = 0; for (const ch of t.id) if (ch === q[i]) i++; return i === q.length; }) || null;
 }
@@ -408,53 +436,98 @@ function stateSnippet(t, n = 140) {
   return trunc(t.stateIsJson ? JSON.stringify(t.state) : t.state, n);
 }
 
-function card(t) {
+function cardTools(t, { hiddenView = false } = {}) {
+  const btn = (name, label, onclick, cls) => el('button', { class: ['icon-btn sm', cls], type: 'button', title: label, 'aria-label': label, onclick }, icon(name, 14));
+  if (isUserTemplate(t)) {
+    return [
+      btn('edit', 'Edit template', () => openEditor({ mode: 'edit', template: t })),
+      btn('duplicate', 'Duplicate template', () => openEditor({ mode: 'duplicate', template: t })),
+      btn('trash', 'Delete template', async () => {
+        if (!(await confirmDialog(`Delete template "${t.title}"?`, { danger: true }))) return;
+        if (deleteUserTemplate(t.id)) toast(`Deleted template "${t.title}"`, { kind: 'ok' });
+        else toast('Could not delete the template', { kind: 'err' });
+      }, 'tpl-del'),
+    ];
+  }
+  return [
+    btn('duplicate', 'Duplicate into an editable copy', () => openEditor({ mode: 'duplicate', template: t })),
+    hiddenView
+      ? btn('eye', 'Unhide', () => { setTemplateHidden(t.id, false); toast(`Restored "${t.title}"`, { kind: 'ok' }); })
+      : btn('eye-off', 'Hide', async () => {
+        if (!(await confirmDialog(`Hide built-in "${t.title}"? Restore it from the hidden filter.`, { okLabel: 'Hide' }))) return;
+        setTemplateHidden(t.id, true);
+      }),
+  ];
+}
+
+function card(t, opts = {}) {
   const nQ = Object.keys(t.questions).length;
-  return el('article', { class: 'card tpl-card', dataset: { id: t.id } },
+  const mine = isUserTemplate(t);
+  return el('article', { class: ['card tpl-card', mine && 'tpl-card-user'], dataset: { id: t.id } },
     el('header', { class: 'tpl-head' },
       el('h3', { class: 'tpl-title' }, t.title),
-      el('span', { class: 'chip tpl-cat' }, t.category)),
-    el('p', { class: 'muted tpl-desc' }, t.description),
+      mine ? el('span', { class: 'chip tpl-mine' }, 'mine') : null,
+      mine && t.category === 'mine' ? null : el('span', { class: 'chip tpl-cat' }, t.category)),
+    t.description ? el('p', { class: 'muted tpl-desc' }, t.description) : null,
     el('pre', { class: 'mono tpl-state' }, stateSnippet(t)),
     el('div', { class: 'row tpl-meta' }, typeChips(t.questions), el('span', { class: 'faint mono' }, `${nQ} q · ${t.batchStates?.length || 0} batch`), optionBadges(t)),
     el('footer', { class: 'row tpl-actions' },
       el('button', { class: 'btn sm', type: 'button', onclick: () => loadTemplate(t, { where: 'here' }) }, 'Use here'),
       el('button', { class: 'btn sm primary', type: 'button', onclick: () => loadTemplate(t, { where: 'new' }) }, icon('plus', 14), ' New conversation'),
-      el('button', { class: 'btn sm ghost', type: 'button', onclick: () => openInBatch(t) }, icon('batch', 14), ' Open in Batch')));
+      el('button', { class: 'btn sm ghost', type: 'button', onclick: () => openInBatch(t) }, icon('batch', 14), ' Open in Batch'),
+      el('span', { class: 'spacer' }),
+      cardTools(t, opts)));
 }
 
 /** #/templates view. */
 export function mountTemplatesView(root) {
-  let query = '', cat = '';
+  let query = '', cat = '', showHidden = false;
   const grid = el('div', { class: 'tpl-grid' });
   const count = el('span', { class: 'faint mono' });
   const search = el('input', { class: 'input tpl-search', type: 'search', placeholder: 'Search templates…', 'aria-label': 'search templates', oninput: (e) => { query = e.target.value.toLowerCase(); draw(); } });
+  const newBtn = el('button', { class: 'btn sm primary', type: 'button', onclick: () => openEditor({ mode: 'create' }) }, icon('plus', 14), ' New template');
   const chips = el('div', { class: 'row tpl-cats' });
+  const hiddenList = () => { const ids = safe(getHiddenTemplateIds, []); return TEMPLATES.filter((t) => ids.includes(t.id)).map(asBuiltin); };
   const drawChips = () => {
     chips.textContent = '';
-    chips.appendChild(el('button', { class: ['chip', !cat && 'active'], type: 'button', onclick: () => { cat = ''; drawChips(); draw(); } }, 'all'));
-    for (const c of CATEGORIES) chips.appendChild(el('button', { class: ['chip', cat === c && 'active'], type: 'button', onclick: () => { cat = cat === c ? '' : c; drawChips(); draw(); } }, c));
+    const cats = categories();
+    if (cat && !cats.includes(cat)) cat = '';
+    const nHidden = hiddenList().length;
+    if (!nHidden) showHidden = false;
+    chips.appendChild(el('button', { class: ['chip', !cat && !showHidden && 'active'], type: 'button', onclick: () => { cat = ''; showHidden = false; drawChips(); draw(); } }, 'all'));
+    for (const c of cats) chips.appendChild(el('button', { class: ['chip', cat === c && !showHidden && 'active'], type: 'button', onclick: () => { cat = cat === c ? '' : c; showHidden = false; drawChips(); draw(); } }, c));
+    if (nHidden) {
+      chips.appendChild(el('button', { class: ['chip tpl-hidden-chip', showHidden && 'active'], type: 'button', title: 'Built-in templates you hid', onclick: () => { showHidden = !showHidden; drawChips(); draw(); } },
+        icon('eye-off', 12), ` hidden (${nHidden})`));
+    }
   };
   function draw() {
     grid.textContent = '';
-    const list = TEMPLATES.filter((t) => (!cat || t.category === cat) && (!query || `${t.id} ${t.title} ${t.description} ${t.category} ${Object.keys(t.questions).join(' ')}`.toLowerCase().includes(query)));
-    count.textContent = `${list.length} / ${TEMPLATES.length}`;
-    list.forEach((t) => grid.appendChild(card(t)));
+    const match = (t) => !query || `${t.id} ${t.title} ${t.description} ${t.category} ${Object.keys(t.questions).join(' ')}`.toLowerCase().includes(query);
+    const list = showHidden ? hiddenList().filter(match) : allTemplates().filter((t) => (!cat || t.category === cat) && match(t));
+    count.textContent = `${list.length} / ${allTemplates().length}`;
+    list.forEach((t) => grid.appendChild(card(t, { hiddenView: showHidden })));
     if (!list.length) grid.appendChild(el('div', { class: 'muted tpl-none' }, 'No template matches.'));
   }
   root.appendChild(el('div', { class: 'tpl-view' },
     el('div', { class: 'tpl-top' },
       el('div', {}, el('h2', { class: 'tpl-h' }, icon('templates', 18), ' Templates'),
-        el('p', { class: 'muted' }, 'Ready-made question sets that show what each OpenJev feature does. Every template has batch states for #/batch.')),
-      el('div', { class: 'row' }, search, count)),
+        el('p', { class: 'muted' }, 'Ready-made question sets that show what each OpenJev feature does. Every template has batch states for #/batch. Built-ins are read-only: duplicate one to edit it. Your templates are stored in this browser.')),
+      el('div', { class: 'row' }, newBtn, search, count)),
     chips, grid));
   drawChips(); draw();
+  const off = on('oj:templates-changed', () => { drawChips(); draw(); });
   setTimeout(() => search.focus(), 30);
+  return () => off();
 }
 
 /** Welcome-screen strip of template cards. */
 export function renderTemplateStrip(host, { limit = 6 } = {}) {
-  const pick = ['ticket-triage', 'shell-safety', 'pr-risk', 'image-yes-no', 'sentiment', 'think-math', 'moderation', 'rubric'].map(getTemplate).filter(Boolean).slice(0, limit);
+  const hidden = safe(getHiddenTemplateIds, []);
+  const pick = [
+    ...safe(listUserTemplates, []).slice(0, 2),
+    ...['ticket-triage', 'shell-safety', 'pr-risk', 'image-yes-no', 'sentiment', 'think-math', 'moderation', 'rubric'].filter((id) => !hidden.includes(id)).map(getTemplate),
+  ].filter(Boolean).slice(0, limit);
   const strip = el('div', { class: 'tpl-strip' },
     pick.map((t) => el('button', {
       class: 'card tpl-mini', type: 'button', title: t.description,
@@ -463,7 +536,7 @@ export function renderTemplateStrip(host, { limit = 6 } = {}) {
     el('div', { class: 'row' }, el('strong', {}, t.title), el('span', { class: 'spacer' }), el('span', { class: 'chip tpl-cat' }, t.category)),
     el('div', { class: 'mono faint tpl-mini-state' }, stateSnippet(t, 70)),
     typeChips(t.questions))),
-    el('a', { class: 'tpl-more', href: '#/templates' }, `All ${TEMPLATES.length} templates `, icon('chevron-right', 14)));
+    el('a', { class: 'tpl-more', href: '#/templates' }, `All ${allTemplates().length} templates `, icon('chevron-right', 14)));
   if (host) host.appendChild(strip);
   return strip;
 }

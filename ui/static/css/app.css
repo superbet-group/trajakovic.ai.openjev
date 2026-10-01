@@ -480,6 +480,19 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
 .turn-meta { font-size: 11px; }
 .result-fallback { font-size: 12px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; max-height: 420px; overflow: auto; }
 
+/* v2 decision card: state + answers + meta in one block (settings.threadLayout 'v2') */
+.turn-v2 { gap: 6px; }
+.dcard { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 14px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); }
+.dcard-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 10.5px; }
+.dcard-prompt { display: flex; flex-direction: column; gap: 6px; padding-left: 12px; border-left: 3px solid var(--accent); }
+.dcard-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; }
+.dcard-sep { height: 1px; background: var(--border); margin: 2px 0; }
+.dcard-answers { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.dcard-foot { border-top: 1px dashed var(--border); padding-top: 8px; }
+.turn-v2 .turn-toolbar { padding: 0 6px; }
+.turn-v2.status-error .dcard { border-color: color-mix(in srgb, var(--err) 40%, var(--border)); }
+@media (max-width: 600px) { .dcard { padding: 10px 12px; } }
+
 .turn-toolbar {
   display: flex; flex-wrap: wrap; gap: 2px; opacity: 0; transform: translateY(-2px);
   transition: opacity var(--t), transform var(--t);

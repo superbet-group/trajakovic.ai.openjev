@@ -1,6 +1,7 @@
-// app/thread.js — the conversation thread view (builder B): user bubbles, assistant blocks
-// (pending skeleton, error card, C's renderResult / chat Markdown), C's meta bar, hover
-// toolbars, per-turn replacement on oj:turn-updated, autoscroll, and image drag & drop.
+// app/thread.js — the conversation thread view (builder B): System One decision cards (v2) or
+// user bubbles + assistant blocks (classic), pending skeleton, error card, C's renderResult /
+// chat Markdown, C's meta bar, hover toolbars, per-turn replacement on oj:turn-updated,
+// autoscroll, and image drag & drop.
 
 import { h, clear, copyText, debounce, download } from '/js/core/dom.js';
 import { icon } from '/js/core/icons.js';
@@ -16,7 +17,7 @@ import { renderChatAssistant, destroyChatExtras } from '/js/app/chat.js';
 import { renderWelcome } from '/js/app/welcome.js';
 import {
   mountComposer, editAndReask, fixInEditor, rerunTurn, retryTurn, regenerateChat, isTurnInflight, addImageFiles, stopInflight,
-  focusComposer,
+  focusComposer, openConversationInBatch,
 } from '/js/app/composer.js';
 
 let statsOpen = false;
@@ -78,35 +79,43 @@ function pendingBlock(turn) {
 }
 
 // ------------------------------------------------------------------ turn nodes
-function systemoneNode(conv, turn, idx) {
-  const req = turn.request || {};
+// System One turns come in two layouts (settings.threadLayout): 'v2' decision cards, where the
+// state and its answers share one card (one region to screenshot or copy), and 'classic' chat
+// bubbles. Both are built from the same pieces below.
+function turnTopRow(conv, turn, idx) {
   const parentIdx = turn.parentTurnId ? conv.turns.findIndex((t) => t.id === turn.parentTurnId) : -1;
-  const parentTurn = parentIdx >= 0 ? conv.turns[parentIdx] : null;
-  const images = Array.isArray(req.images) ? req.images : [];
+  return [
+    h('span', { class: 'turn-no' }, `#${idx + 1}`),
+    h('span', {}, fmtClock(turn.createdAt)),
+    turn.source && turn.source !== 'thread' ? h('span', { class: 'badge src-badge' }, turn.source) : null,
+    turn.label ? h('span', { class: 'badge label-badge' }, turn.label) : null,
+    turn.parentTurnId ? h('button', { class: 'reask-link', onClick: () => scrollToTurn(turn.parentTurnId) }, icon('corner-down-right', 12), parentIdx >= 0 ? `re-ask of #${parentIdx + 1}` : 're-ask') : null,
+  ];
+}
 
-  const user = h('div', { class: 'msg-user' }, h('div', { class: 'bubble' },
-    h('div', { class: 'bubble-top mono faint' },
-      h('span', { class: 'turn-no' }, `#${idx + 1}`),
-      h('span', {}, fmtClock(turn.createdAt)),
-      turn.source && turn.source !== 'thread' ? h('span', { class: 'badge src-badge' }, turn.source) : null,
-      turn.label ? h('span', { class: 'badge label-badge' }, turn.label) : null,
-      turn.parentTurnId ? h('button', { class: 'reask-link', onClick: () => scrollToTurn(turn.parentTurnId) }, icon('corner-down-right', 12), parentIdx >= 0 ? `re-ask of #${parentIdx + 1}` : 're-ask') : null),
-    stateView(req.state),
-    images.length ? h('div', { class: 'bubble-images' }, images.map((src, i) => {
-      const meta = turn.imagesMeta?.[i] || {};
-      return typeof src === 'string' && src
-        ? h('img', { class: 'bubble-img', src, alt: meta.name || `image ${i + 1}`, title: `${meta.name || ''} ${meta.width ? `${meta.width}×${meta.height}` : ''} ${meta.bytes ? fmtBytes(meta.bytes) : ''}` })
-        : h('div', { class: 'bubble-img missing', title: 'image data stripped' }, icon('image', 16));
-    })) : null,
-    h('div', { class: 'bubble-foot' },
-      h('div', { class: 'qchips' }, Object.entries(req.questions || {}).map(([qid, q]) => h('span', { class: `qchip type-${q?.type || 'unknown'}`, title: `${q?.type || '?'}${typeof q?.instructions === 'string' ? `: ${q.instructions}` : ''}` }, qid))),
-      h('div', { class: 'opt-badges' }, h('span', { class: 'badge opt-badge mono model-badge' }, req.model || ''), optionBadges(req)))));
+function imagesRow(turn) {
+  const images = Array.isArray(turn.request?.images) ? turn.request.images : [];
+  return images.length ? h('div', { class: 'bubble-images' }, images.map((src, i) => {
+    const meta = turn.imagesMeta?.[i] || {};
+    return typeof src === 'string' && src
+      ? h('img', { class: 'bubble-img', src, alt: meta.name || `image ${i + 1}`, title: `${meta.name || ''} ${meta.width ? `${meta.width}×${meta.height}` : ''} ${meta.bytes ? fmtBytes(meta.bytes) : ''}` })
+      : h('div', { class: 'bubble-img missing', title: 'image data stripped' }, icon('image', 16));
+  })) : null;
+}
 
-  const ctx = { conversation: conv, settings: getSettings(), turnIndex: idx, parentTurn, compact: false };
-  let content;
-  if (turn.status === 'pending') content = pendingBlock(turn);
-  else if (turn.status === 'error') {
-    content = renderError(turn.error, {
+function qchipsRow(req) {
+  return h('div', { class: 'qchips' }, Object.entries(req.questions || {}).map(([qid, q]) => h('span', { class: `qchip type-${q?.type || 'unknown'}`, title: `${q?.type || '?'}${typeof q?.instructions === 'string' ? `: ${q.instructions}` : ''}` }, qid)));
+}
+
+function modelBadges(req) {
+  return [h('span', { class: 'badge opt-badge mono model-badge' }, req.model || ''), optionBadges(req)];
+}
+
+/** The answer area: pending skeleton, error card, stopped line, or C's renderResult. */
+function contentFor(conv, turn, ctx) {
+  if (turn.status === 'pending') return pendingBlock(turn);
+  if (turn.status === 'error') {
+    return renderError(turn.error, {
       requestBytes: turn.http?.requestBytes,
       autoRetry: turn.autoRetried ? false : undefined,
       onRetry: async (_e, opts) => {
@@ -116,17 +125,22 @@ function systemoneNode(conv, turn, idx) {
       onFix: () => fixInEditor(turn),
       onEdit: () => editAndReask(turn),
     });
-  } else if (turn.status === 'aborted') {
-    content = h('div', { class: 'turn-stopped muted' }, icon('stop', 12), h('span', {}, 'Stopped'),
-      h('button', { class: 'btn sm ghost', onClick: () => retryTurn(conv.id, turn.id) }, icon('refresh', 12), 'Retry'));
-  } else {
-    try { content = J.renderResult(turn, ctx); } catch (err) { content = h('pre', { class: 'mono' }, String(err)); }
   }
-  let meta = null;
-  try { meta = J.renderTurnMeta(turn, ctx); } catch (err) { console.warn(err); }
+  if (turn.status === 'aborted') {
+    return h('div', { class: 'turn-stopped muted' }, icon('stop', 12), h('span', {}, 'Stopped'),
+      h('button', { class: 'btn sm ghost', onClick: () => retryTurn(conv.id, turn.id) }, icon('refresh', 12), 'Retry'));
+  }
+  try { return J.renderResult(turn, ctx); } catch (err) { return h('pre', { class: 'mono' }, String(err)); }
+}
 
-  const tb = toolbar([
+function metaFor(turn, ctx) {
+  try { return J.renderTurnMeta(turn, ctx); } catch (err) { console.warn(err); return null; }
+}
+
+function toolbarFor(conv, turn, idx) {
+  return toolbar([
     { icon: 'edit', label: 'Edit & re-ask', showLabel: true, onClick: () => editAndReask(turn) },
+    turn.status === 'ok' ? { icon: 'copy', label: 'Copy as text', title: 'Copy prompt + answers as Markdown', onClick: () => copyText(J.turnToMarkdown(turn, { turnIndex: idx })) } : null,
     { icon: 'refresh', label: 'Rerun', title: 'Rerun the identical body (reproducibility check)', onClick: () => rerunTurn(conv.id, turn) },
     { icon: 'compare', label: 'Compare…', title: 'Compare variants of this request', onClick: () => navigate(`#/compare/${encodeURIComponent(conv.id)}/${encodeURIComponent(turn.id)}`) },
     { icon: 'inspect', label: 'Inspect', title: 'Inspect request / response / timing (Cmd+I)', onClick: () => emit('oj:open-inspector', { convId: conv.id, turnId: turn.id }) },
@@ -135,12 +149,54 @@ function systemoneNode(conv, turn, idx) {
     turn.response ? { icon: 'json', label: 'Copy JSON response', onClick: () => copyText(JSON.stringify(turn.response, null, 2)) } : null,
     { icon: 'trash', label: 'Delete turn', danger: true, onClick: () => deleteTurn(conv.id, turn.id).then(() => toast('Turn deleted')) },
   ]);
+}
 
+function turnCtx(conv, turn, idx) {
+  const parentTurn = turn.parentTurnId ? conv.turns.find((t) => t.id === turn.parentTurnId) || null : null;
+  return { conversation: conv, settings: getSettings(), turnIndex: idx, parentTurn, compact: false };
+}
+
+function classicSystemoneNode(conv, turn, idx) {
+  const req = turn.request || {};
+  const ctx = turnCtx(conv, turn, idx);
+  const user = h('div', { class: 'msg-user' }, h('div', { class: 'bubble' },
+    h('div', { class: 'bubble-top mono faint' }, turnTopRow(conv, turn, idx)),
+    stateView(req.state),
+    imagesRow(turn),
+    h('div', { class: 'bubble-foot' }, qchipsRow(req), h('div', { class: 'opt-badges' }, modelBadges(req)))));
   return h('div', { class: ['turn', 'turn-systemone', `status-${turn.status}`], id: `turn-${turn.id}`, dataset: { turnId: turn.id } },
     user,
     h('div', { class: 'msg-assistant' },
       h('div', { class: 'avatar', title: turn.response?.model || req.model || 'OpenJev' }, icon('logo', 16)),
-      h('div', { class: 'assistant-body' }, content, meta, tb)));
+      h('div', { class: 'assistant-body' }, contentFor(conv, turn, ctx), metaFor(turn, ctx), toolbarFor(conv, turn, idx))));
+}
+
+// The <article> holds prompt, answers and meta; the hover toolbar sits outside it, so a
+// screenshot of the card leaves the buttons out.
+function v2SystemoneNode(conv, turn, idx) {
+  const req = turn.request || {};
+  const ctx = turnCtx(conv, turn, idx);
+  const nImg = Array.isArray(req.images) ? req.images.length : 0;
+  const isJson = req.state !== null && typeof req.state === 'object';
+  const meta = metaFor(turn, ctx);
+  const label = `State${isJson ? ' · JSON' : ''}${nImg ? ` · ${nImg} image${nImg === 1 ? '' : 's'}` : ''}`;
+  const card = h('article', { class: 'dcard' },
+    h('header', { class: 'dcard-head mono faint' }, turnTopRow(conv, turn, idx), h('span', { class: 'spacer' }), modelBadges(req)),
+    h('section', { class: 'dcard-prompt' },
+      h('div', { class: 'dcard-label faint' }, label),
+      stateView(req.state),
+      imagesRow(turn),
+      // once answered, the answer cards name each question
+      turn.status !== 'ok' ? qchipsRow(req) : null),
+    h('div', { class: 'dcard-sep' }),
+    h('section', { class: 'dcard-answers' }, contentFor(conv, turn, ctx)),
+    meta ? h('footer', { class: 'dcard-foot' }, meta) : null);
+  return h('div', { class: ['turn', 'turn-systemone', 'turn-v2', `status-${turn.status}`], id: `turn-${turn.id}`, dataset: { turnId: turn.id } },
+    card, toolbarFor(conv, turn, idx));
+}
+
+function systemoneNode(conv, turn, idx) {
+  return getSettings().threadLayout === 'classic' ? classicSystemoneNode(conv, turn, idx) : v2SystemoneNode(conv, turn, idx);
 }
 
 function chatNode(conv, turn, idx) {
@@ -222,6 +278,8 @@ function mountThread(el, params) {
       h('span', { class: ['badge', 'mode-badge', c.mode === 'chat' ? 'mode-chat' : 'mode-s1'] }, icon(c.mode === 'chat' ? 'chat' : 'bolt', 12), c.mode === 'chat' ? `Chat · ${getSettings().chatModel}` : 'System One'),
       h('span', { class: 'mono faint th-meta' }, `${c.turns.length} turn${c.turns.length === 1 ? '' : 's'} · ${okN} ok · started ${fmtRelTime(c.createdAt)}`),
       h('span', { class: 'spacer' }),
+      // native append would print `false`, hence the spread
+      ...(c.mode === 'systemone' ? [h('button', { class: 'btn sm ghost', title: "Open these questions and this conversation's states in Batch", onClick: () => openConversationInBatch() }, icon('batch', 13), 'batch')] : []),
       h('button', { class: ['btn sm ghost', statsOpen && 'active'], title: 'Conversation stats', onClick: () => { statsOpen = !statsOpen; renderStats(); renderHeader(); } }, icon('sigma', 13), 'stats'),
       h('button', { class: 'btn sm ghost', title: 'Export this conversation', onClick: async () => { const f = await exportConversations([c.id]); download(`openjev-${c.id}.json`, f); } }, icon('download', 13)));
   }
@@ -325,7 +383,7 @@ function mountThread(el, params) {
   offs.push(on('oj:conversation-updated', ({ id: cid }) => { if (cid === id) { reconcile(); renderStats(); } }));
   offs.push(on('oj:conversations-changed', () => { if (!peekConversation(id)) navigate('#/'); }));
   offs.push(on('oj:settings-changed', ({ changed }) => {
-    if (changed.some((k) => ['pricePerMInput', 'pricePerMOutput', 'currency', 'chatModel'].includes(k))) { const top = wrap.scrollTop; renderAll(); wrap.scrollTop = top; renderStats(); renderHeader(); }
+    if (changed.some((k) => ['pricePerMInput', 'pricePerMOutput', 'currency', 'chatModel', 'threadLayout'].includes(k))) { const top = wrap.scrollTop; renderAll(); wrap.scrollTop = top; renderStats(); renderHeader(); }
   }));
 
   // drag & drop images anywhere on the thread

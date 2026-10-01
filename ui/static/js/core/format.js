@@ -97,3 +97,17 @@ export function shortId(id, n = 8) {
   const s = String(id);
   return s.length > n + 4 ? `${s.slice(0, n + 4)}…` : s;
 }
+
+/** (string|object)[] → {format:'lines'|'blocks'|'jsonl', input, count}: lossless text for the batch textarea.
+ *  Any object, or a string with a blank line inside → 'jsonl' (every entry JSON.stringify'd, strings too);
+ *  else any string with '\n' → 'blocks' joined by '\n\n'; else 'lines'. Trims, drops empty strings, no dedupe. */
+export function statesToBatchInput(states) {
+  const list = (Array.isArray(states) ? states : [])
+    .map((s) => (typeof s === 'string' ? s.trim() : s))
+    .filter((s) => s !== null && s !== undefined && s !== '');
+  // same split as parseStates' blocks branch, so a whitespace-only line also counts as blank
+  const jsonl = list.some((s) => typeof s !== 'string' || /\n\s*\n/.test(s));
+  if (jsonl) return { format: 'jsonl', input: list.map((s) => JSON.stringify(s)).join('\n'), count: list.length };
+  if (list.some((s) => s.includes('\n'))) return { format: 'blocks', input: list.join('\n\n'), count: list.length };
+  return { format: 'lines', input: list.join('\n'), count: list.length };
+}

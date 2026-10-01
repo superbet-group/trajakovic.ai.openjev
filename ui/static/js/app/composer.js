@@ -11,11 +11,11 @@ import { navigate, currentRoute } from '/js/core/router.js';
 import { attachSlashMenu, matchSlash, runSlash } from '/js/core/slash.js';
 import {
   getSettings, getConversation, createConversation, updateConversation, saveDraft, appendTurn, updateTurn,
-  getLayout, setLayout, getLastConvId, flushPendingWrites,
+  getLayout, setLayout, getLastConvId, flushPendingWrites, peekConversation,
 } from '/js/core/store.js';
 import { buildSystemOneBody, systemOne, getLastHealth, getCachedConfig } from '/js/core/api.js';
 import { estimateTokens, costOf, sha256Hex, IMAGE_TOKENS_EST } from '/js/core/metrics.js';
-import { uid, fmtBytes, fmtInt, fmtCost } from '/js/core/format.js';
+import { uid, fmtBytes, fmtInt, fmtCost, statesToBatchInput } from '/js/core/format.js';
 import { J } from '/js/app/jev.js';
 import { buildChatBody, runChatTurn, chatOptions } from '/js/app/chat.js';
 
@@ -102,12 +102,67 @@ export function slashCtx() {
   return {
     conversation: cur?.conv || null,
     settings: getSettings(),
-    composer: { getDraft, loadDraft, submit, clear: clearComposer },
+    composer: { getDraft, loadDraft, submit, clear: clearComposer, openInBatch: openConversationInBatch },
     navigate,
   };
 }
 
 // ================================================================== draft helpers
+/** Distinct user states of a systemone conversation, oldest first, plus the unsent draft.
+ *  → {states: (string|object)[], fromTurns: number, draftIncluded: boolean} */
+export function conversationStates(conv, draft, { includeDraft = true } = {}) {
+  const seen = new Set();
+  const states = [];
+  const add = (s) => {
+    if (s === null || s === undefined || (typeof s === 'string' && !s.trim())) return false;
+    const key = typeof s === 'string' ? `s:${s.trim()}` : `j:${JSON.stringify(s)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    states.push(s);
+    return true;
+  };
+  for (const t of conv?.turns || []) {
+    if (t.kind === 'systemone' && t.request && t.label !== 'rerun') add(t.request.state);
+  }
+  const fromTurns = states.length;
+  let draftIncluded = false;
+  if (includeDraft && draft && typeof draft.state === 'string' && draft.state.trim()) {
+    let v = draft.state;
+    if (draft.stateIsJson) { try { v = JSON.parse(draft.state); } catch { /* keep the text */ } }
+    // an empty JSON editor reads back as {} (its blank seed), which is not a state
+    const blank = v !== null && typeof v === 'object' && !Object.keys(v).length;
+    draftIncluded = !blank && add(v);
+  }
+  return { states, fromTurns, draftIncluded };
+}
+
+/** Copy the open System One conversation into #/batch: current questions + every distinct
+ *  user state (oldest first, then the unsent draft), kept lossless via statesToBatchInput. */
+export function openConversationInBatch() {
+  if (!cur || cur.conv.mode !== 'systemone') { toast('Open a System One decision first', { kind: 'warn' }); return false; }
+  syncFromEditors();
+  const conv = peekConversation(cur.conv.id) || cur.conv;
+  // a draft with invalid JSON stays a plain string (conversationStates keeps the text)
+  const { states, draftIncluded } = conversationStates(conv, cur.draft);
+  const bi = statesToBatchInput(states);
+  const imgs = cur.draft.images.slice();
+  const { model, ...rest } = conv.options || {};
+  J.openInBatch({
+    title: conv.title && conv.title !== 'Untitled' ? conv.title : 'From conversation',
+    questions: clone(cur.draft.questions), options: { ...(model ? { model } : {}), ...rest },
+    batchStates: [], batchInput: { format: bi.format, input: bi.input }, stateIsJson: bi.format === 'jsonl',
+    imageRefs: imgs, // applied to every batch state
+    source: 'conversation',
+  });
+  if (!bi.count) toast('Batch: questions copied, no states yet: paste one per line', { kind: 'info' });
+  else {
+    toast(`Batch: ${bi.count} state${bi.count === 1 ? '' : 's'} from this conversation (${bi.format})`
+      + `${draftIncluded ? ', including the unsent draft' : ''}`
+      + `${imgs.length ? `, ${imgs.length} image${imgs.length === 1 ? '' : 's'} applied to every state` : ''}`, { kind: 'ok' });
+  }
+  return true;
+}
+
 function requestToDraft(turn) {
   const r = turn.request || {};
   const isObj = r.state !== null && typeof r.state === 'object';
@@ -255,6 +310,21 @@ export function mountComposer(el, conv) {
     inner.appendChild(c.panel);
     c.qeditor = J.mountQuestionEditor(c.qhost, {
       questions: c.draft.questions,
+      // "Save as template" pre-fill: this conversation's states, the draft and its options
+      templateContext: () => {
+        if (cur !== c) return {};
+        syncFromEditors();
+        const { states } = conversationStates(c.conv, c.draft);
+        const json = c.draft.stateIsJson;
+        const pick = states.filter((s) => (json ? typeof s === 'object' : typeof s === 'string'));
+        const st = c.draft.state.trim() ? c.draft.state
+          : (pick.length ? (json ? JSON.stringify(pick[pick.length - 1], null, 2) : pick[pick.length - 1]) : '');
+        const { model, ...o } = c.conv.options || {};
+        return { state: st, stateIsJson: json,
+          batchStates: pick.map((s) => (typeof s === 'string' ? s : JSON.stringify(s))),
+          options: Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined && v !== false)),
+          title: c.conv.title && c.conv.title !== 'Untitled' ? c.conv.title : '' };
+      },
       onChange: (questions, v) => {
         if (cur !== c) return;
         if (questions && typeof questions === 'object') c.draft.questions = questions;
@@ -766,7 +836,9 @@ async function sendSystemOne({ skipValidation = false } = {}) {
   };
   c.source = null;
   c.draft.parentTurnId = null;
-  if (getSettings().clearStateOnSend) {
+  const turnConvId = c.conv.id;
+  const sent = { state: c.draft.state, imageIds: c.draft.images.map((i) => i.id).join('|') };
+  if (getSettings().clearStateOn === 'send') {
     c.draft.state = '';
     c.draft.images = [];
     renderStateInput();
@@ -777,7 +849,40 @@ async function sendSystemOne({ skipValidation = false } = {}) {
   refreshEstimate();
   persist();
   await appendTurn(c.conv.id, turn);
+  // Tied to the turn, not this call: an auto-retry or manual retry that finally succeeds
+  // goes through retryTurn and must still empty the box.
+  pendingClears.set(turn.id, { sent, convId: turnConvId });
   await runSystemOneTurn(c.conv.id, turn);
+}
+
+// turn id -> what was sent; consumed by the first successful run of that turn.
+const pendingClears = new Map();
+
+// The answer is back: empty the state box, unless the user already typed or changed images while
+// waiting. Errors and stops never get here, so the text stays for a fix and resend.
+function clearSentState(sent, convId) {
+  const c = cur && cur.conv.id === convId && cur.conv.mode === 'systemone' ? cur : null;
+  if (!c) {
+    // navigated away meanwhile: clear the saved draft if it still holds what was sent
+    const d = peekConversation(convId)?.draft;
+    if (d && d.state === sent.state) saveDraft(convId, { ...d, state: '', images: [] });
+    return;
+  }
+  syncFromEditors();
+  if (c.draft.state !== sent.state || c.draft.images.map((i) => i.id).join('|') !== sent.imageIds) return;
+  const a = document.activeElement;
+  const refocus = !a || a === document.body || c.stateHost.contains(a);
+  c.draft.state = '';
+  c.draft.images = [];
+  // text mode: keep the same textarea so caret and focus stay put; JSON mode rebuilds the editor
+  if (c.textarea && !c.draft.stateIsJson) { c.textarea.value = ''; autogrow(c.textarea); }
+  else renderStateInput();
+  renderTray();
+  renderChips();
+  renderSend();
+  refreshEstimate();
+  persist();
+  if (refocus && !c.stateHost.contains(document.activeElement)) focusComposer();
 }
 
 async function runSystemOneTurn(convId, turn) {
@@ -795,6 +900,11 @@ async function runSystemOneTurn(convId, turn) {
     http: r.http,
     error: r.ok ? null : r.error,
   });
+  const p = pendingClears.get(turn.id);
+  if (p && r.ok) {
+    pendingClears.delete(turn.id);
+    if (getSettings().clearStateOn === 'answer') clearSentState(p.sent, p.convId);
+  }
   return r;
 }
 

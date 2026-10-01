@@ -78,6 +78,7 @@ ui/
     js/jev/inspector.js       C   raw request/response inspector (drawer)
     js/jev/compare.js         C   compare view
     js/jev/batch.js           C   batch view
+    js/jev/batchImport.js     C   batch file import: CSV/TSV/JSONL/JSON parsing, sniffing, merge (pure)
     js/jev/stats.js           C   stats dashboard view + per-conversation stats strip
     js/jev/slashCommands.js   C   C's slash commands
 ```
@@ -119,7 +120,7 @@ through `/js/jev/index.js`, and only with a dynamic `import()` (see §3.10). Nei
 - Structure: `create_app(openjev_url: str, api_key: str = "", origin_secret: str = "",
   static_dir: Path = <ui/static>, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI`.
   Tests pass `transport=httpx.MockTransport(...)`. `main()` parses args/env and calls
-  `uvicorn.run(app, host, port, log_level="warning")`.
+  `_Server(uvicorn.Config(app, host, port, log_level="warning")).run()`. Ctrl+C or SIGTERM exits cleanly with code 0 and no traceback; a second Ctrl+C more than 1 s later force-quits while requests are open (hint: "ojui: waiting for N open request(s)"); a failed startup exits with code 3.
 - Log one line per proxied request to stdout:
   `POST /v1/systemone 200 312ms up=298ms req_abc…`.
 
@@ -337,6 +338,7 @@ Event names. Every event carries a single `detail` object.
 | `oj:composer-questions-changed` | `{questions, valid, errors}` | C question editor → composer |
 | `oj:open-inspector` | `{convId, turnId}` | thread → C |
 | `oj:toast` | `{message, kind?: 'info'\|'ok'\|'warn'\|'err', timeout?}` | anyone |
+| `oj:templates-changed` | `{op: 'put'\|'delete'\|'hide'\|'sync', id?}` | store (user template saved/deleted, built-in hidden, another tab changed them) |
 
 Handling `oj:composer-load`:
 
@@ -380,7 +382,9 @@ export function fmtTokens(n) {}         // "1.2k", "3.4M"
 export function toast(message, {kind = 'info', timeout = 2500} = {}) {}
 
 // modal.js
-export function openModal({title, body /*Node*/, actions /*[{label, kind, onClick}]*/, wide}) {} // → {close}
+export function openModal({title, body /*Node*/, actions /*[{label, kind, onClick}]*/, wide, beforeClose /*() => bool|Promise<bool>*/}) {} // → {close}
+// beforeClose is awaited for Esc, backdrop and the X button (not an action's own close); false keeps it open.
+// Esc from inside an open .qb-menu is left to the dropdown.
 export async function confirmDialog(message, {danger} = {}) {}   // → boolean
 export async function promptDialog(message, defaultValue = '') {} // → string|null
 
@@ -446,7 +450,19 @@ export async function clearRequests() {}
 export function getTotals() {}                           // → Totals (§4.6), sync from localStorage
 export function addToTotals(record) {}                   // called by api.js only
 export function resetTotals() {}
+
+// user templates (§5.6): sync, localStorage, every change emits oj:templates-changed
+export function listUserTemplates() {}           // → UserTemplate[] (clones), newest updatedAt first
+export function getUserTemplate(id) {}           // → UserTemplate | null
+export function saveUserTemplate(t) {}           // insert or update (uid('tpl') when no id); → saved clone.
+                                                 // Throws on a missing title/questions, 200 templates, or a full localStorage
+export function deleteUserTemplate(id) {}        // → boolean
+export function getHiddenTemplateIds() {}        // → built-in ids the user hid
+export function setTemplateHidden(id, hidden) {}
 ```
+
+`exportConversations('all')` also carries `templates: UserTemplate[]`; `importConversations`
+saves the ones whose id is not present yet.
 
 Persistence keys:
 
@@ -456,6 +472,7 @@ Persistence keys:
 | localStorage | `ojui.totals.v1` | B | Totals |
 | localStorage | `ojui.lastConv` | B | last open conversation id |
 | localStorage | `ojui.layout.v1` | B | `{sidebarCollapsed, qeditorOpen, drawerWidth}` |
+| localStorage | `ojui.templates.v1` | B | `{v: 1, items: UserTemplate[], hidden: string[]}` (not IndexedDB: no version bump, no images) |
 | localStorage | `ojui.batch.last.v1` | C | last batch job (inputs + results, images stripped) |
 | localStorage | `ojui.compare.presets.v1` | C | user compare presets |
 | localStorage | `ojui.stats.range.v1` | C | selected stats range |
@@ -544,6 +561,12 @@ export function getDraft() {}           // → Draft (§4.4)
 export function loadDraft(partial) {}   // same semantics as oj:composer-load
 export async function submit() {}
 export function clearComposer() {}
+export function conversationStates(conv, draft, {includeDraft = true} = {}) {}
+  // → {states, fromTurns, draftIncluded}: distinct systemone user states, oldest first
+  //   (rerun turns skipped), then the unsent draft (JSON-parsed when it is a JSON draft); an empty
+  //   `{}`/`[]` JSON draft (the blank JSON editor) is skipped
+export function openConversationInBatch() {}
+  // → boolean: hands the open decision to #/batch (§5.9); slash ctx.composer.openInBatch
 ```
 
 The composer consists of:
@@ -581,7 +604,13 @@ Sending a systemone turn:
    Otherwise, keep the draft and do not send.
 3. Append a pending Turn, call `api.systemOne`, then update the turn with the response or error.
 4. Keep the question set in the composer after sending, because repeated asking is the normal
-   loop. Clear state and images only if `settings.clearStateOnSend` is set (default false).
+   loop. State and images follow `settings.clearStateOn`:
+   - `'answer'` (default): the text box clears once the answer arrives (`r.ok`). It is left alone
+     when the user typed or changed images while waiting. Errors, stops and 4xx/5xx keep the
+     text so it can be fixed and resent. If the user navigated away, the saved draft is cleared
+     instead, as long as it still holds the sent state.
+   - `'send'`: clear immediately on send.
+   - `'never'`: keep the text.
 
 ### 3.10 C's barrel `/js/jev/index.js`. B loads it with `await import('/js/jev/index.js')` in try/catch
 
@@ -593,7 +622,10 @@ export async function init() {}
 export function mountQuestionEditor(el, {questions, onChange /*(questions, {valid, errors})*/}) {}
   // → QuestionEditorHandle:
   //   { get() → QuestionSet, set(questions), validate() → {valid, errors},
-  //     highlightErrors(serverErrors /* 422 detail list */), setTab('builder'|'json'), focus(), destroy() }
+  //     highlightErrors(serverErrors /* 422 detail list */), setTab('builder'|'json'), focus(), destroy(),
+  //     saveAsTemplate() → Promise<UserTemplate|null> }
+  // Option templateContext?: () => {state, stateIsJson, batchStates, options, title} pre-fills
+  // "Save as template" (composer: this conversation's states + draft; batch: the parsed job).
   // Also emits oj:composer-questions-changed on every change (debounced 150 ms).
 
 export function mountJsonEditor(el, {value, mode = 'tree' /*'tree'|'text'|'table'*/, readOnly = false,
@@ -613,10 +645,25 @@ export function renderTurnMeta(turn, ctx) {}
 export function renderConversationStats(conversation, ctx) {} // → HTMLElement for #conv-stats
 
 export function renderTemplateStrip(el, {limit = 6} = {}) {}   // cards on the welcome screen; click → oj:composer-load
+export const templates;               // the 13 built-ins (read-only)
+export function getTemplate(id) {}    // built-in (hidden ones too) or user template → Template | null
+export function allTemplates({includeHidden = false} = {}) {} // user templates (newest first), then visible built-ins
 
 export function openInspector({conversation, turn}) {}          // uses openDrawer
 
 export function buildSnippet(kind /* 'curl'|'python'|'fetch'|'http'|'openai' */, turn, config) {} // → string
+
+export function openInBatch(handoff) {}
+  // one-shot handoff to #/batch, read once by the batch view (`takeBatchHandoff`). Handoff object:
+  //   {title, questions, options?, batchStates?, stateIsJson?, batchInput?: {format, input},
+  //    imageRefs?: ImageRef[], images?: 'demo-shapes', source?: 'conversation'|...}
+  //   batchInput is used as is (format + textarea text); imageRefs apply to every state.
+  //   B's fallback: navigate('#/batch').
+
+export function turnToMarkdown(turn, {turnIndex} = {}) {}
+  // → string: `**#<n> state**`, the state as a `>` blockquote (JSON in a ```json fence),
+  //   a `| question | type | answer |` table (answerText long form), then `model · N in / M out tok`.
+  //   B's fallback: JSON of {state, answers}.
 
 export const questionTypes;  // ['noul','choice','score'] with {label, color var, description}
 ```
@@ -647,7 +694,9 @@ export const questionTypes;  // ['noul','choice','score'] with {label, color var
   pricePerMOutput: 0,              // currency per 1M output tokens
   currency: '$',
   authOverride: '',                // '' = let proxy decide; else sent verbatim as Authorization
-  clearStateOnSend: false,
+  clearStateOnSend: false,         // deprecated: migrated on load (true → clearStateOn 'send'), read by nothing
+  clearStateOn: 'answer',          // 'answer'|'send'|'never': when the composer's state box is emptied (§3.9)
+  threadLayout: 'v2',              // 'v2' decision cards | 'classic' chat bubbles (§5.2); switches live
   jsonEditorMode: 'tree',
   questionEditorTab: 'builder',
   showRawByDefault: false,
@@ -854,7 +903,29 @@ file. Export includes images. A checkbox, "strip images", replaces each dataUrl 
 
 ### 5.2 Thread (B)
 
-**Systemone turn**:
+**Systemone turn, v2 layout** (`settings.threadLayout: 'v2'`, the default): one decision card
+per turn, so the prompt and its answers can be screenshotted or copied as one block.
+
+```
+div.turn.turn-systemone.turn-v2.status-<s>#turn-<id>[data-turn-id]
+  article.dcard                    the card (screenshot region)
+    header.dcard-head              #n · time · source / label / re-ask link … model + option badges
+    section.dcard-prompt           accent rule on the left: "STATE [· JSON] [· N images]",
+                                   the state (clamped, show more), image thumbnails, and the
+                                   question chips until the answer is ok
+    div.dcard-sep
+    section.dcard-answers          pending skeleton | renderError | "Stopped" | renderResult
+    footer.dcard-foot              renderTurnMeta
+  div.turn-toolbar                 outside the article, so screenshots leave the buttons out
+```
+
+The toolbar is the same as the classic one, plus **Copy as text** on ok turns (both layouts):
+it copies `C.turnToMarkdown(turn)` (§3.10). Changing `threadLayout` in Settings re-renders the
+thread without a reload. In a systemone thread the header has a **batch** button (before
+`stats`) that hands the decision to batch (§5.9). Once a turn reaches `status-ok`, the composer's state box clears
+(setting `clearStateOn`, default `'answer'`, §3.9); failed or stopped turns keep the text.
+
+**Systemone turn, classic layout** (`threadLayout: 'classic'`):
 
 - The user bubble, right-aligned, shows:
   - the state as text, or as pretty JSON when it is an object;
@@ -876,6 +947,7 @@ file. Export includes images. A checkbox, "strip images", replaces each dataUrl 
   - **Inspect**: emits `oj:open-inspector`
   - **Copy curl**, **Copy Python**: `buildSnippet`
   - **Copy JSON response**
+  - **Copy as text** (ok turns): Markdown of the state and an answers table
   - **Delete turn**
 
 **Chat turn**:
@@ -937,7 +1009,15 @@ again on `oj:turn-updated` for the current conversation, replacing only that tur
 ### 5.4 Question editor (C)
 
 It has two tabs, **Builder** and **JSON**, with a toolbar showing the question count, "Add
-question ▾" (noul, choice, score), "From template ▾", and "Paste JSON".
+question ▾" (noul, choice, score), "From template ▾", "Paste JSON", and "Save as template".
+
+- "From template ▾" lists the user's templates first (hint `mine · N q`), a separator, then
+  the visible built-ins.
+- "Save as template" needs a non-empty, valid question set (otherwise a warning toast). It
+  opens the template editor (§5.6) in create mode, pre-filled with the questions plus the
+  host's `templateContext()`: in the composer, the draft state, every distinct state of the
+  conversation as batch states, the conversation options (never `model`) and its title. The
+  same button shows in batch, pre-filled from the batch job.
 
 **Builder**: one card per question with:
 
@@ -1032,6 +1112,33 @@ templates, each with realistic content and `batchStates`:
     `options: {sequential: true}`.
 13. `json-order` (optional): a JSON order object; fraud_risk, ship_priority, gift (noul).
 
+**User templates.** Built-ins are read-only: they can be duplicated (into an editable copy)
+or hidden. User templates can be edited, duplicated and deleted (after a confirm). They live
+in localStorage (`ojui.templates.v1`, §3.6) with this shape:
+
+```js
+{ id: 'tpl_…', title /* 1..80 chars */, category /* lowercased, default 'mine' */, description,
+  state /* string, or object when stateIsJson */, stateIsJson, questions /* ≥ 1 */,
+  options? /* {steps?, samples?, think?, sequential?}, never model */,
+  batchStates /* string[], JSON text when stateIsJson; ≤ 1000 */,
+  batchFormat? /* 'jsonl' for a text template whose states need it */,
+  images? /* 'demo-shapes', kept by a duplicate */, builtin: false, from? /* source id */,
+  createdAt, updatedAt }
+```
+
+- The gallery has a "New template" button, user cards first with a `mine` badge and
+  edit / duplicate / delete icon buttons, and a "hidden (N)" chip (only when N > 0) that lists
+  the hidden built-ins with an Unhide button. It re-renders on `oj:templates-changed`.
+- The editor modal (`jev/templateEditor.js`) has title, category (with suggestions),
+  description, state (+ "JSON state"), batch states with a format select and a live
+  "N states" count (`parseStates`), options, and a full question editor. Save stays open and
+  shows the errors inline when the title, questions, JSON state or batch states are invalid.
+  Esc, a backdrop click and the X button go through a `beforeClose` guard: with unsaved
+  changes it asks "Discard the changes to this template?". Esc inside an open dropdown only
+  closes the dropdown.
+- "From template ▾", the batch template select and `/template` see user templates too.
+- `renderTemplateStrip` shows up to 2 of the newest user templates before the built-ins.
+
 ### 5.7 Inspector (C, drawer via `oj:open-inspector` or `openInspector`)
 
 Tabs:
@@ -1120,9 +1227,24 @@ The JSON-to-Python literal converter maps `true/false/null` to `True/False/None`
   - States input with a format selector:
     - `lines`: one state per line;
     - `blank-line blocks`;
-    - `JSONL`: each line is a JSON state;
-    - `CSV`: pick a column.
+    - `JSONL`: each line is a JSON state; objects can send one field, chosen in the column select
+      (default `*`, the whole object);
+    - `CSV / TSV`: comma, tab or `;` separated (detected from the header row); pick a column.
   - The state count, and an estimated token total.
+  - **Upload file** in the States header, or drop files anywhere on the view (an overlay shows
+    while dragging). Files are read in the browser (`js/jev/batchImport.js`); nothing is uploaded.
+    - Accepted: `.jsonl/.ndjson`; `.txt/.log/.md` (lines, or blank-line blocks); `.csv/.tsv`;
+      `.json` (an array, or an object such as `{states|items|…: […]}`); an `ojui-batch` export.
+      Format comes from the extension, then the MIME type, then the content. Images in a drop go
+      to the image tray. Conversation exports (`ojui-export`) are refused with a pointer to the sidebar.
+    - A preview modal lists each file (format, states, skipped rows, first error, notes) and a
+      Send column/field select, then **Replace** (Load when the input is blank) or **Append**.
+      Append converts to JSONL unless the formats match or both are CSV with the same header.
+      An `ojui-batch` export also offers **Restore batch** (questions, options and states), not
+      while a run is going.
+    - Limits: 5 MB per file and 5000 states (beyond the cap states are dropped, with a message).
+      Binary files and spreadsheets (`.xlsx`, `.ods`, …) are refused. UTF-16 with a BOM and
+      Windows-1252 are decoded.
 - **Controls**: Run, Pause/Resume, Abort, and concurrency 1–4 (default 1). The progress bar
   shows done/total, errors, elapsed time, ETA and a live req/s figure.
 - **Results table**:
@@ -1131,14 +1253,31 @@ The JSON-to-Python literal converter maps `true/false/null` to `True/False/None`
   - Cell formats: noul `0.998`, choice `billing 97%`, score `E 1.03`.
   - Each cell is tinted by `confColor(confidence)` at low alpha.
   - Sort by any column, and filter with "low confidence < x".
-  - Clicking a row opens the inspector with a synthetic turn.
+  - Clicking a row opens a full-screen state-detail modal: the v2 decision card (`js/jev/turnCard.js`)
+    plus the inspector tabs (Request, Response, Timing, ...) from `mountInspector`. Left/Right/J/K move
+    through rows in table order, Esc closes, copy actions (text, JSON, curl, Python) and Retry on
+    error or stopped rows. Data comes from the run's snapshot (`job.sent`); images are not kept after a reload.
+  - The left pane collapses to a 40px rail via a toggle in its header; the state is saved in
+    localStorage `ojui.batch.layout.v1`. A handoff re-expands it without changing the saved preference.
+    Under 1100px the pane stacks as before.
 - **Aggregates row**: noul mean P(yes), the choice distribution as a stacked mini-bar, the
   score mean with σ, and mean confidence.
 - **Export**: CSV (flattened: `qid.choice`, `qid.p_<option>`, `qid.score`, `qid.confidence`,
   `qid.noul`, latency_ms, input_tokens), JSON (full answers), and "Copy as Markdown table".
-- **Persistence**: the last job's inputs and results go to `ojui.batch.last.v1`, without
-  images. Batch supports images too (the same images for every state) through an image drop on
-  the pane. Every request goes through `api.systemOne` with `source: 'batch'`.
+- **Persistence**: the last job's inputs and results go to `ojui.batch.last.v1` (including the
+  JSONL `field`), without images. A job too large for localStorage shows a warning once.
+  Batch supports images too (the same images for every state) through an image drop on the
+  pane. Every request goes through `api.systemOne` with `source: 'batch'`.
+- **Handoff from a decision** (thread header **batch** button, or `/batch` in a systemone
+  composer; `openConversationInBatch`, §3.9):
+  - Copies the current questions, the conversation options, the draft images (applied to every
+    state) and every distinct user state, oldest first, with the unsent draft last.
+  - States go in newline mode (`lines`). A state with a line break switches to `blank-line
+    blocks`; a state with a blank line inside, or any JSON state, switches to `JSONL`, so no
+    text is lost (`statesToBatchInput`).
+  - When the current job has finished rows, a confirm asks before replacing it; Cancel keeps
+    the old job. Template handoffs replace without asking, as before.
+  - A toast reports the state count and format, whether the draft was included, and the images.
 
 ### 5.10 Stats dashboard (C, `#/stats`) and conversation stats (C)
 
@@ -1215,7 +1354,8 @@ C registers these in `init()`:
 |---|---|
 | `/template <id\|fuzzy>` | load a template |
 | `/templates` | open the gallery |
-| `/batch` | open batch |
+| `/save-template` | save the active question editor's questions as a template |
+| `/batch` | in a systemone composer: hand the decision to batch (§5.9); otherwise open batch |
 | `/compare [preset]` | compare |
 | `/inspect` | inspect the last turn |
 | `/curl` | copy curl |
@@ -1304,7 +1444,8 @@ Setup: `mise run startOpenJev`, wait for `/v1/models`, then `mise run ui`.
     One" opens a rubric decision.
 12. Batch: the `sentiment` template's batchStates (10 or more) with concurrency 1. Progress,
     ETA and the table all work. Sort by confidence. CSV export opens in a spreadsheet with one
-    column per `qid.field`.
+    column per `qid.field`. Drop a `.jsonl` of objects on the view, pick the `text` field in the
+    preview, Load, Run.
 13. Stats: KPIs are non-zero, all charts render, "tok/image" is estimated after the image run,
     and labelling 3 answers correct/wrong populates the reliability diagram. Totals survive a
     page reload and deleting every conversation.

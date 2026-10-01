@@ -14,6 +14,7 @@ No build step, no npm. A small Python server (`ui/server.py`) serves `ui/static/
 mise run startOpenJev      # start OpenJev on :8080 (the first start loads the model and takes a while)
 mise run ui                # UI on http://127.0.0.1:8090
 mise run uiTest            # proxy tests (mocked upstream, no model needed)
+mise run uiTestJs          # batch file import unit tests (node --test, no browser)
 ```
 
 The server starts even when OpenJev is down. The startup banner tells you whether the upstream
@@ -43,7 +44,7 @@ upstream request id).
 | `UI_PORT` | `8090` | Bind port |
 
 CLI flags override the env vars: `.venv/bin/python ui/server.py --host 0.0.0.0 --port 9000 --open`
-(`--open` opens a browser tab after startup).
+(`--open` opens a browser tab once the server is listening; `mise run ui` passes it).
 
 Against a server that needs a key: `OPENJEV_API_KEY=sk-... mise run ui`.
 
@@ -89,7 +90,8 @@ Proxy details:
 - **Chat mode** (`diffusiongemma-26b`): streamed Markdown, ttft and tok/s, JSON mode, a system
   prompt, and "Judge with System One".
 - **Templates** gallery, **Compare** (the same request under different options, with per-question
-  JSD), **Batch** (many states through one question set, CSV export), **Stats** dashboard (KPIs,
+  JSD), **Batch** (many states through one question set; load them from JSONL, TXT, CSV/TSV or
+  JSON files with Upload or drag and drop, read locally; CSV export), **Stats** dashboard (KPIs,
   latency percentiles, token and confidence distributions, a reliability diagram from your
   correct/wrong labels), and a raw request/response **Inspector** with curl, Python, fetch and
   OpenAI snippets.
@@ -105,6 +107,7 @@ recorded token counts, so changing a price rewrites every figure.
 ui/
   server.py            proxy + static server (FastAPI/uvicorn/httpx from the project .venv)
   tests/test_server.py pytest against a fake upstream (httpx.MockTransport)
+  tests/batch_import.test.mjs  node --test for js/jev/batchImport.js (mise run uiTestJs)
   static/              the SPA: index.html, css/, js/core (shell), js/app (chat UI), js/jev (visualizers)
   CONTRACT.md          the build contract the pieces were written against
 ```

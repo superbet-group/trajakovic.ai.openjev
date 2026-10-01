@@ -1,12 +1,12 @@
-// Builder C's slash commands: /template, /templates, /batch, /compare, /inspect, /curl,
-// /python, /add, /json and /builder. Registered once from init() through core/slash.js.
+// Builder C's slash commands: /template, /templates, /save-template, /batch, /compare, /inspect,
+// /curl, /python, /add, /json and /builder. Registered once from init() through core/slash.js.
 
 import { registerSlash } from '/js/core/slash.js';
 import { emit } from '/js/core/bus.js';
 import { copyText } from '/js/core/dom.js';
 import { toast } from '/js/core/toast.js';
 import { buildSystemOneBody, getCachedConfig } from '/js/core/api.js';
-import { findTemplate, templateToDraft, TEMPLATES } from '/js/jev/templates.js';
+import { findTemplate, templateToDraft, allTemplates } from '/js/jev/templates.js';
 import { buildSnippet } from '/js/jev/snippets.js';
 import { openInspector } from '/js/jev/inspector.js';
 import { queueComparePreset, PRESETS } from '/js/jev/compare.js';
@@ -46,7 +46,7 @@ export function registerJevSlashCommands() {
   const reg = (spec) => { try { registerSlash(spec); } catch (e) { console.warn('[ojui] registerSlash failed', spec.name, e); } };
 
   reg({
-    name: 'template', args: '<id|fuzzy>', description: `load a template (${TEMPLATES.map((t) => t.id).slice(0, 4).join(', ')}, …)`,
+    name: 'template', args: '<id|fuzzy>', description: `load a template (${allTemplates().map((t) => t.id).slice(0, 4).join(', ')}, …)`,
     run: async (arg, ctx) => {
       const t = findTemplate(arg);
       if (!t) { toast(arg ? `No template matches "${arg}"` : 'Usage: /template <id>', { kind: 'warn' }); if (!arg) go(ctx, '#/templates'); return; }
@@ -57,7 +57,21 @@ export function registerJevSlashCommands() {
     },
   });
   reg({ name: 'templates', description: 'open the template gallery', run: async (_a, ctx) => go(ctx, '#/templates') });
-  reg({ name: 'batch', description: 'open batch mode', run: async (_a, ctx) => go(ctx, '#/batch') });
+  reg({
+    name: 'save-template', description: 'save the current questions as a template',
+    run: async () => {
+      const ed = getActiveQuestionEditor();
+      if (!ed) { toast('Open a System One conversation first', { kind: 'warn' }); return; }
+      await ed.saveAsTemplate();
+    },
+  });
+  reg({
+    name: 'batch', description: 'open batch mode (from a decision: copies its questions and states)',
+    run: async (_a, ctx) => {
+      if (ctx?.conversation?.mode === 'systemone' && ctx.composer?.openInBatch) { ctx.composer.openInBatch(); return; }
+      go(ctx, '#/batch');
+    },
+  });
   reg({
     name: 'compare', args: `[${PRESETS.map((p) => p.id).join('|')}]`, description: 'compare the last turn under variants',
     run: async (arg, ctx) => {

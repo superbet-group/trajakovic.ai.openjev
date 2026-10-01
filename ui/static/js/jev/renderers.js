@@ -42,6 +42,30 @@ export function answerText(st, { long = false } = {}) {
   return '—';
 }
 
+/** A finished System One turn as Markdown (the v2 card's "Copy as text"): state, an answers
+ *  table and a model / token line. ctx.turnIndex numbers the heading. */
+export function turnToMarkdown(turn, ctx = {}) {
+  const req = turn?.request || {};
+  const cell = (v) => String(v ?? '').replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|');
+  const n = Number.isFinite(ctx.turnIndex) ? ctx.turnIndex + 1 : '?';
+  const out = [`**#${n} state**`, ''];
+  if (req.state !== null && typeof req.state === 'object') out.push('```json', JSON.stringify(req.state, null, 2), '```');
+  else out.push(String(req.state ?? '').split('\n').map((l) => `> ${l}`).join('\n'));
+  const nImg = Array.isArray(req.images) ? req.images.length : 0;
+  if (nImg) out.push('', `_${nImg} image${nImg === 1 ? '' : 's'} attached_`);
+  const answers = turn?.response?.answers || {};
+  const stats = statsFor(answers, req.questions);
+  out.push('', '| question | type | answer |', '| --- | --- | --- |');
+  for (const qid of Object.keys(answers)) {
+    const q = (req.questions || {})[qid] || {};
+    const st = stats[qid];
+    out.push(`| ${cell(qid)} | ${cell(st?.type || q.type || answers[qid]?.type || '?')} | ${cell(answerText(st, { long: true }))} |`);
+  }
+  const u = turn?.response?.usage || {};
+  out.push('', `${turn?.response?.model || req.model || 'openjev'} · ${fmtInt(u.input_tokens ?? 0)} in / ${fmtInt(u.output_tokens ?? 0)} out tok`);
+  return out.join('\n');
+}
+
 function typeChip(type) {
   return el('span', { class: 'chip viz-typechip', style: { '--viz-c': TYPE_COLOR[type] || 'var(--fg-muted)' } }, type || '?');
 }

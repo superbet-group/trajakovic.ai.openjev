@@ -6,6 +6,13 @@ health shapes, SSE chunking and disconnect cleanup at the ASGI level, and static
 import asyncio
 import importlib.util
 import json
+import os
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 
 import httpx
@@ -280,3 +287,94 @@ def test_cross_origin_and_rebinding_are_refused(static_dir):
         assert c.get("/v1/models", headers={"host": "attacker.test:8090"}).status_code == 403
         assert c.get("/v1/models", headers={"host": "127.0.0.1:8090"}).status_code == 200
         assert c.get("/v1/models", headers={"host": "[::1]:8090"}).status_code == 200
+
+
+SERVER_PY = Path(__file__).resolve().parents[1] / "server.py"
+
+
+def _spawn(upstream="http://127.0.0.1:1"):
+    """Start the real dev server (default upstream down: port 1 refuses at once) and wait until it listens."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    env = {**os.environ, "UI_PORT": str(port), "UI_HOST": "127.0.0.1",
+           "OPENJEV_URL": upstream, "PYTHONUNBUFFERED": "1"}
+    p = subprocess.Popen([sys.executable, str(SERVER_PY)], env=env,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    deadline = time.monotonic() + 15
+    while True:
+        try:
+            socket.create_connection(("127.0.0.1", port), 0.2).close()
+            return p, port
+        except OSError:
+            if p.poll() is not None or time.monotonic() > deadline:
+                p.kill()
+                _, err = p.communicate()
+                pytest.fail(f"server did not start: {err.decode(errors='replace')}")
+            time.sleep(0.05)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+@pytest.mark.parametrize("sigs", [
+    pytest.param([signal.SIGINT], id="sigint_once"),
+    pytest.param([signal.SIGINT, signal.SIGINT], id="sigint_twice"),  # terminal + mise forwarding
+    pytest.param([signal.SIGTERM], id="sigterm"),
+])
+def test_signal_shutdown_is_clean(sigs):
+    p, port = _spawn()
+    try:
+        # use the lifespan client once, as in a real session (502: the upstream is down)
+        assert httpx.post(f"http://127.0.0.1:{port}/v1/systemone", json={}, timeout=5).status_code == 502
+        for i, sig in enumerate(sigs):
+            if i:
+                time.sleep(0.05)
+            p.send_signal(sig)
+        out, err = p.communicate(timeout=15)
+    finally:
+        if p.poll() is None:
+            p.kill()
+            p.communicate()
+    assert p.returncode == 0, err.decode(errors="replace")
+    assert b"Traceback" not in err, err.decode(errors="replace")
+    assert b"CancelledError" not in err
+    assert b"ojui: stopped" in err
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_signal_during_open_request_hints_then_force_quits():
+    # upstream sends headers, then stalls: the proxied request stays open across the shutdown
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    stop = threading.Event()
+
+    def stall():
+        conn, _ = srv.accept()
+        conn.recv(65536)
+        conn.sendall(b"HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\ntransfer-encoding: chunked\r\n\r\n")
+        stop.wait(30)
+        conn.close()
+
+    threading.Thread(target=stall, daemon=True).start()
+    p, port = _spawn(f"http://127.0.0.1:{srv.getsockname()[1]}")
+    client = socket.create_connection(("127.0.0.1", port))
+    try:
+        client.sendall(b"POST /v1/systemone HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n"
+                       b"Content-Type: application/json\r\n\r\n{}")
+        time.sleep(1)
+        p.send_signal(signal.SIGINT)  # terminal + mise forwarding: one press
+        p.send_signal(signal.SIGINT)
+        time.sleep(2)
+        assert p.poll() is None  # still waiting for the open request
+        p.send_signal(signal.SIGINT)  # a real second press
+        out, err = p.communicate(timeout=15)
+    finally:
+        stop.set()
+        client.close()
+        srv.close()
+        if p.poll() is None:
+            p.kill()
+            p.communicate()
+    assert p.returncode == 0, err.decode(errors="replace")
+    assert b"waiting for 1 open request" in err, err.decode(errors="replace")
+    assert b"Traceback" not in err, err.decode(errors="replace")

@@ -112,8 +112,15 @@ export async function openSettings({ section: focusSection } = {}) {
   const qTab = h('select', { class: 'select sm' }, ['builder', 'json'].map((m) => h('option', { value: m }, m)));
   qTab.value = s.questionEditorTab;
   qTab.onchange = () => setSettings({ questionEditorTab: qTab.value });
+  const clearSel = h('select', { class: 'select sm' }, [['answer', 'after the answer arrives'], ['send', 'immediately on send'], ['never', 'never']].map(([v, l]) => h('option', { value: v }, l)));
+  clearSel.value = s.clearStateOn;
+  clearSel.onchange = () => setSettings({ clearStateOn: clearSel.value });
+  const layoutSel = h('select', { class: 'select sm' }, [['v2', 'decision cards (prompt + answers in one card)'], ['classic', 'chat bubbles']].map(([v, l]) => h('option', { value: v }, l)));
+  layoutSel.value = s.threadLayout;
+  layoutSel.onchange = () => setSettings({ threadLayout: layoutSel.value });
   body.appendChild(section('Behaviour',
-    field('Clear state on send', checkbox(s.clearStateOnSend, (v) => setSettings({ clearStateOnSend: v })), 'Off by default: asking the same questions repeatedly is the normal loop.'),
+    field('Clear the state box', clearSel, 'Default: once the answer is back. Failed or stopped requests keep the text so you can fix and resend.'),
+    field('Thread layout', layoutSel, 'Decision cards keep the state and its answers in one block, ready to screenshot or copy as text.'),
     field('Auto-retry 429 / 529 once', checkbox(s.autoRetryOverloaded, (v) => setSettings({ autoRetryOverloaded: v })), 'Waits for retry-after, then retries a single time.'),
     field('Show raw error bodies', checkbox(s.showRawByDefault, (v) => setSettings({ showRawByDefault: v }))),
     h('div', { class: 'set-grid3' }, field('JSON editor mode', jsonMode), field('Question editor tab', qTab))));

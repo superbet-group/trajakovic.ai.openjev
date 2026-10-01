@@ -29,9 +29,13 @@ description = "Restart the OpenJev server with OPENJEV_LOG_LEVEL=debug (logs req
 run = "./stopOpenJev; OPENJEV_LOG_LEVEL=debug ./startOpenJev"
 
 [tasks.ui]
-description = "OpenJev UI on http://127.0.0.1:8090 (serves ui/static, proxies /v1/* to OpenJev)"
-run = ".venv/bin/python ui/server.py"
+description = "OpenJev UI on http://127.0.0.1:8090 (serves ui/static, proxies /v1/* to OpenJev) and opens it in the default browser"
+run = ".venv/bin/python ui/server.py --open"
 
 [tasks.uiTest]
 description = "Tests for the OpenJev UI proxy"
 run = ".venv/bin/python -m pytest ui/tests -q"
+
+[tasks.uiTestJs]
+description = "Unit tests for the batch file import (node, no browser)"
+run = "node --test ui/tests/batch_import.test.mjs"
