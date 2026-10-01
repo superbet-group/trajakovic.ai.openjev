@@ -1,0 +1,783 @@
+{
+ "use_case": "support-ticket-triage",
+ "cases": [
+  {
+   "id": "triage-01",
+   "description": "Clear billing ticket: routes to billing, refund yes, churn no",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Subject: Charged twice\n\nHi, I was billed $49 twice on March 3 for the same Pro subscription. Please refund the duplicate charge. Order #88213.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     },
+     "churn": {
+      "type": "noul",
+      "instructions": "Is the customer threatening to cancel or leave?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice": "billing",
+      "confidence_gte": 0.7
+     },
+     "refund": {
+      "noul_gte": 0.8
+     },
+     "churn": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-02",
+   "description": "Outage ticket: technical, urgent, high frustration-adjacent",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Subject: API returns 500 since this morning\n\nOur production integration has been getting HTTP 500 from POST /v2/orders since 08:00 UTC. No deploy on our side. Checkout is down for all our shoppers, we are losing sales every minute. Please escalate NOW.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "urgent": {
+      "type": "noul",
+      "instructions": "Does this need attention today (outage, money lost, deadline, or a blocked customer)?"
+     },
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice": "technical"
+     },
+     "urgent": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-03",
+   "description": "Sales lead, calm, not urgent",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Hello, we are a 300-person company evaluating your platform. Could you send enterprise pricing and set up a demo for next week? No rush, whenever suits.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "urgent": {
+      "type": "noul",
+      "instructions": "Does this need attention today (outage, money lost, deadline, or a blocked customer)?"
+     },
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice": "sales"
+     },
+     "urgent": {
+      "noul_lte": 0.25
+     },
+     "frustration": {
+      "score_lte": 0.5
+     },
+     "refund": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-04",
+   "description": "Furious churn + refund + chargeback threat",
+   "request": {
+    "model": "openjev-latest",
+    "state": "This is the THIRD time I write. Your app has logged me out every 5 minutes for two weeks and support keeps sending me the same useless FAQ link. I am done. Cancel my account and refund this month or I dispute the charge with my bank.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     },
+     "churn": {
+      "type": "noul",
+      "instructions": "Is the customer threatening to cancel or leave?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "frustration": {
+      "score_gte": 1.6
+     },
+     "refund": {
+      "noul_gte": 0.85
+     },
+     "churn": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-05",
+   "description": "Happy customer with nice-to-have: calm, not urgent, no churn, no refund",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Thanks so much, the new export feature works great and saved us hours. One tiny thing: could the CSV header include the timezone? Not urgent at all, just a nice-to-have.",
+    "questions": {
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     },
+     "urgent": {
+      "type": "noul",
+      "instructions": "Does this need attention today (outage, money lost, deadline, or a blocked customer)?"
+     },
+     "churn": {
+      "type": "noul",
+      "instructions": "Is the customer threatening to cancel or leave?"
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "frustration": {
+      "score_lte": 0.5
+     },
+     "urgent": {
+      "noul_lte": 0.15
+     },
+     "churn": {
+      "noul_lte": 0.1
+     },
+     "refund": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-06",
+   "description": "Vague message: model must not be confident about department; 'other' should carry weight",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Please help",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "prob_gte": {
+       "other": 0.4
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-07a",
+   "description": "Paraphrase stability 1/3 of a duplicate-charge ticket: all must route billing and ask refund",
+   "request": {
+    "model": "openjev-latest",
+    "state": "I was charged twice this month for my subscription, please fix it and refund the extra payment.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice": "billing"
+     },
+     "refund": {
+      "noul_gte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-07b",
+   "description": "Paraphrase stability 2/3 of a duplicate-charge ticket: all must route billing and ask refund",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Two identical payments for my plan hit my card this month. I want the duplicate one returned.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice": "billing"
+     },
+     "refund": {
+      "noul_gte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-07c",
+   "description": "Paraphrase stability 3/3 of a duplicate-charge ticket: all must route billing and ask refund",
+   "request": {
+    "model": "openjev-latest",
+    "state": "There is a double charge on my credit card statement from your service. Could you reverse one of them?",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice": "billing"
+     },
+     "refund": {
+      "noul_gte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-08",
+   "description": "Mixed billing/technical ticket, fan-out of 5 questions in one call; only unambiguous facts asserted",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Subject: Invoice question and login broken\n\nMy invoice shows the old company address and I can't log in to download the new one, it says 'invalid token'. It's slightly annoying but I need the PDF by Friday for my accountant.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "urgent": {
+      "type": "noul",
+      "instructions": "Does this need attention today (outage, money lost, deadline, or a blocked customer)?"
+     },
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     },
+     "churn": {
+      "type": "noul",
+      "instructions": "Is the customer threatening to cancel or leave?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice_in": [
+       "billing",
+       "technical"
+      ]
+     },
+     "refund": {
+      "noul_lte": 0.15
+     },
+     "churn": {
+      "noul_lte": 0.2
+     },
+     "frustration": {
+      "score_lte": 1.2
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-09a",
+   "description": "Intent cascade: order-status goes to DB lookup",
+   "request": {
+    "model": "openjev-latest",
+    "state": "hey where is my order 55120? it said delivery by Tuesday and it's Thursday now",
+    "questions": {
+     "intent": {
+      "type": "choice",
+      "instructions": "What does the customer want?",
+      "criteria": {
+       "order_status": "asks where an order or shipment is, tracking, delivery date",
+       "complaint": "expresses dissatisfaction with product or service and wants it addressed",
+       "cancel": "wants to cancel a subscription or order",
+       "other": "anything else"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "intent": {
+      "choice": "order_status",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-09b",
+   "description": "Intent cascade: complaint routes to complaint, not order_status",
+   "request": {
+    "model": "openjev-latest",
+    "state": "The jacket I received has a torn seam and the zipper broke on day one. Honestly disappointed with the quality, this is not what the photos showed.",
+    "questions": {
+     "intent": {
+      "type": "choice",
+      "instructions": "What does the customer want?",
+      "criteria": {
+       "order_status": "asks where an order or shipment is, tracking, delivery date",
+       "complaint": "expresses dissatisfaction with product or service and wants it addressed",
+       "cancel": "wants to cancel a subscription or order",
+       "other": "anything else"
+      }
+     },
+     "complex": {
+      "type": "noul",
+      "instructions": "Does this need a human agent's judgement rather than a canned answer?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "intent": {
+      "choice": "complaint"
+     },
+     "complex": {
+      "noul_gte": 0.5
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-10a",
+   "description": "Email tray: newsletter",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Subject: This week in cloud - 10 tips to cut your bill\n\nRead the latest in our newsletter! Unsubscribe | View in browser. Sponsored by CloudCo, 20% off annual plans.",
+    "questions": {
+     "tray": {
+      "type": "choice",
+      "instructions": "Which inbox tray does this email belong in?",
+      "criteria": {
+       "action": "needs a decision or task from me",
+       "fyi": "informational, no action needed",
+       "newsletter": "bulk marketing or newsletter",
+       "personal": "personal note from a friend or family"
+      }
+     },
+     "reply": {
+      "type": "noul",
+      "instructions": "Does the sender expect a reply from me?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tray": {
+      "choice": "newsletter"
+     },
+     "reply": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-10b",
+   "description": "Email tray: action item needing reply",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Subject: Contract sign-off by Friday\n\nHi Tom, legal needs your signature on the vendor contract by end of day Friday or we lose the slot. Can you confirm you'll sign and send back?",
+    "questions": {
+     "tray": {
+      "type": "choice",
+      "instructions": "Which inbox tray does this email belong in?",
+      "criteria": {
+       "action": "needs a decision or task from me",
+       "fyi": "informational, no action needed",
+       "newsletter": "bulk marketing or newsletter",
+       "personal": "personal note from a friend or family"
+      }
+     },
+     "reply": {
+      "type": "noul",
+      "instructions": "Does the sender expect a reply from me?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tray": {
+      "choice": "action"
+     },
+     "reply": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-11",
+   "description": "Extension: think=true on the mixed-signal ticket still yields sane churn/refund answers",
+   "request": {
+    "model": "openjev-latest",
+    "state": "This is the THIRD time I write. Your app has logged me out every 5 minutes for two weeks and support keeps sending me the same useless FAQ link. I am done. Cancel my account and refund this month or I dispute the charge with my bank.",
+    "questions": {
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     },
+     "churn": {
+      "type": "noul",
+      "instructions": "Is the customer threatening to cancel or leave?"
+     }
+    },
+    "think": true
+   },
+   "expect": {
+    "answers": {
+     "refund": {
+      "noul_gte": 0.8
+     },
+     "churn": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-12",
+   "description": "Hard: sarcastic but decidable frustration",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Wow, fantastic, another 'scheduled maintenance' that lasted 9 hours during my launch day. Great job, truly. Really loving paying for this.",
+    "questions": {
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     },
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "frustration": {
+      "score_gte": 1.0
+     },
+     "dept": {
+      "choice": "technical"
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-13",
+   "description": "Chat message intent cascade: short live-chat cancellation request routes to cancel and flags churn",
+   "request": {
+    "model": "openjev-latest",
+    "state": "hi, pls cancel my subscription before it renews tomorrow, dont need it anymore",
+    "questions": {
+     "intent": {
+      "type": "choice",
+      "instructions": "What does the customer want?",
+      "criteria": {
+       "order_status": "asks where an order or shipment is, tracking, delivery date",
+       "complaint": "expresses dissatisfaction with product or service and wants it addressed",
+       "cancel": "wants to cancel a subscription or order",
+       "other": "anything else"
+      }
+     },
+     "churn": {
+      "type": "noul",
+      "instructions": "Is the customer threatening to cancel or leave?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "intent": {
+      "choice": "cancel"
+     },
+     "churn": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-14",
+   "description": "Non-English ticket (German duplicate charge) still routes billing with refund",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Betreff: Doppelte Abbuchung\n\nGuten Tag, mir wurden diesen Monat zweimal 49 Euro für mein Abonnement abgebucht. Bitte erstatten Sie mir den doppelten Betrag.",
+    "questions": {
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "dept": {
+      "choice": "billing"
+     },
+     "refund": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-15",
+   "description": "Hard: politely worded but furious refund/churn threat is still high frustration",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Dear team, I would be most grateful if you could look at this once more. I have now waited five weeks for a refund I was promised, and I will be reporting this to the consumer authority and leaving the platform if it is not resolved by Monday.",
+    "questions": {
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     },
+     "churn": {
+      "type": "noul",
+      "instructions": "Is the customer threatening to cancel or leave?"
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Is the customer asking for money back (a refund or a credit)?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "frustration": {
+      "score_gte": 1.5
+     },
+     "churn": {
+      "noul_gte": 0.85
+     },
+     "refund": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "triage-16",
+   "description": "Negative: polite small request is not urgent (guards against over-flagging)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "The invoice PDF is missing the VAT number, could you add it? Thanks",
+    "questions": {
+     "urgent": {
+      "type": "noul",
+      "instructions": "Does this need attention today (outage, money lost, deadline, or a blocked customer)?"
+     },
+     "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": [
+       "calm or neutral",
+       "somewhat annoyed",
+       "angry or furious"
+      ]
+     },
+     "dept": {
+      "type": "choice",
+      "instructions": "Which team should own this ticket?",
+      "criteria": {
+       "billing": "charges, invoices, refunds, payment methods, plan pricing",
+       "technical": "bugs, errors, outages, integrations, performance, login problems",
+       "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+       "other": "anything else, or too vague to tell"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "urgent": {
+      "noul_lte": 0.2
+     },
+     "frustration": {
+      "score_lte": 0.5
+     },
+     "dept": {
+      "choice": "billing"
+     }
+    }
+   }
+  }
+ ]
+}

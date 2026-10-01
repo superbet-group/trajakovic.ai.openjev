@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenJev Playground</title>
+  <meta name="description" content="A local, ChatGPT-like playground for OpenJev System One decisions and diffusiongemma-26b chat.">
+  <link rel="icon" href="/favicon.svg">
+  <script>
+    /* no-flash: read ojui.settings.v1.theme, resolve 'system' via matchMedia, set data-theme */
+    (function () {
+      var t = 'system';
+      try { t = (JSON.parse(localStorage.getItem('ojui.settings.v1') || '{}') || {}).theme || 'system'; } catch (e) {}
+      if (t !== 'dark' && t !== 'light') t = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      var d = document.documentElement;
+      d.setAttribute('data-theme', t);
+      d.style.colorScheme = t;
+    })();
+  </script>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/viz.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <script>
+      /* restore the collapsed sidebar before first paint */
+      try { if ((JSON.parse(localStorage.getItem('ojui.layout.v1') || '{}') || {}).sidebarCollapsed) document.getElementById('app').classList.add('sidebar-collapsed'); } catch (e) {}
+    </script>
+    <aside id="sidebar" class="sidebar"></aside>
+    <main id="main" class="main">
+      <header id="topbar" class="topbar"></header>
+      <div id="banner" class="banner" hidden></div>
+      <section id="view" class="view"></section>
+    </main>
+    <aside id="drawer" class="drawer" hidden></aside>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

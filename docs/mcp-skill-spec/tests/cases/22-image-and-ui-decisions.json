@@ -1,0 +1,344 @@
+{
+ "use_case": "22-image-and-ui-decisions",
+ "cases": [
+  {
+   "id": "ui-01",
+   "description": "Image + noul: login wall present (positive)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Screenshot of the page the browser agent just loaded.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_login_wall.png"
+     }
+    ],
+    "questions": {
+     "login_wall": {
+      "type": "noul",
+      "instructions": "Does this screenshot show a login wall or sign-in prompt that blocks the content the user wants to read?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "login_wall": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-02",
+   "description": "Image + noul: same question on a normal dashboard (negative)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Screenshot of the page the browser agent just loaded.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     }
+    ],
+    "questions": {
+     "login_wall": {
+      "type": "noul",
+      "instructions": "Does this screenshot show a login wall or sign-in prompt that blocks the content the user wants to read?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "login_wall": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-03",
+   "description": "Image + choice taxonomy: HTTP error page classified as error_page, with a done/blocked noul",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Screenshot after submitting the checkout form.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_error_500.png"
+     }
+    ],
+    "questions": {
+     "kind": {
+      "type": "choice",
+      "instructions": "What kind of page does this screenshot show?",
+      "criteria": {
+       "login_wall": "a sign-in or paywall page asking for credentials or a subscription",
+       "dashboard": "a working application page with data, metrics or lists",
+       "error_page": "an HTTP error or crash page such as 404 or 500",
+       "consent_modal": "a cookie or privacy consent dialog covering the page"
+      }
+     },
+     "checkout_completed": {
+      "type": "noul",
+      "instructions": "Does the screenshot show that the order was successfully placed?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "kind": {
+      "choice": "error_page"
+     },
+     "checkout_completed": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-04",
+   "description": "Image + choice taxonomy: cookie consent modal",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Screenshot of a blog landing page.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_cookie_modal.png"
+     }
+    ],
+    "questions": {
+     "kind": {
+      "type": "choice",
+      "instructions": "What kind of page does this screenshot show?",
+      "criteria": {
+       "login_wall": "a sign-in or paywall page asking for credentials or a subscription",
+       "dashboard": "a working application page with data, metrics or lists",
+       "error_page": "an HTTP error or crash page such as 404 or 500",
+       "consent_modal": "a cookie or privacy consent dialog covering the page"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "kind": {
+      "choice": "consent_modal"
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-05",
+   "description": "Image + noul irreversible: delete-confirm dialog is irreversible and goal not done (image, 2 noul)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Screenshot of the dialog on screen. The agent is about to click the red button.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_delete_confirm.png"
+     }
+    ],
+    "questions": {
+     "irreversible": {
+      "type": "noul",
+      "instructions": "Would clicking the primary red button in this dialog permanently destroy data that cannot be recovered?"
+     },
+     "done": {
+      "type": "noul",
+      "instructions": "Does the screenshot show that the user's goal, cleaning up a staging log file, is complete?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "irreversible": {
+      "noul_gte": 0.8
+     },
+     "done": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-06",
+   "description": "Image + choice among visible elements (cookie modal): next click when the task is to read the article without tracking",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task: read the article without agreeing to tracking. Screenshot shows the current page. Candidates: e1 button 'Accept all', e2 button 'Reject non-essential'.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_cookie_modal.png"
+     }
+    ],
+    "questions": {
+     "next": {
+      "type": "choice",
+      "instructions": "Which element should the agent click next to dismiss the dialog according to the task?",
+      "criteria": {
+       "e1": "the 'Accept all' button, which agrees to all tracking",
+       "e2": "the 'Reject non-essential' button, which declines tracking"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "next": {
+      "choice": "e2"
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-07",
+   "description": "Two images in one request (login wall then dashboard): question targets the second image",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Two screenshots in order: first before signing in, second after signing in. Answer about the second.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_login_wall.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     }
+    ],
+    "questions": {
+     "signed_in": {
+      "type": "noul",
+      "instructions": "Does the second screenshot show the user successfully signed in and looking at their account data?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "signed_in": {
+      "noul_gte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-08",
+   "description": "Photo classification against a taxonomy using the shared hotdog fixture",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Uploaded photo to classify.",
+    "images": [
+     {
+      "$file": "tests/data/hotdog.jpg"
+     }
+    ],
+    "questions": {
+     "category": {
+      "type": "choice",
+      "instructions": "Which category best describes the main subject of the photo?",
+      "criteria": {
+       "food": "prepared food or a meal",
+       "animal": "a pet or wild animal",
+       "vehicle": "a car, bike or other vehicle",
+       "document": "a document, receipt or screenshot of text"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "category": {
+      "choice": "food"
+     }
+    }
+   }
+  },
+  {
+   "id": "ui-09",
+   "description": "Error: 9 images exceeds the cap of 8",
+   "request": {
+    "model": "openjev-latest",
+    "state": "x",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     },
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     }
+    ],
+    "questions": {
+     "q": {
+      "type": "noul",
+      "instructions": "Is this a dashboard?"
+     }
+    }
+   },
+   "expect": {
+    "status": 400,
+    "body_contains": "at most 8 images per request"
+   }
+  },
+  {
+   "id": "ui-10",
+   "description": "Error: think with an image is rejected (must send text-only state to think)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Check this screenshot.",
+    "images": [
+     {
+      "$file": "docs/mcp-skill-spec/tests/data/ui22_dashboard.png"
+     }
+    ],
+    "think": 128,
+    "questions": {
+     "q": {
+      "type": "noul",
+      "instructions": "Is this a dashboard?"
+     }
+    }
+   },
+   "expect": {
+    "status": 400,
+    "body_contains": "think needs a text state"
+   }
+  },
+  {
+   "id": "ui-11",
+   "description": "Error: an https URL is not an accepted image; MCP layer must fetch and encode as data URL first",
+   "request": {
+    "model": "openjev-latest",
+    "state": "x",
+    "images": [
+     "https://example.com/shot.png"
+    ],
+    "questions": {
+     "q": {
+      "type": "noul",
+      "instructions": "Is this a dashboard?"
+     }
+    }
+   },
+   "expect": {
+    "status": 400,
+    "body_contains": "data:image"
+   }
+  }
+ ]
+}

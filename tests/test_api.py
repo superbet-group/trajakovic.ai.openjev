@@ -525,3 +525,19 @@ def test_model_time_reaches_the_response_from_parallel_reads():
         return spent[0]
 
     assert asyncio.run(main()) == 15
+
+
+def test_debug_log_has_request_and_response_bodies(client, caplog):
+    with caplog.at_level("DEBUG", logger="openjev"):
+        client.post("/v1/systemone", json=dict(EXAMPLE))
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert " request  /v1/systemone" in text and "Stripe account" in text
+    assert " response 200" in text and '"answers"' in text
+    assert "-> 200 total=" in text and "questions=3" in text
+
+
+def test_info_log_omits_bodies(client, caplog):
+    with caplog.at_level("INFO", logger="openjev"):
+        client.post("/v1/systemone", json=dict(EXAMPLE))
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "-> 200 total=" in text and "Stripe account" not in text

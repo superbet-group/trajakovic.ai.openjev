@@ -1,0 +1,481 @@
+{
+  "use_case": "11-extraction-by-selection",
+  "cases": [
+    {
+      "id": "ext-01-phone-customer-own",
+      "description": "Choose the customer's own callback number among three regex-found numbers.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Ticket #4471 from Dana Whitfield: 'My router keeps dropping. Please call me back on 415-555-0142. Our office line is 415-555-0199 but nobody answers it after 5. Your support line 1-800-555-0100 was busy.'",
+        "questions": {
+          "callback": {
+            "type": "choice",
+            "instructions": "Which candidate is the number the customer asks to be called back on?",
+            "criteria": {
+              "415-555-0142": "the customer's own number where they want the callback",
+              "415-555-0199": "the customer's office line",
+              "1-800-555-0100": "the support company's own line",
+              "not_stated": "the ticket gives no callback number"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "callback": {
+            "choice": "415-555-0142",
+            "prob_gte": {
+              "415-555-0142": 0.8
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-02-phone-not-stated",
+      "description": "Only the vendor's number appears; the customer's own number is not stated, so the not_stated option must win.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Ticket #4472 from Sam: 'Refund never arrived. Ring your billing team on 1-800-555-0100 if you need anything from me, otherwise just email me.'",
+        "questions": {
+          "callback": {
+            "type": "choice",
+            "instructions": "Which candidate is a phone number belonging to the customer?",
+            "criteria": {
+              "1-800-555-0100": "a number that belongs to the customer",
+              "not_stated": "no number belonging to the customer appears in the text"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "callback": {
+            "choice": "not_stated",
+            "prob_gte": {
+              "not_stated": 0.7
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-03-verify-invoice-total-true",
+      "description": "Verify a cheaper extractor's field with a noul: the total is stated in the text.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "INVOICE INV-2291\nBill to: Northwind Traders\nSubtotal 1,180.00 EUR\nVAT 20% 236.00 EUR\nTotal due: 1,416.00 EUR\nDue date: 2026-03-14",
+        "questions": {
+          "total": {
+            "type": "noul",
+            "instructions": "Extracted field: total_due = '1,416.00 EUR'. Does the invoice explicitly state this as the total due?",
+            "criteria": {
+              "true": "the invoice states exactly this total due",
+              "false": "the invoice does not state this total due"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "total": {
+            "noul_gte": 0.85
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-04-verify-invoice-wrong-field",
+      "description": "Extractor picked the subtotal as the total; the verifier must reject it.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "INVOICE INV-2291\nBill to: Northwind Traders\nSubtotal 1,180.00 EUR\nVAT 20% 236.00 EUR\nTotal due: 1,416.00 EUR\nDue date: 2026-03-14",
+        "questions": {
+          "total": {
+            "type": "noul",
+            "instructions": "Extracted field: total_due = '1,180.00 EUR'. Does the invoice state this as the total due?",
+            "criteria": {
+              "true": "the invoice states exactly this as the total due",
+              "false": "the invoice does not state this as the total due"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "total": {
+            "noul_lte": 0.15
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-05-multi-field-verify",
+      "description": "Multi-question request: verify three extracted fields at once (two correct, one hallucinated).",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Order confirmation. Order ID: A-88213. Customer: Priya Nair. Shipping to 12 Elm Street, Leeds. Items: 2x USB-C cable. Estimated delivery: 3-5 business days.",
+        "questions": {
+          "order_id": {
+            "type": "noul",
+            "instructions": "Extracted order_id = 'A-88213'. Does the text contain this exact string as the order ID?",
+            "criteria": {
+              "true": "the text states this order ID",
+              "false": "the text does not state this order ID"
+            }
+          },
+          "city": {
+            "type": "noul",
+            "instructions": "Extracted city = 'Leeds'. Does the text contain this exact string as the shipping city?",
+            "criteria": {
+              "true": "the text states this city",
+              "false": "the text does not state this city"
+            }
+          },
+          "carrier": {
+            "type": "noul",
+            "instructions": "Extracted carrier = 'DHL'. Does the text name DHL as the carrier?",
+            "criteria": {
+              "true": "the text names DHL as the carrier",
+              "false": "the text does not name DHL"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "order_id": {
+            "noul_gte": 0.85
+          },
+          "city": {
+            "noul_gte": 0.85
+          },
+          "carrier": {
+            "noul_lte": 0.15
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-06-date-components-friday-after-next",
+      "description": "Dates read as text: pick the weekday component from a phrase; arithmetic then stays in code.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Hi, can we meet Friday after next? Anything in the afternoon works.",
+        "questions": {
+          "weekday": {
+            "type": "choice",
+            "instructions": "Which weekday does the sender name?",
+            "criteria": {
+              "monday": "Monday",
+              "tuesday": "Tuesday",
+              "wednesday": "Wednesday",
+              "thursday": "Thursday",
+              "friday": "Friday",
+              "not_stated": "no weekday named"
+            }
+          },
+          "offset": {
+            "type": "choice",
+            "instructions": "Which week offset does the phrase express? 'this' = the coming one, 'next' = one week later, 'after_next' = two weeks later.",
+            "criteria": {
+              "this": "the coming occurrence",
+              "next": "the occurrence in the following week",
+              "after_next": "the occurrence a week after 'next'",
+              "not_stated": "no offset expressed"
+            }
+          },
+          "daypart": {
+            "type": "choice",
+            "instructions": "Which part of the day is requested?",
+            "criteria": {
+              "morning": "morning",
+              "afternoon": "afternoon",
+              "evening": "evening",
+              "not_stated": "no part of day stated"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "weekday": {
+            "choice": "friday"
+          },
+          "offset": {
+            "choice": "after_next"
+          },
+          "daypart": {
+            "choice": "afternoon"
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-07-date-not-stated",
+      "description": "No date in the text; the year component must resolve to not_stated rather than guessing.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Contract signed on the 3rd of March by both parties. Payment is due within thirty days.",
+        "questions": {
+          "year": {
+            "type": "choice",
+            "instructions": "Which year is the contract signing date in?",
+            "criteria": {
+              "2024": "2024",
+              "2025": "2025",
+              "2026": "2026",
+              "not_stated": "the year is not stated in the text"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "year": {
+            "choice": "not_stated",
+            "prob_gte": {
+              "not_stated": 0.6
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-08-ner-span-classification",
+      "description": "NER by classification: code proposes spans, model classifies each span type (batched questions).",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Yesterday Marie Curie Hospital in Lyon announced that Dr. Alain Perrot will lead the new oncology unit.",
+        "questions": {
+          "span_a": {
+            "type": "choice",
+            "instructions": "In the sentence, what kind of entity is the span 'Marie Curie Hospital'?",
+            "criteria": {
+              "person": "a human being",
+              "organization": "an institution or company",
+              "location": "a place or city",
+              "other": "none of these"
+            }
+          },
+          "span_b": {
+            "type": "choice",
+            "instructions": "In the sentence, what kind of entity is the span 'Lyon'?",
+            "criteria": {
+              "person": "a human being",
+              "organization": "an institution or company",
+              "location": "a place or city",
+              "other": "none of these"
+            }
+          },
+          "span_c": {
+            "type": "choice",
+            "instructions": "In the sentence, what kind of entity is the span 'Alain Perrot'?",
+            "criteria": {
+              "person": "a human being",
+              "organization": "an institution or company",
+              "location": "a place or city",
+              "other": "none of these"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "span_a": {
+            "choice": "organization"
+          },
+          "span_b": {
+            "choice": "location"
+          },
+          "span_c": {
+            "choice": "person"
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-09-verbatim-span-boundary",
+      "description": "Span boundary selection: choose the candidate that is exactly brand plus model, excluding the generic category words that follow.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Review: I bought the Logitech MX Master 3S wireless mouse last month and the scroll wheel is fantastic.",
+        "questions": {
+          "product": {
+            "type": "choice",
+            "instructions": "A product name is the brand and model only. Generic category nouns such as 'wireless mouse' are never part of a product name. Which candidate span is the product name in the review?",
+            "criteria": {
+              "Logitech MX Master 3S": "brand and complete model, ending at '3S' and stopping before any category noun",
+              "MX Master": "cuts the name short: missing the brand and the '3S'",
+              "Logitech MX Master 3S wireless mouse": "wrong: runs past the model into the generic category words 'wireless mouse'",
+              "not_stated": "no product named"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "product": {
+            "choice": "Logitech MX Master 3S",
+            "prob_gte": {
+              "Logitech MX Master 3S": 0.8
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-10-choice-many-candidates-log",
+      "description": "Many options (6 candidate timestamps/IDs) from a log; pick the request id belonging to the failed call.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "12:01:03 INFO req=r-1001 GET /health 200\n12:01:04 INFO req=r-1002 GET /users/7 200\n12:01:05 ERROR req=r-1003 POST /orders 500 NullPointerException in OrderService\n12:01:06 INFO req=r-1004 GET /users/9 200\n12:01:07 INFO req=r-1005 GET /health 200\n12:01:08 WARN req=r-1006 GET /users/11 404",
+        "questions": {
+          "failed": {
+            "type": "choice",
+            "instructions": "Which request id failed with a server error (HTTP 500)?",
+            "criteria": {
+              "r-1001": "GET /health 200",
+              "r-1002": "GET /users/7 200",
+              "r-1003": "POST /orders 500",
+              "r-1004": "GET /users/9 200",
+              "r-1005": "GET /health 200",
+              "r-1006": "GET /users/11 404",
+              "not_stated": "no request failed with 500"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "failed": {
+            "choice": "r-1003",
+            "prob_gte": {
+              "r-1003": 0.8
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-11-ambiguous-two-emails-think",
+      "description": "Harder decidable case with think and samples: two emails, pick the one for invoices being sent to.",
+      "request": {
+        "model": "openjev-latest",
+        "think": 256,
+        "samples": 2,
+        "state": "Hi accounts team, our old billing address ap@oldco.example is being retired, please stop using it. From now on send all invoices to finance@newco.example. Questions can still go to Lena at lena@newco.example.",
+        "questions": {
+          "invoice_email": {
+            "type": "choice",
+            "instructions": "Which email address should invoices be sent to going forward?",
+            "criteria": {
+              "ap@oldco.example": "the retired old billing address",
+              "finance@newco.example": "the new address for invoices",
+              "lena@newco.example": "the contact for questions",
+              "not_stated": "no invoice address given"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "invoice_email": {
+            "choice": "finance@newco.example",
+            "prob_gte": {
+              "finance@newco.example": 0.6
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-12-classify-each-match-then-count-in-code",
+      "description": "Counting pattern done right: code finds each 'error' match with its context, the model classifies each match (real failure vs harmless mention); code counts the answers.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Log excerpt:\n[1] error: connection refused to db-2\n[2] 0 errors found in lint run\n[3] error: disk full on /var\n[4] retry policy: error budget is 2%\n[5] error: timeout calling billing",
+        "questions": {
+          "m1": {
+            "type": "noul",
+            "instructions": "Match [1] 'error: connection refused to db-2'. Is this line reporting a real failure that happened?",
+            "criteria": {
+              "true": "the line reports an actual failure",
+              "false": "the line only mentions the word error"
+            }
+          },
+          "m2": {
+            "type": "noul",
+            "instructions": "Match [2] '0 errors found in lint run'. Is this line reporting a real failure that happened?",
+            "criteria": {
+              "true": "the line reports an actual failure",
+              "false": "the line only mentions the word error"
+            }
+          },
+          "m3": {
+            "type": "noul",
+            "instructions": "Match [3] 'error: disk full on /var'. Is this line reporting a real failure that happened?",
+            "criteria": {
+              "true": "the line reports an actual failure",
+              "false": "the line only mentions the word error"
+            }
+          },
+          "m4": {
+            "type": "noul",
+            "instructions": "Match [4] 'retry policy: error budget is 2%'. Is this line reporting a real failure that happened?",
+            "criteria": {
+              "true": "the line reports an actual failure",
+              "false": "the line only mentions the word error"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "m1": {
+            "noul_gte": 0.85
+          },
+          "m2": {
+            "noul_lte": 0.15
+          },
+          "m3": {
+            "noul_gte": 0.85
+          },
+          "m4": {
+            "noul_lte": 0.15
+          }
+        }
+      }
+    },
+    {
+      "id": "ext-13-pick-currency-amount-among-many",
+      "description": "Select the amount actually charged among several money values, distinguishing it from the list price and a credit.",
+      "request": {
+        "model": "openjev-latest",
+        "state": "Hello, I was charged $89.90 on 3 May but the plan costs $49.90. Please refund the difference. I already got a $10 goodwill credit last month.",
+        "questions": {
+          "refund": {
+            "type": "choice",
+            "instructions": "Which candidate is the amount that was actually charged to the customer's card on 3 May?",
+            "criteria": {
+              "$89.90": "the amount charged on 3 May",
+              "$49.90": "the plan's list price, not what was charged",
+              "$10": "a goodwill credit received last month",
+              "not_stated": "no charged amount appears"
+            }
+          }
+        }
+      },
+      "expect": {
+        "answers": {
+          "refund": {
+            "choice": "$89.90",
+            "prob_gte": {
+              "$89.90": 0.8
+            }
+          }
+        }
+      }
+    }
+  ]
+}

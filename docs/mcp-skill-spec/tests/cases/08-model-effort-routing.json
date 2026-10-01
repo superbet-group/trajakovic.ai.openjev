@@ -1,0 +1,650 @@
+{
+ "use_case": "08-model-effort-routing",
+ "cases": [
+  {
+   "id": "route-01-trivial-rename",
+   "description": "Trivial mechanical rename must route to haiku and not need deep reasoning",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Rename the local variable `usr_cnt` to `user_count` in src/stats.py (3 occurrences, one function). No behavior change. Tests already exist and pass.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     },
+     "cx": {
+      "type": "score",
+      "instructions": "How complex is this task for a coding agent?",
+      "criteria": [
+       "trivial: one mechanical edit",
+       "easy: small well-specified change",
+       "moderate: several files, clear approach",
+       "hard: subtle bugs or design decisions",
+       "expert: deep reasoning over many interacting components"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "haiku"
+     },
+     "deep": {
+      "noul_lte": 0.2
+     },
+     "cx": {
+      "score_lte": 1.5
+     }
+    }
+   }
+  },
+  {
+   "id": "route-02-typo-docs",
+   "description": "Docs typo fix is the cheapest tier",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: README.md line 42 says 'recieve'; fix the spelling to 'receive'. Docs only.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "cx": {
+      "type": "score",
+      "instructions": "How complex is this task for a coding agent?",
+      "criteria": [
+       "trivial: one mechanical edit",
+       "easy: small well-specified change",
+       "moderate: several files, clear approach",
+       "hard: subtle bugs or design decisions",
+       "expert: deep reasoning over many interacting components"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "haiku"
+     },
+     "cx": {
+      "score_lte": 1.0
+     }
+    }
+   }
+  },
+  {
+   "id": "route-03-readonly-listing",
+   "description": "Read-only listing/count needs no deep reasoning",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: List all *.log files under /var/log/app and tell me how many there are. Read-only, no analysis needed.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "haiku"
+     },
+     "deep": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "route-04-routine-feature",
+   "description": "Well-specified pagination feature with tests is sonnet-class, not deep",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Add optional `limit` and `offset` query params to GET /orders in orders/api.py, following the pattern already used in GET /customers. Add two unit tests. The spec is clear and the DB layer already supports LIMIT/OFFSET.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     },
+     "cx": {
+      "type": "score",
+      "instructions": "How complex is this task for a coding agent?",
+      "criteria": [
+       "trivial: one mechanical edit",
+       "easy: small well-specified change",
+       "moderate: several files, clear approach",
+       "hard: subtle bugs or design decisions",
+       "expert: deep reasoning over many interacting components"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice_in": [
+       "sonnet",
+       "haiku"
+      ],
+      "prob_gte": {
+       "sonnet": 0.4
+      }
+     },
+     "deep": {
+      "noul_lte": 0.3
+     },
+     "cx": {
+      "score_gte": 1.0,
+      "score_lte": 2.8
+     }
+    }
+   }
+  },
+  {
+   "id": "route-05-known-cause-bugfix",
+   "description": "Bug with known cause and one-line guard is not deep",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Stack trace shows NoneType has no attribute 'email' at billing/invoice.py:88 because get_user() returns None for deleted users. Add a None guard that skips the invoice and logs a warning, plus one regression test.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice_in": [
+       "sonnet",
+       "haiku"
+      ]
+     },
+     "deep": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "route-06-architecture-migration",
+   "description": "Large-scale migration design is opus-class, deep, high complexity",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Plan and design the migration of our 400k-line monolith's order, inventory and payment modules to event-sourced microservices with zero downtime, dual-writes, backfill of 6 years of history, and a rollback strategy across three teams' data contracts. Evaluate Kafka vs Pulsar and the consistency tradeoffs.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     },
+     "cx": {
+      "type": "score",
+      "instructions": "How complex is this task for a coding agent?",
+      "criteria": [
+       "trivial: one mechanical edit",
+       "easy: small well-specified change",
+       "moderate: several files, clear approach",
+       "hard: subtle bugs or design decisions",
+       "expert: deep reasoning over many interacting components"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "opus"
+     },
+     "deep": {
+      "noul_gte": 0.8
+     },
+     "cx": {
+      "score_gte": 3.0
+     }
+    }
+   }
+  },
+  {
+   "id": "route-07-heisenbug-root-cause",
+   "description": "Unknown root cause across components needs deep reasoning",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Orders occasionally get charged twice, roughly 1 in 20000, only in production under load. No error logs. Suspect an interaction between the Redis distributed lock (TTL 5s), the retry middleware in the payment client, and the idempotency-key check that reads a replica. Find the root cause.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     },
+     "cx": {
+      "type": "score",
+      "instructions": "How complex is this task for a coding agent?",
+      "criteria": [
+       "trivial: one mechanical edit",
+       "easy: small well-specified change",
+       "moderate: several files, clear approach",
+       "hard: subtle bugs or design decisions",
+       "expert: deep reasoning over many interacting components"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "opus"
+     },
+     "deep": {
+      "noul_gte": 0.8
+     },
+     "cx": {
+      "score_gte": 3.0
+     }
+    }
+   }
+  },
+  {
+   "id": "route-08-security-diff",
+   "description": "Subtle security review (alg confusion) is deep and opus-class",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Review this diff for security flaws. It changes JWT verification: `jwt.decode(token, key, algorithms=[header['alg']])` replaces `algorithms=['RS256']`, and the key loader now falls back to the shared HMAC secret when the RSA public key file is missing. Explain whether an attacker could forge tokens.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "opus"
+     },
+     "deep": {
+      "noul_gte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "route-09-format-commit",
+   "description": "Formatting and committing is haiku, complexity at floor",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Run `prettier --write` on the files changed in this branch and commit with message 'style: format'. No code changes beyond formatting.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     },
+     "cx": {
+      "type": "score",
+      "instructions": "How complex is this task for a coding agent?",
+      "criteria": [
+       "trivial: one mechanical edit",
+       "easy: small well-specified change",
+       "moderate: several files, clear approach",
+       "hard: subtle bugs or design decisions",
+       "expert: deep reasoning over many interacting components"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "haiku"
+     },
+     "deep": {
+      "noul_lte": 0.15
+     },
+     "cx": {
+      "score_lte": 1.0
+     }
+    }
+   }
+  },
+  {
+   "id": "route-10-flaky-test",
+   "description": "Hard-but-decidable: flaky timing test is a moderate-to-hard diagnosis, not trivial",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: test_sync_replica fails about 1 run in 10 in CI with 'expected 3 rows, got 2'. It passes locally. The test starts a background writer thread, sleeps 50 ms, then asserts. Decide what is wrong and fix it.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "cx": {
+      "type": "score",
+      "instructions": "How complex is this task for a coding agent?",
+      "criteria": [
+       "trivial: one mechanical edit",
+       "easy: small well-specified change",
+       "moderate: several files, clear approach",
+       "hard: subtle bugs or design decisions",
+       "expert: deep reasoning over many interacting components"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice_in": [
+       "sonnet",
+       "opus"
+      ]
+     },
+     "cx": {
+      "score_gte": 1.5
+     }
+    }
+   }
+  },
+  {
+   "id": "route-11-summary-task",
+   "description": "Summarizing a changelog is haiku-tier (summary of provided text, no deep reasoning)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Summarize the attached 2-page CHANGELOG into three bullet points for the release announcement.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "haiku"
+     },
+     "deep": {
+      "noul_lte": 0.25
+     }
+    }
+   }
+  },
+  {
+   "id": "route-12-think-extension",
+   "description": "think extension on a hard algorithmic task still answers deep=yes",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Implement an optimal algorithm for scheduling 10^5 jobs with deadlines, penalties and precedence constraints on 3 heterogeneous machines, prove its approximation ratio, and write property-based tests that catch off-by-one errors in the tie-breaking.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     }
+    },
+    "think": 256
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice": "opus"
+     },
+     "deep": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "route-13-samples-extension",
+   "description": "samples:3 on a routine unit-test-writing task: averaged reads still land on the sonnet/haiku band, not deep",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Write unit tests for the pure function slugify(text) in utils/text.py. The behavior is specified in its docstring (lowercase, spaces to hyphens, strip punctuation). No other files involved.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+      "criteria": {
+       "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+       "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+       "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+      }
+     },
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     }
+    },
+    "samples": 3
+   },
+   "expect": {
+    "answers": {
+     "tier": {
+      "choice_in": [
+       "sonnet",
+       "haiku"
+      ]
+     },
+     "deep": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "route-14-effort-levels-routine",
+   "description": "5-option effort choice on a routine well-specified feature lands on low/medium",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Add optional `limit` and `offset` query params to GET /orders in orders/api.py, following the pattern already used in GET /customers. Add two unit tests. The spec is clear and the DB layer already supports LIMIT/OFFSET.",
+    "questions": {
+     "effort": {
+      "type": "choice",
+      "instructions": "What thinking effort should the next turn use?",
+      "criteria": {
+       "none": "No extended thinking; answer directly",
+       "low": "Brief reasoning, a couple of steps",
+       "medium": "Moderate reasoning, weigh a few options",
+       "high": "Extended reasoning, careful verification",
+       "max": "Maximum reasoning budget for a very hard open-ended problem"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "effort": {
+      "choice_in": [
+       "low",
+       "medium"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "route-16-error-unknown-model",
+   "description": "Error case the MCP layer must handle: unknown model gives 400; caller must fail open to a safe default tier",
+   "request": {
+    "model": "jev-1.13.0",
+    "state": "Task summary: Rename the local variable `usr_cnt` to `user_count` in src/stats.py (3 occurrences, one function). No behavior change. Tests already exist and pass.",
+    "questions": {
+     "deep": {
+      "type": "noul",
+      "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+      "criteria": {
+       "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+       "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 400,
+    "body_contains": "Unknown model"
+   }
+  },
+  {
+   "id": "route-17-error-missing-criteria",
+   "description": "Error case: choice without criteria is a 422; MCP layer must validate before sending and fail open",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Task summary: Rename the local variable `usr_cnt` to `user_count` in src/stats.py (3 occurrences, one function). No behavior change. Tests already exist and pass.",
+    "questions": {
+     "tier": {
+      "type": "choice",
+      "instructions": "tier?"
+     }
+    }
+   },
+   "expect": {
+    "status": 422
+   }
+  }
+ ]
+}

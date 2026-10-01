@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Follow the OpenJev server log (Ctrl+C stops following, not the server).
+cd "$(dirname "$0")" || exit 1
+touch .openjev.log
+exec tail -n 50 -f .openjev.log

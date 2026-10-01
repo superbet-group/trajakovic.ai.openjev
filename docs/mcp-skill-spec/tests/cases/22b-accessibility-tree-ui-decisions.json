@@ -1,0 +1,174 @@
+{
+ "use_case": "22b-accessibility-tree-ui-decisions",
+ "cases": [
+  {
+   "id": "tree-01",
+   "description": "Choice over accessibility-tree ids (text only): a size must be chosen before Add to cart",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Goal: add the blue 'Trail Runner' shoes, size 42, to the cart.\nPage: shop.example.com/product/trail-runner (accessibility tree)\ne01 link 'Home'\ne02 link 'Men'\ne03 searchbox 'Search products'\ne04 button 'Sign in'\ne05 heading 'Trail Runner - Blue'\ne06 combobox 'Size' (value: none selected)\ne07 button 'Add to cart' (disabled until a size is chosen)\ne08 button 'Add to wishlist'\ne09 link 'Size guide'\ne10 link 'Privacy policy'",
+    "questions": {
+     "next": {
+      "type": "choice",
+      "instructions": "Which element should the agent interact with next to make progress on the goal?",
+      "criteria": {
+       "e03": "search box",
+       "e04": "sign in button",
+       "e06": "size dropdown, where the size is chosen",
+       "e07": "add to cart button",
+       "e08": "add to wishlist button",
+       "e10": "privacy policy link"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "next": {
+      "choice": "e06"
+     }
+    }
+   }
+  },
+  {
+   "id": "tree-02",
+   "description": "40 candidate ids: exact id selected among many options",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Goal: open the billing settings page to download the latest invoice PDF.\nCandidates (ids from the accessibility tree):\ne01 link 'Nav item 1'\ne02 link 'Nav item 2'\ne03 link 'Nav item 3'\ne04 link 'Nav item 4'\ne05 link 'Nav item 5'\ne06 link 'Nav item 6'\ne07 link 'Nav item 7'\ne08 link 'Nav item 8'\ne09 link 'Nav item 9'\ne10 link 'Nav item 10'\ne11 link 'Nav item 11'\ne12 link 'Nav item 12'\ne13 link 'Nav item 13'\ne14 link 'Nav item 14'\ne15 link 'Nav item 15'\ne16 link 'Nav item 16'\ne17 link 'Nav item 17'\ne18 link 'Nav item 18'\ne19 link 'Nav item 19'\ne20 link 'Nav item 20'\ne21 link 'Billing and invoices'\ne22 link 'Nav item 22'\ne23 link 'Nav item 23'\ne24 link 'Nav item 24'\ne25 link 'Nav item 25'\ne26 link 'Nav item 26'\ne27 link 'Nav item 27'\ne28 link 'Nav item 28'\ne29 link 'Nav item 29'\ne30 link 'Nav item 30'\ne31 link 'Nav item 31'\ne32 link 'Nav item 32'\ne33 link 'Nav item 33'\ne34 link 'Nav item 34'\ne35 link 'Nav item 35'\ne36 link 'Nav item 36'\ne37 link 'Nav item 37'\ne38 link 'Nav item 38'\ne39 link 'Nav item 39'\ne40 link 'Nav item 40'",
+    "questions": {
+     "next": {
+      "type": "choice",
+      "instructions": "Which single candidate should the agent click next to reach the goal?",
+      "criteria": {
+       "e01": "navigation link 'Nav item 1'",
+       "e02": "navigation link 'Nav item 2'",
+       "e03": "navigation link 'Nav item 3'",
+       "e04": "navigation link 'Nav item 4'",
+       "e05": "navigation link 'Nav item 5'",
+       "e06": "navigation link 'Nav item 6'",
+       "e07": "navigation link 'Nav item 7'",
+       "e08": "navigation link 'Nav item 8'",
+       "e09": "navigation link 'Nav item 9'",
+       "e10": "navigation link 'Nav item 10'",
+       "e11": "navigation link 'Nav item 11'",
+       "e12": "navigation link 'Nav item 12'",
+       "e13": "navigation link 'Nav item 13'",
+       "e14": "navigation link 'Nav item 14'",
+       "e15": "navigation link 'Nav item 15'",
+       "e16": "navigation link 'Nav item 16'",
+       "e17": "navigation link 'Nav item 17'",
+       "e18": "navigation link 'Nav item 18'",
+       "e19": "navigation link 'Nav item 19'",
+       "e20": "navigation link 'Nav item 20'",
+       "e21": "link 'Billing and invoices'",
+       "e22": "navigation link 'Nav item 22'",
+       "e23": "navigation link 'Nav item 23'",
+       "e24": "navigation link 'Nav item 24'",
+       "e25": "navigation link 'Nav item 25'",
+       "e26": "navigation link 'Nav item 26'",
+       "e27": "navigation link 'Nav item 27'",
+       "e28": "navigation link 'Nav item 28'",
+       "e29": "navigation link 'Nav item 29'",
+       "e30": "navigation link 'Nav item 30'",
+       "e31": "navigation link 'Nav item 31'",
+       "e32": "navigation link 'Nav item 32'",
+       "e33": "navigation link 'Nav item 33'",
+       "e34": "navigation link 'Nav item 34'",
+       "e35": "navigation link 'Nav item 35'",
+       "e36": "navigation link 'Nav item 36'",
+       "e37": "navigation link 'Nav item 37'",
+       "e38": "navigation link 'Nav item 38'",
+       "e39": "navigation link 'Nav item 39'",
+       "e40": "navigation link 'Nav item 40'"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "next": {
+      "choice": "e21"
+     }
+    }
+   }
+  },
+  {
+   "id": "tree-03",
+   "description": "Noul irreversible on a Place order candidate; the same question on Edit cart is folded into the phrasing note (mirror case removed)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Goal: buy the item in the cart.\nPage: shop.example.com/checkout/review (accessibility tree)\ne01 heading 'Review your order'\ne02 text 'Total: $189.00, charged to card ending 4242'\ne03 button 'Edit cart'\ne04 button 'Place order' (submits payment immediately)\ne05 link 'Return to shop'\nProposed click: e04 button 'Place order'",
+    "questions": {
+     "irreversible": {
+      "type": "noul",
+      "instructions": "Does clicking this element commit an action that cannot be undone, such as submitting payment, deleting data or sending a message?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "irreversible": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "tree-04",
+   "description": "Done + blocked in one request: order confirmation page is done and not blocked",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Goal: buy the item in the cart.\nPage: shop.example.com/checkout/confirmation\ne01 heading 'Thank you! Order #88213 confirmed'\ne02 text 'A receipt was emailed to you'\ne03 link 'Continue shopping'",
+    "questions": {
+     "done": {
+      "type": "noul",
+      "instructions": "Does the page state show that the goal is fully accomplished?"
+     },
+     "blocked": {
+      "type": "noul",
+      "instructions": "Is the agent blocked by something it cannot get past without human help, such as a CAPTCHA, a two-factor prompt or a permissions error?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "done": {
+      "noul_gte": 0.85
+     },
+     "blocked": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "tree-05",
+   "description": "Blocked: CAPTCHA wall while goal not done",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Goal: download the latest invoice.\nPage: billing.example.com/login (accessibility tree)\ne01 text 'Verify you are human'\ne02 checkbox 'I am not a robot' (reCAPTCHA iframe)\ne03 button 'Continue' (disabled)\ne04 link 'Help'",
+    "questions": {
+     "done": {
+      "type": "noul",
+      "instructions": "Does the page state show that the goal is fully accomplished?"
+     },
+     "blocked": {
+      "type": "noul",
+      "instructions": "Is the agent blocked by something it cannot get past without human help, such as a CAPTCHA, a two-factor prompt or a permissions error?"
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "done": {
+      "noul_lte": 0.1
+     },
+     "blocked": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  }
+ ]
+}

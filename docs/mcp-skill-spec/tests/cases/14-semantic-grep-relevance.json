@@ -1,0 +1,877 @@
+{
+ "use_case": "14-semantic-grep-relevance",
+ "cases": [
+  {
+   "id": "log-01-real-errors-only",
+   "description": "noul per log line: keep real errors (L4 job abort, L6 pool exhausted) drop noise",
+   "request": {
+    "model": "openjev-latest",
+    "state": "LOG LINES (tag: line):\nL1: 2026-03-02 10:14:01 INFO  http GET /healthz 200 1ms\nL2: 2026-03-02 10:14:03 WARN  db connection retry 1/3 succeeded after 40ms\nL3: 2026-03-02 10:14:09 ERROR payments charge failed: card_declined order=88121 (user-facing, expected)\nL4: 2026-03-02 10:14:12 ERROR worker unhandled exception in job sync_inventory: KeyError 'sku' -- job aborted, 412 items not synced\nL5: 2026-03-02 10:14:15 INFO  cache warmed 9812 keys in 2.1s\nL6: 2026-03-02 10:14:19 FATAL db pool exhausted, all 50 connections in use, rejecting requests\nL7: 2026-03-02 10:14:21 DEBUG scheduler tick",
+    "questions": {
+     "L1": {
+      "type": "noul",
+      "instructions": "Is log line L1 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L2": {
+      "type": "noul",
+      "instructions": "Is log line L2 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L3": {
+      "type": "noul",
+      "instructions": "Is log line L3 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L4": {
+      "type": "noul",
+      "instructions": "Is log line L4 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L5": {
+      "type": "noul",
+      "instructions": "Is log line L5 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L6": {
+      "type": "noul",
+      "instructions": "Is log line L6 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L7": {
+      "type": "noul",
+      "instructions": "Is log line L7 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "L4": {
+      "noul_gte": 0.7
+     },
+     "L6": {
+      "noul_gte": 0.7
+     },
+     "L1": {
+      "noul_lte": 0.2
+     },
+     "L5": {
+      "noul_lte": 0.2
+     },
+     "L7": {
+      "noul_lte": 0.2
+     },
+     "L2": {
+      "noul_lte": 0.35
+     }
+    }
+   }
+  },
+  {
+   "id": "files-01-relevance-threshold",
+   "description": "noul per file: auth callback/session/redirect files >0.6, docs/billing/css <0.2",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: Fix the bug where users are redirected to /login after successfully signing in with Google OAuth (redirect loop).\n\nCANDIDATE FILES (path: first lines):\nF1 src/auth/oauth_callback.py: def handle_google_callback(request): exchanges code, sets session cookie, redirects to state['next']\nF2 src/auth/session.py: def set_session_cookie(resp, user): sets cookie with SameSite and Secure flags; def require_login(view)\nF3 docs/CONTRIBUTING.md: how to sign the CLA, code style, and how to open a pull request\nF4 src/billing/invoice_pdf.py: def render_invoice(order): builds PDF with reportlab, tax lines, footer\nF5 web/static/css/theme.css: .btn-primary { background: #0a58ca } dark mode variables\nF6 src/middleware/redirect_guard.py: def login_redirect(request): redirects unauthenticated requests to /login?next=...",
+    "questions": {
+     "F1": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F1 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F2": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F2 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F3": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F3 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F4": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F4 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F5": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F5 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F6": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F6 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "F1": {
+      "noul_gte": 0.7
+     },
+     "F2": {
+      "noul_gte": 0.6
+     },
+     "F6": {
+      "noul_gte": 0.7
+     },
+     "F3": {
+      "noul_lte": 0.15
+     },
+     "F4": {
+      "noul_lte": 0.15
+     },
+     "F5": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "files-02-order-invariance",
+   "description": "same files in reversed order; identical assertions must hold (batch order invariance)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: Fix the bug where users are redirected to /login after successfully signing in with Google OAuth (redirect loop).\n\nCANDIDATE FILES (path: first lines):\nF6 src/middleware/redirect_guard.py: def login_redirect(request): redirects unauthenticated requests to /login?next=...\nF5 web/static/css/theme.css: .btn-primary { background: #0a58ca } dark mode variables\nF4 src/billing/invoice_pdf.py: def render_invoice(order): builds PDF with reportlab, tax lines, footer\nF3 docs/CONTRIBUTING.md: how to sign the CLA, code style, and how to open a pull request\nF2 src/auth/session.py: def set_session_cookie(resp, user): sets cookie with SameSite and Secure flags; def require_login(view)\nF1 src/auth/oauth_callback.py: def handle_google_callback(request): exchanges code, sets session cookie, redirects to state['next']",
+    "questions": {
+     "F1": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F1 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F2": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F2 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F3": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F3 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F4": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F4 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F5": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F5 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     },
+     "F6": {
+      "type": "noul",
+      "instructions": "Would a developer working on the TASK need to open and read file F6 to fix it?",
+      "criteria": {
+       "true": "file is likely part of the code path involved in the bug",
+       "false": "file is unrelated to the bug"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "F1": {
+      "noul_gte": 0.7
+     },
+     "F2": {
+      "noul_gte": 0.6
+     },
+     "F6": {
+      "noul_gte": 0.7
+     },
+     "F3": {
+      "noul_lte": 0.15
+     },
+     "F4": {
+      "noul_lte": 0.15
+     },
+     "F5": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "choice-01-root-cause-line-plus-exists",
+   "description": "choice over tagged line ids plus an exists noul",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: find the line where the crash originates (root cause), not the follow-on symptoms.\nTAGGED LINES:\n[a1] INFO  starting import job 4471\n[a2] INFO  read 20000 rows from customers.csv\n[a3] ERROR row 8123: invalid date '31/02/2025' in column signup_date -> ValueError raised in parse_row()\n[a4] ERROR import job 4471 aborted after 8122 rows\n[a5] WARN  rolling back transaction (8122 rows discarded)\n[a6] ERROR notification: failed to send \"import finished\" email, no result to report\n[a7] INFO  job runner idle",
+    "questions": {
+     "line": {
+      "type": "choice",
+      "instructions": "Which tagged line is the root cause of the failure (the first thing that went wrong), not a consequence?",
+      "criteria": {
+       "a1": "job start",
+       "a2": "file read",
+       "a3": "invalid date raises ValueError",
+       "a4": "job aborted",
+       "a5": "rollback",
+       "a6": "email failure",
+       "a7": "runner idle"
+      }
+     },
+     "exists": {
+      "type": "noul",
+      "instructions": "Does the tagged log contain at least one line that shows the root cause of a failure?",
+      "criteria": {
+       "true": "yes, a line shows the originating error",
+       "false": "no line shows a failure origin"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "line": {
+      "choice": "a3",
+      "confidence_gte": 0.5
+     },
+     "exists": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "choice-02-nothing-relevant-low-exists",
+   "description": "nothing-relevant case: none of the lines mention cache/TTL config; exists must be low",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: find where the app configures the Redis cache TTL.\nTAGGED LINES:\n[b1] INFO  server listening on :8080\n[b2] INFO  GET /api/users 200 12ms\n[b3] INFO  GET /api/orders 200 31ms\n[b4] WARN  slow query 480ms on orders.list\n[b5] INFO  user 552 logged out\n[b6] INFO  GET /static/app.js 304",
+    "questions": {
+     "exists": {
+      "type": "noul",
+      "instructions": "Does any tagged line show where the Redis cache TTL is configured?",
+      "criteria": {
+       "true": "at least one line shows Redis TTL configuration",
+       "false": "no line mentions Redis or cache TTL configuration"
+      }
+     },
+     "line": {
+      "type": "choice",
+      "instructions": "Which tagged line shows where the Redis cache TTL is configured? Choose none if no line does.",
+      "criteria": {
+       "b1": "server listening",
+       "b2": "users request",
+       "b3": "orders request",
+       "b4": "slow query",
+       "b5": "logout",
+       "b6": "static asset",
+       "none": "no line shows Redis cache TTL configuration"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "exists": {
+      "noul_lte": 0.15
+     },
+     "line": {
+      "choice": "none"
+     }
+    }
+   }
+  },
+  {
+   "id": "prune-01-large-noise-still-finds-needle",
+   "description": "irrelevant large state (160 noise lines) must not degrade: needle x1 still found and exists high",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: find the line that reports a TLS certificate expiry.\nTAGGED LINES:\n[n1] INFO  GET /api/items/1001 200 6ms request_id=r0001\n[n2] INFO  GET /api/items/1002 200 7ms request_id=r0002\n[n3] INFO  GET /api/items/1003 200 8ms request_id=r0003\n[n4] INFO  GET /api/items/1004 200 9ms request_id=r0004\n[n5] INFO  GET /api/items/1005 200 10ms request_id=r0005\n[n6] INFO  GET /api/items/1006 200 11ms request_id=r0006\n[n7] INFO  GET /api/items/1007 200 12ms request_id=r0007\n[n8] INFO  GET /api/items/1008 200 13ms request_id=r0008\n[n9] INFO  GET /api/items/1009 200 5ms request_id=r0009\n[n10] INFO  GET /api/items/1010 200 6ms request_id=r0010\n[n11] INFO  GET /api/items/1011 200 7ms request_id=r0011\n[n12] INFO  GET /api/items/1012 200 8ms request_id=r0012\n[n13] INFO  GET /api/items/1013 200 9ms request_id=r0013\n[n14] INFO  GET /api/items/1014 200 10ms request_id=r0014\n[n15] INFO  GET /api/items/1015 200 11ms request_id=r0015\n[n16] INFO  GET /api/items/1016 200 12ms request_id=r0016\n[n17] INFO  GET /api/items/1017 200 13ms request_id=r0017\n[n18] INFO  GET /api/items/1018 200 5ms request_id=r0018\n[n19] INFO  GET /api/items/1019 200 6ms request_id=r0019\n[n20] INFO  GET /api/items/1020 200 7ms request_id=r0020\n[n21] INFO  GET /api/items/1021 200 8ms request_id=r0021\n[n22] INFO  GET /api/items/1022 200 9ms request_id=r0022\n[n23] INFO  GET /api/items/1023 200 10ms request_id=r0023\n[n24] INFO  GET /api/items/1024 200 11ms request_id=r0024\n[n25] INFO  GET /api/items/1025 200 12ms request_id=r0025\n[n26] INFO  GET /api/items/1026 200 13ms request_id=r0026\n[n27] INFO  GET /api/items/1027 200 5ms request_id=r0027\n[n28] INFO  GET /api/items/1028 200 6ms request_id=r0028\n[n29] INFO  GET /api/items/1029 200 7ms request_id=r0029\n[n30] INFO  GET /api/items/1030 200 8ms request_id=r0030\n[n31] INFO  GET /api/items/1031 200 9ms request_id=r0031\n[n32] INFO  GET /api/items/1032 200 10ms request_id=r0032\n[n33] INFO  GET /api/items/1033 200 11ms request_id=r0033\n[n34] INFO  GET /api/items/1034 200 12ms request_id=r0034\n[n35] INFO  GET /api/items/1035 200 13ms request_id=r0035\n[n36] INFO  GET /api/items/1036 200 5ms request_id=r0036\n[n37] INFO  GET /api/items/1037 200 6ms request_id=r0037\n[n38] INFO  GET /api/items/1038 200 7ms request_id=r0038\n[n39] INFO  GET /api/items/1039 200 8ms request_id=r0039\n[n40] INFO  GET /api/items/1040 200 9ms request_id=r0040\n[n41] INFO  GET /api/items/1041 200 10ms request_id=r0041\n[n42] INFO  GET /api/items/1042 200 11ms request_id=r0042\n[n43] INFO  GET /api/items/1043 200 12ms request_id=r0043\n[n44] INFO  GET /api/items/1044 200 13ms request_id=r0044\n[n45] INFO  GET /api/items/1045 200 5ms request_id=r0045\n[n46] INFO  GET /api/items/1046 200 6ms request_id=r0046\n[n47] INFO  GET /api/items/1047 200 7ms request_id=r0047\n[n48] INFO  GET /api/items/1048 200 8ms request_id=r0048\n[n49] INFO  GET /api/items/1049 200 9ms request_id=r0049\n[n50] INFO  GET /api/items/1050 200 10ms request_id=r0050\n[n51] INFO  GET /api/items/1051 200 11ms request_id=r0051\n[n52] INFO  GET /api/items/1052 200 12ms request_id=r0052\n[n53] INFO  GET /api/items/1053 200 13ms request_id=r0053\n[n54] INFO  GET /api/items/1054 200 5ms request_id=r0054\n[n55] INFO  GET /api/items/1055 200 6ms request_id=r0055\n[n56] INFO  GET /api/items/1056 200 7ms request_id=r0056\n[n57] INFO  GET /api/items/1057 200 8ms request_id=r0057\n[n58] INFO  GET /api/items/1058 200 9ms request_id=r0058\n[n59] INFO  GET /api/items/1059 200 10ms request_id=r0059\n[n60] INFO  GET /api/items/1060 200 11ms request_id=r0060\n[n61] INFO  GET /api/items/1061 200 12ms request_id=r0061\n[n62] INFO  GET /api/items/1062 200 13ms request_id=r0062\n[n63] INFO  GET /api/items/1063 200 5ms request_id=r0063\n[n64] INFO  GET /api/items/1064 200 6ms request_id=r0064\n[n65] INFO  GET /api/items/1065 200 7ms request_id=r0065\n[n66] INFO  GET /api/items/1066 200 8ms request_id=r0066\n[n67] INFO  GET /api/items/1067 200 9ms request_id=r0067\n[n68] INFO  GET /api/items/1068 200 10ms request_id=r0068\n[n69] INFO  GET /api/items/1069 200 11ms request_id=r0069\n[n70] INFO  GET /api/items/1070 200 12ms request_id=r0070\n[n71] INFO  GET /api/items/1071 200 13ms request_id=r0071\n[n72] INFO  GET /api/items/1072 200 5ms request_id=r0072\n[n73] INFO  GET /api/items/1073 200 6ms request_id=r0073\n[n74] INFO  GET /api/items/1074 200 7ms request_id=r0074\n[n75] INFO  GET /api/items/1075 200 8ms request_id=r0075\n[n76] INFO  GET /api/items/1076 200 9ms request_id=r0076\n[n77] INFO  GET /api/items/1077 200 10ms request_id=r0077\n[n78] INFO  GET /api/items/1078 200 11ms request_id=r0078\n[n79] INFO  GET /api/items/1079 200 12ms request_id=r0079\n[n80] INFO  GET /api/items/1080 200 13ms request_id=r0080\n[n81] INFO  GET /api/items/1081 20\n[x1] ERROR tls: certificate for api.internal.example expires in 3 days (2026-03-05), renew now\n0 5ms request_id=r0081\n[n82] INFO  GET /api/items/1082 200 6ms request_id=r0082\n[n83] INFO  GET /api/items/1083 200 7ms request_id=r0083\n[n84] INFO  GET /api/items/1084 200 8ms request_id=r0084\n[n85] INFO  GET /api/items/1085 200 9ms request_id=r0085\n[n86] INFO  GET /api/items/1086 200 10ms request_id=r0086\n[n87] INFO  GET /api/items/1087 200 11ms request_id=r0087\n[n88] INFO  GET /api/items/1088 200 12ms request_id=r0088\n[n89] INFO  GET /api/items/1089 200 13ms request_id=r0089\n[n90] INFO  GET /api/items/1090 200 5ms request_id=r0090\n[n91] INFO  GET /api/items/1091 200 6ms request_id=r0091\n[n92] INFO  GET /api/items/1092 200 7ms request_id=r0092\n[n93] INFO  GET /api/items/1093 200 8ms request_id=r0093\n[n94] INFO  GET /api/items/1094 200 9ms request_id=r0094\n[n95] INFO  GET /api/items/1095 200 10ms request_id=r0095\n[n96] INFO  GET /api/items/1096 200 11ms request_id=r0096\n[n97] INFO  GET /api/items/1097 200 12ms request_id=r0097\n[n98] INFO  GET /api/items/1098 200 13ms request_id=r0098\n[n99] INFO  GET /api/items/1099 200 5ms request_id=r0099\n[n100] INFO  GET /api/items/1100 200 6ms request_id=r0100\n[n101] INFO  GET /api/items/1101 200 7ms request_id=r0101\n[n102] INFO  GET /api/items/1102 200 8ms request_id=r0102\n[n103] INFO  GET /api/items/1103 200 9ms request_id=r0103\n[n104] INFO  GET /api/items/1104 200 10ms request_id=r0104\n[n105] INFO  GET /api/items/1105 200 11ms request_id=r0105\n[n106] INFO  GET /api/items/1106 200 12ms request_id=r0106\n[n107] INFO  GET /api/items/1107 200 13ms request_id=r0107\n[n108] INFO  GET /api/items/1108 200 5ms request_id=r0108\n[n109] INFO  GET /api/items/1109 200 6ms request_id=r0109\n[n110] INFO  GET /api/items/1110 200 7ms request_id=r0110\n[n111] INFO  GET /api/items/1111 200 8ms request_id=r0111\n[n112] INFO  GET /api/items/1112 200 9ms request_id=r0112\n[n113] INFO  GET /api/items/1113 200 10ms request_id=r0113\n[n114] INFO  GET /api/items/1114 200 11ms request_id=r0114\n[n115] INFO  GET /api/items/1115 200 12ms request_id=r0115\n[n116] INFO  GET /api/items/1116 200 13ms request_id=r0116\n[n117] INFO  GET /api/items/1117 200 5ms request_id=r0117\n[n118] INFO  GET /api/items/1118 200 6ms request_id=r0118\n[n119] INFO  GET /api/items/1119 200 7ms request_id=r0119\n[n120] INFO  GET /api/items/1120 200 8ms request_id=r0120\n[n121] INFO  GET /api/items/1121 200 9ms request_id=r0121\n[n122] INFO  GET /api/items/1122 200 10ms request_id=r0122\n[n123] INFO  GET /api/items/1123 200 11ms request_id=r0123\n[n124] INFO  GET /api/items/1124 200 12ms request_id=r0124\n[n125] INFO  GET /api/items/1125 200 13ms request_id=r0125\n[n126] INFO  GET /api/items/1126 200 5ms request_id=r0126\n[n127] INFO  GET /api/items/1127 200 6ms request_id=r0127\n[n128] INFO  GET /api/items/1128 200 7ms request_id=r0128\n[n129] INFO  GET /api/items/1129 200 8ms request_id=r0129\n[n130] INFO  GET /api/items/1130 200 9ms request_id=r0130\n[n131] INFO  GET /api/items/1131 200 10ms request_id=r0131\n[n132] INFO  GET /api/items/1132 200 11ms request_id=r0132\n[n133] INFO  GET /api/items/1133 200 12ms request_id=r0133\n[n134] INFO  GET /api/items/1134 200 13ms request_id=r0134\n[n135] INFO  GET /api/items/1135 200 5ms request_id=r0135\n[n136] INFO  GET /api/items/1136 200 6ms request_id=r0136\n[n137] INFO  GET /api/items/1137 200 7ms request_id=r0137\n[n138] INFO  GET /api/items/1138 200 8ms request_id=r0138\n[n139] INFO  GET /api/items/1139 200 9ms request_id=r0139\n[n140] INFO  GET /api/items/1140 200 10ms request_id=r0140\n[n141] INFO  GET /api/items/1141 200 11ms request_id=r0141\n[n142] INFO  GET /api/items/1142 200 12ms request_id=r0142\n[n143] INFO  GET /api/items/1143 200 13ms request_id=r0143\n[n144] INFO  GET /api/items/1144 200 5ms request_id=r0144\n[n145] INFO  GET /api/items/1145 200 6ms request_id=r0145\n[n146] INFO  GET /api/items/1146 200 7ms request_id=r0146\n[n147] INFO  GET /api/items/1147 200 8ms request_id=r0147\n[n148] INFO  GET /api/items/1148 200 9ms request_id=r0148\n[n149] INFO  GET /api/items/1149 200 10ms request_id=r0149\n[n150] INFO  GET /api/items/1150 200 11ms request_id=r0150\n[n151] INFO  GET /api/items/1151 200 12ms request_id=r0151\n[n152] INFO  GET /api/items/1152 200 13ms request_id=r0152\n[n153] INFO  GET /api/items/1153 200 5ms request_id=r0153\n[n154] INFO  GET /api/items/1154 200 6ms request_id=r0154\n[n155] INFO  GET /api/items/1155 200 7ms request_id=r0155\n[n156] INFO  GET /api/items/1156 200 8ms request_id=r0156\n[n157] INFO  GET /api/items/1157 200 9ms request_id=r0157\n[n158] INFO  GET /api/items/1158 200 10ms request_id=r0158\n[n159] INFO  GET /api/items/1159 200 11ms request_id=r0159\n[n160] INFO  GET /api/items/1160 200 12ms request_id=r0160",
+    "questions": {
+     "exists": {
+      "type": "noul",
+      "instructions": "Does any tagged line report an impending TLS certificate expiry?",
+      "criteria": {
+       "true": "yes, a line warns a certificate is about to expire",
+       "false": "no such line exists"
+      }
+     },
+     "needle": {
+      "type": "noul",
+      "instructions": "Is line [x1] a warning about an impending TLS certificate expiry?",
+      "criteria": {
+       "true": "yes",
+       "false": "no"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "exists": {
+      "noul_gte": 0.8
+     },
+     "needle": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "hunks-01-auth-relevant",
+   "description": "noul per diff hunk: H1 and H4 touch authz; H2,H3,H5 do not",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: review only hunks that change authorization or permission checks.\nHUNKS:\nH1 (api/admin.py): -    if user.is_staff:\n+    if user.is_staff or user.role == \"support\":\n         delete_account(target)\nH2 (README.md): -Run `make test` to run tests.\n+Run `make test` (requires Python 3.12) to run tests.\nH3 (api/reports.py): -    rows = query(sql)\n+    rows = query(sql, timeout=30)\nH4 (api/files.py): -    if file.owner_id != request.user.id: raise Forbidden()\n+    # ownership check moved to middleware (TODO)\nH5 (ui/button.tsx): -  padding: 4px\n+  padding: 6px",
+    "questions": {
+     "H1": {
+      "type": "noul",
+      "instructions": "Does hunk H1 change who is allowed to perform an action (authorization, permissions, ownership or role checks)?",
+      "criteria": {
+       "true": "hunk modifies, removes or weakens an access check",
+       "false": "hunk does not touch access control"
+      }
+     },
+     "H2": {
+      "type": "noul",
+      "instructions": "Does hunk H2 change who is allowed to perform an action (authorization, permissions, ownership or role checks)?",
+      "criteria": {
+       "true": "hunk modifies, removes or weakens an access check",
+       "false": "hunk does not touch access control"
+      }
+     },
+     "H3": {
+      "type": "noul",
+      "instructions": "Does hunk H3 change who is allowed to perform an action (authorization, permissions, ownership or role checks)?",
+      "criteria": {
+       "true": "hunk modifies, removes or weakens an access check",
+       "false": "hunk does not touch access control"
+      }
+     },
+     "H4": {
+      "type": "noul",
+      "instructions": "Does hunk H4 change who is allowed to perform an action (authorization, permissions, ownership or role checks)?",
+      "criteria": {
+       "true": "hunk modifies, removes or weakens an access check",
+       "false": "hunk does not touch access control"
+      }
+     },
+     "H5": {
+      "type": "noul",
+      "instructions": "Does hunk H5 change who is allowed to perform an action (authorization, permissions, ownership or role checks)?",
+      "criteria": {
+       "true": "hunk modifies, removes or weakens an access check",
+       "false": "hunk does not touch access control"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "H1": {
+      "noul_gte": 0.75
+     },
+     "H4": {
+      "noul_gte": 0.75
+     },
+     "H2": {
+      "noul_lte": 0.15
+     },
+     "H3": {
+      "noul_lte": 0.2
+     },
+     "H5": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "prune-02-stale-tool-results",
+   "description": "relevance-based pruning during compaction: keep T2,T4 clearly; T6 (grep with no matches, mildly useful negative evidence) must not be dropped (>=0.4); drop T1,T3,T5",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CURRENT GOAL: make test_checkout_total pass (it fails with an off-by-one cent rounding error in cart.py).\nTOOL RESULTS SO FAR:\nT1 (ls /): bin etc home usr var\nT2 (pytest -k checkout_total): FAIL cart.py:88 assert 1999 == 2000 (rounding of 19.995)\nT3 (git log -3 --oneline on unrelated docs branch): 91ac2 fix typo in changelog / 77b1e update badges\nT4 (cat cart.py lines 70-100): def total(items): return int(sum(i.price for i in items) * 100)  # truncates instead of rounding\nT5 (npm view left-pad version): 1.3.0\nT6 (grep -n round cart.py): no matches",
+    "questions": {
+     "T1": {
+      "type": "noul",
+      "instructions": "For the CURRENT GOAL, must tool result T1 stay in the context (would dropping it hurt the next steps)?",
+      "criteria": {
+       "true": "result contains evidence or facts still needed for the goal",
+       "false": "result is stale, unrelated or superseded and can be dropped"
+      }
+     },
+     "T2": {
+      "type": "noul",
+      "instructions": "For the CURRENT GOAL, must tool result T2 stay in the context (would dropping it hurt the next steps)?",
+      "criteria": {
+       "true": "result contains evidence or facts still needed for the goal",
+       "false": "result is stale, unrelated or superseded and can be dropped"
+      }
+     },
+     "T3": {
+      "type": "noul",
+      "instructions": "For the CURRENT GOAL, must tool result T3 stay in the context (would dropping it hurt the next steps)?",
+      "criteria": {
+       "true": "result contains evidence or facts still needed for the goal",
+       "false": "result is stale, unrelated or superseded and can be dropped"
+      }
+     },
+     "T4": {
+      "type": "noul",
+      "instructions": "For the CURRENT GOAL, must tool result T4 stay in the context (would dropping it hurt the next steps)?",
+      "criteria": {
+       "true": "result contains evidence or facts still needed for the goal",
+       "false": "result is stale, unrelated or superseded and can be dropped"
+      }
+     },
+     "T5": {
+      "type": "noul",
+      "instructions": "For the CURRENT GOAL, must tool result T5 stay in the context (would dropping it hurt the next steps)?",
+      "criteria": {
+       "true": "result contains evidence or facts still needed for the goal",
+       "false": "result is stale, unrelated or superseded and can be dropped"
+      }
+     },
+     "T6": {
+      "type": "noul",
+      "instructions": "For the CURRENT GOAL, must tool result T6 stay in the context (would dropping it hurt the next steps)?",
+      "criteria": {
+       "true": "result contains evidence or facts still needed for the goal",
+       "false": "result is stale, unrelated or superseded and can be dropped"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "T2": {
+      "noul_gte": 0.7
+     },
+     "T4": {
+      "noul_gte": 0.75
+     },
+     "T1": {
+      "noul_lte": 0.2
+     },
+     "T3": {
+      "noul_lte": 0.2
+     },
+     "T5": {
+      "noul_lte": 0.2
+     },
+     "T6": {
+      "noul_gte": 0.4
+     }
+    }
+   }
+  },
+  {
+   "id": "score-01-relevance-scale",
+   "description": "score per file with described levels (0-indexed): S1 >=2.5 and S2 >=2.8 (both relevant), S3 low (<=0.8), S4 same-area header file <=1.5",
+   "request": {
+    "model": "openjev-latest",
+    "state": "QUERY: where is the retry-with-backoff logic for HTTP calls?\nFILES:\nS1 http/client.py: def request(...): for attempt in range(5): try: return session.send(req) except Timeout: time.sleep(2 ** attempt)\nS2 http/retry.py: class Backoff: exponential backoff with jitter, max_delay=30\nS3 utils/strings.py: def slugify(s): lowercases and replaces spaces\nS4 http/headers.py: def default_headers(): user-agent and accept headers",
+    "questions": {
+     "S1": {
+      "type": "score",
+      "instructions": "How relevant is file S1 to the QUERY?",
+      "criteria": [
+       "0 unrelated",
+       "1 same area but does not answer the query",
+       "2 mentions the topic in passing",
+       "3 contains part of the logic asked for",
+       "4 is the primary implementation of what is asked"
+      ]
+     },
+     "S2": {
+      "type": "score",
+      "instructions": "How relevant is file S2 to the QUERY?",
+      "criteria": [
+       "0 unrelated",
+       "1 same area but does not answer the query",
+       "2 mentions the topic in passing",
+       "3 contains part of the logic asked for",
+       "4 is the primary implementation of what is asked"
+      ]
+     },
+     "S3": {
+      "type": "score",
+      "instructions": "How relevant is file S3 to the QUERY?",
+      "criteria": [
+       "0 unrelated",
+       "1 same area but does not answer the query",
+       "2 mentions the topic in passing",
+       "3 contains part of the logic asked for",
+       "4 is the primary implementation of what is asked"
+      ]
+     },
+     "S4": {
+      "type": "score",
+      "instructions": "How relevant is file S4 to the QUERY?",
+      "criteria": [
+       "0 unrelated",
+       "1 same area but does not answer the query",
+       "2 mentions the topic in passing",
+       "3 contains part of the logic asked for",
+       "4 is the primary implementation of what is asked"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "S2": {
+      "score_gte": 2.8
+     },
+     "S1": {
+      "score_gte": 2.5
+     },
+     "S3": {
+      "score_lte": 0.8
+     },
+     "S4": {
+      "score_lte": 1.5
+     }
+    }
+   }
+  },
+  {
+   "id": "semgrep-01-swallowed-exceptions",
+   "description": "semantic grep beyond regex: C1,C3,C4 swallow; C2,C5 handle",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find code that swallows exceptions silently (a regex 'except.*pass' would miss variants).\nSNIPPETS:\nC1: try:\n    save(x)\nexcept Exception:\n    pass\nC2: try:\n    save(x)\nexcept Exception as e:\n    logger.exception(\"save failed\"); raise\nC3: try:\n    save(x)\nexcept OSError:\n    ...   # ignore\nC4: try:\n    save(x)\nexcept:\n    return None\nC5: try:\n    save(x)\nexcept ValueError as e:\n    metrics.incr(\"bad_input\"); return Response(400)",
+    "questions": {
+     "C1": {
+      "type": "noul",
+      "instructions": "Does the except block of snippet C1 catch the error and carry on without logging, re-raising or reporting it, so the failure vanishes?",
+      "criteria": {
+       "true": "yes: nothing is logged, raised or reported (returning None or a default, pass and ... all count)",
+       "false": "the error is logged, re-raised, counted or returned as a proper error response"
+      }
+     },
+     "C2": {
+      "type": "noul",
+      "instructions": "Does the except block of snippet C2 catch the error and carry on without logging, re-raising or reporting it, so the failure vanishes?",
+      "criteria": {
+       "true": "yes: nothing is logged, raised or reported (returning None or a default, pass and ... all count)",
+       "false": "the error is logged, re-raised, counted or returned as a proper error response"
+      }
+     },
+     "C3": {
+      "type": "noul",
+      "instructions": "Does the except block of snippet C3 catch the error and carry on without logging, re-raising or reporting it, so the failure vanishes?",
+      "criteria": {
+       "true": "yes: nothing is logged, raised or reported (returning None or a default, pass and ... all count)",
+       "false": "the error is logged, re-raised, counted or returned as a proper error response"
+      }
+     },
+     "C4": {
+      "type": "noul",
+      "instructions": "Does the except block of snippet C4 catch the error and carry on without logging, re-raising or reporting it, so the failure vanishes?",
+      "criteria": {
+       "true": "yes: nothing is logged, raised or reported (returning None or a default, pass and ... all count)",
+       "false": "the error is logged, re-raised, counted or returned as a proper error response"
+      }
+     },
+     "C5": {
+      "type": "noul",
+      "instructions": "Does the except block of snippet C5 catch the error and carry on without logging, re-raising or reporting it, so the failure vanishes?",
+      "criteria": {
+       "true": "yes: nothing is logged, raised or reported (returning None or a default, pass and ... all count)",
+       "false": "the error is logged, re-raised, counted or returned as a proper error response"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "C1": {
+      "noul_gte": 0.8
+     },
+     "C3": {
+      "noul_gte": 0.7
+     },
+     "C4": {
+      "noul_gte": 0.7
+     },
+     "C2": {
+      "noul_lte": 0.15
+     },
+     "C5": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  },
+  {
+   "id": "choice-03-many-options-24",
+   "description": "choice over 24 file ids (many options); pick the refund implementation",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: find the file that implements issuing a refund to a customer.\nCANDIDATES:\n[p1] src/module_1/util.py: helpers for module 1 (string formatting)\n[p2] src/module_2/util.py: helpers for module 2 (string formatting)\n[p3] src/module_3/util.py: helpers for module 3 (string formatting)\n[p4] src/module_4/util.py: helpers for module 4 (string formatting)\n[p5] src/module_5/util.py: helpers for module 5 (string formatting)\n[p6] src/module_6/util.py: helpers for module 6 (string formatting)\n[p7] src/module_7/util.py: helpers for module 7 (string formatting)\n[p8] src/module_8/util.py: helpers for module 8 (string formatting)\n[p9] src/module_9/util.py: helpers for module 9 (string formatting)\n[p10] src/module_10/util.py: helpers for module 10 (string formatting)\n[p11] src/module_11/util.py: helpers for module 11 (string formatting)\n[p12] src/module_12/util.py: helpers for module 12 (string formatting)\n[p13] src/module_13/util.py: helpers for module 13 (string formatting)\n[p14] src/module_14/util.py: helpers for module 14 (string formatting)\n[p15] src/module_15/util.py: helpers for module 15 (string formatting)\n[p16] src/module_16/util.py: helpers for module 16 (string formatting)\n[p17] src/module_17/util.py: helpers for module 17 (string formatting)\n[p18] src/module_18/util.py: helpers for module 18 (string formatting)\n[p19] src/module_19/util.py: helpers for module 19 (string formatting)\n[p20] src/module_20/util.py: helpers for module 20 (string formatting)\n[p21] src/module_21/util.py: helpers for module 21 (string formatting)\n[p22] src/module_22/util.py: helpers for module 22 (string formatting)\n[p23] src/module_23/util.py: helpers for module 23 (string formatting)\n[p24] src/payments/refund.py: def issue_refund(charge_id, amount): calls the gateway refund endpoint and records a ledger entry",
+    "questions": {
+     "file": {
+      "type": "choice",
+      "instructions": "Which candidate file implements issuing a refund?",
+      "criteria": {
+       "p1": "src/module_1/util.py: helpers for module 1 (string formatting)",
+       "p2": "src/module_2/util.py: helpers for module 2 (string formatting)",
+       "p3": "src/module_3/util.py: helpers for module 3 (string formatting)",
+       "p4": "src/module_4/util.py: helpers for module 4 (string formatting)",
+       "p5": "src/module_5/util.py: helpers for module 5 (string formatting)",
+       "p6": "src/module_6/util.py: helpers for module 6 (string formatting)",
+       "p7": "src/module_7/util.py: helpers for module 7 (string formatting)",
+       "p8": "src/module_8/util.py: helpers for module 8 (string formatting)",
+       "p9": "src/module_9/util.py: helpers for module 9 (string formatting)",
+       "p10": "src/module_10/util.py: helpers for module 10 (string formatting)",
+       "p11": "src/module_11/util.py: helpers for module 11 (string formatting)",
+       "p12": "src/module_12/util.py: helpers for module 12 (string formatting)",
+       "p13": "src/module_13/util.py: helpers for module 13 (string formatting)",
+       "p14": "src/module_14/util.py: helpers for module 14 (string formatting)",
+       "p15": "src/module_15/util.py: helpers for module 15 (string formatting)",
+       "p16": "src/module_16/util.py: helpers for module 16 (string formatting)",
+       "p17": "src/module_17/util.py: helpers for module 17 (string formatting)",
+       "p18": "src/module_18/util.py: helpers for module 18 (string formatting)",
+       "p19": "src/module_19/util.py: helpers for module 19 (string formatting)",
+       "p20": "src/module_20/util.py: helpers for module 20 (string formatting)",
+       "p21": "src/module_21/util.py: helpers for module 21 (string formatting)",
+       "p22": "src/module_22/util.py: helpers for module 22 (string formatting)",
+       "p23": "src/module_23/util.py: helpers for module 23 (string formatting)",
+       "p24": "src/payments/refund.py: def issue_refund(charge_id, amount): calls the gateway refund endpoint and records a ledger entry"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "file": {
+      "choice": "p24",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "ext-01-samples-borderline-relevance",
+   "description": "samples:4 on a borderline case: tangentially related file; expect a mid/low relevance, not a confident yes",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TASK: fix the Google OAuth redirect loop after sign-in.\nFILE: src/auth/logout.py: def logout(request): clears the session cookie and redirects to /goodbye",
+    "questions": {
+     "open": {
+      "type": "noul",
+      "instructions": "Is it necessary to open this file to fix the sign-in redirect loop?",
+      "criteria": {
+       "true": "file is on the sign-in code path",
+       "false": "file is not needed for sign-in"
+      }
+     }
+    },
+    "samples": 4
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "open": {
+      "noul_lte": 0.5
+     }
+    }
+   }
+  },
+  {
+   "id": "ext-02-think-sequential-batch",
+   "description": "sequential:true with think:64 over a batch of 4 lines still yields separated answers",
+   "request": {
+    "model": "openjev-latest",
+    "state": "LOG LINES (tag: line):\nL1: 2026-03-02 10:14:01 INFO  http GET /healthz 200 1ms\nL2: 2026-03-02 10:14:03 WARN  db connection retry 1/3 succeeded after 40ms\nL3: 2026-03-02 10:14:09 ERROR payments charge failed: card_declined order=88121 (user-facing, expected)\nL4: 2026-03-02 10:14:12 ERROR worker unhandled exception in job sync_inventory: KeyError 'sku' -- job aborted, 412 items not synced\nL5: 2026-03-02 10:14:15 INFO  cache warmed 9812 keys in 2.1s\nL6: 2026-03-02 10:14:19 FATAL db pool exhausted, all 50 connections in use, rejecting requests\nL7: 2026-03-02 10:14:21 DEBUG scheduler tick",
+    "questions": {
+     "L1": {
+      "type": "noul",
+      "instructions": "Is log line L1 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L4": {
+      "type": "noul",
+      "instructions": "Is log line L4 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L6": {
+      "type": "noul",
+      "instructions": "Is log line L6 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     },
+     "L7": {
+      "type": "noul",
+      "instructions": "Is log line L7 a real error an on-call engineer must act on (a failure, crash or data loss), as opposed to routine, benign or expected output?",
+      "criteria": {
+       "true": "line is a genuine failure needing action",
+       "false": "line is routine, benign, informational or an expected condition"
+      }
+     }
+    },
+    "sequential": true,
+    "think": 64
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "L4": {
+      "noul_gte": 0.6
+     },
+     "L6": {
+      "noul_gte": 0.6
+     },
+     "L1": {
+      "noul_lte": 0.3
+     },
+     "L7": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "semgrep-02-hardcoded-secrets",
+   "description": "semantic grep beyond regex: D1,D3 embed secret literals (different shapes); D2,D4,D5 do not",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find code that hardcodes a credential (secret literal in source), even when the variable name is not obvious.\nSNIPPETS:\nD1: client = boto3.client('s3', aws_access_key_id='AKIAIOSFODNN7EXAMPLE', aws_secret_access_key='wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY')\nD2: client = boto3.client('s3', aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'])\nD3: headers = {'Authorization': 'Bearer sk_live_REDACTED_EXAMPLE_KEY'}\nD4: # NOTE: rotate the payments API token every 90 days (stored in the vault, never in code)\nD5: db_password = vault.read('secret/db')['password']",
+    "questions": {
+     "D1": {
+      "type": "noul",
+      "instructions": "Does snippet D1 contain a credential (key, token or password) written as a literal value in the source code?",
+      "criteria": {
+       "true": "yes: a real-looking secret string is embedded in the code",
+       "false": "no: secrets are read from env or a vault, or the line only mentions secrets in a comment"
+      }
+     },
+     "D2": {
+      "type": "noul",
+      "instructions": "Does snippet D2 contain a credential (key, token or password) written as a literal value in the source code?",
+      "criteria": {
+       "true": "yes: a real-looking secret string is embedded in the code",
+       "false": "no: secrets are read from env or a vault, or the line only mentions secrets in a comment"
+      }
+     },
+     "D3": {
+      "type": "noul",
+      "instructions": "Does snippet D3 contain a credential (key, token or password) written as a literal value in the source code?",
+      "criteria": {
+       "true": "yes: a real-looking secret string is embedded in the code",
+       "false": "no: secrets are read from env or a vault, or the line only mentions secrets in a comment"
+      }
+     },
+     "D4": {
+      "type": "noul",
+      "instructions": "Does snippet D4 contain a credential (key, token or password) written as a literal value in the source code?",
+      "criteria": {
+       "true": "yes: a real-looking secret string is embedded in the code",
+       "false": "no: secrets are read from env or a vault, or the line only mentions secrets in a comment"
+      }
+     },
+     "D5": {
+      "type": "noul",
+      "instructions": "Does snippet D5 contain a credential (key, token or password) written as a literal value in the source code?",
+      "criteria": {
+       "true": "yes: a real-looking secret string is embedded in the code",
+       "false": "no: secrets are read from env or a vault, or the line only mentions secrets in a comment"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "D1": {
+      "noul_gte": 0.75
+     },
+     "D3": {
+      "noul_gte": 0.7
+     },
+     "D2": {
+      "noul_lte": 0.2
+     },
+     "D4": {
+      "noul_lte": 0.2
+     },
+     "D5": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  }
+ ]
+}

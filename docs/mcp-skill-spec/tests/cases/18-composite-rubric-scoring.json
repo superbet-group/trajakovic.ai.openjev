@@ -1,0 +1,831 @@
+{
+ "use_case": "18-composite-rubric-scoring",
+ "cases": [
+  {
+   "id": "rubric-01-candidate-strong-3-dims",
+   "description": "CANDIDATES: strong staff resume, three rubric dimensions in ONE request; the weighted composite is computed in code from these scores",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nPriya Nair - Staff Engineer, 12 years\n- Core contributor to CPython: fixed a GIL-related refcount bug in the asyncio C accelerator (bpo merged), wrote a C extension for fast varint decoding, profiled and cut p99 of a Python ingestion service from 900ms to 120ms with py-spy and Cython.\n- Directed 3 teams (22 engineers) building the payments platform; set the org's technical roadmap and ran the architecture review board.\n- Architected an event-sourced ledger on Kafka + Postgres handling 40k TPS at 99.99% availability; documented CAP tradeoffs, partitioning and backpressure strategy.",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ]
+     },
+     "leadership": {
+      "type": "score",
+      "instructions": "Rate the leadership scope demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of leading anyone",
+       "informal mentoring or leading small tasks",
+       "led a team or a project end to end",
+       "managed multiple teams or set org-level technical direction"
+      ]
+     },
+     "system_design": {
+      "type": "score",
+      "instructions": "Rate the system design experience demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of system design",
+       "worked on components designed by others",
+       "designed services or components of moderate scale",
+       "architected distributed systems at high scale with explicit scale/latency/availability tradeoffs"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "python_depth": {
+      "score_gte": 2.4
+     },
+     "leadership": {
+      "score_gte": 2.4
+     },
+     "system_design": {
+      "score_gte": 2.4
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-02-candidate-weak-3-dims",
+   "description": "CANDIDATES: weak graduate resume, all dimensions low",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nSam Ortiz - Recent graduate\n- Completed a university course in Python programming; wrote a few scripts to rename files.\n- Member of the chess club.\n- Summer internship: helped test a web form.",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ]
+     },
+     "leadership": {
+      "type": "score",
+      "instructions": "Rate the leadership scope demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of leading anyone",
+       "informal mentoring or leading small tasks",
+       "led a team or a project end to end",
+       "managed multiple teams or set org-level technical direction"
+      ]
+     },
+     "system_design": {
+      "type": "score",
+      "instructions": "Rate the system design experience demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of system design",
+       "worked on components designed by others",
+       "designed services or components of moderate scale",
+       "architected distributed systems at high scale with explicit scale/latency/availability tradeoffs"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "python_depth": {
+      "score_lte": 1.3
+     },
+     "leadership": {
+      "score_lte": 0.7
+     },
+     "system_design": {
+      "score_lte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-03-candidate-mid-profile",
+   "description": "CANDIDATES: mid resume, moderate leadership and design, python not deep",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nMarcus Lee - Software Engineer, 4 years\n- Built Django REST services and Celery workers for an e-commerce backend; wrote pytest suites and used pandas for reporting.\n- Led a 4-person squad for a checkout redesign, planning sprints and delivering it on schedule.\n- Designed a caching layer with Redis for the product catalog service (about 500 req/s).",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ]
+     },
+     "leadership": {
+      "type": "score",
+      "instructions": "Rate the leadership scope demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of leading anyone",
+       "informal mentoring or leading small tasks",
+       "led a team or a project end to end",
+       "managed multiple teams or set org-level technical direction"
+      ]
+     },
+     "system_design": {
+      "type": "score",
+      "instructions": "Rate the system design experience demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of system design",
+       "worked on components designed by others",
+       "designed services or components of moderate scale",
+       "architected distributed systems at high scale with explicit scale/latency/availability tradeoffs"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "python_depth": {
+      "score_gte": 1.3,
+      "score_lte": 2.5
+     },
+     "leadership": {
+      "score_gte": 1.4,
+      "score_lte": 2.6
+     },
+     "system_design": {
+      "score_gte": 1.3,
+      "score_lte": 2.6
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-04-weights-flip-specialist",
+   "description": "WEIGHTING (candidate A of a pair): deep-Python specialist with zero leadership. Client weights py .7/lead .3 give composite ~0.7; weights .3/.7 give ~0.3 - the same read serves both, so re-weighting needs no new inference",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nJon Bell - Principal Engineer, 10 years\n- Wrote a C extension and profiled CPython hot paths with py-spy; merged two patches into the CPython standard library.\n- Works solo; has never led or mentored anyone.",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ]
+     },
+     "leadership": {
+      "type": "score",
+      "instructions": "Rate the leadership scope demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of leading anyone",
+       "informal mentoring or leading small tasks",
+       "led a team or a project end to end",
+       "managed multiple teams or set org-level technical direction"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "python_depth": {
+      "score_gte": 2.4
+     },
+     "leadership": {
+      "score_lte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-05-weights-flip-manager",
+   "description": "WEIGHTING (candidate B of the pair): manager with weak Python. Under py-heavy weights B loses to A, under leadership-heavy weights B wins: the ranking flips purely from client-side weights",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nMaya Ross - Engineering Manager, 9 years\n- Managed 3 teams (25 engineers) and set the org technical roadmap.\n- Uses Python only for small shell-replacement scripts.",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ]
+     },
+     "leadership": {
+      "type": "score",
+      "instructions": "Rate the leadership scope demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of leading anyone",
+       "informal mentoring or leading small tasks",
+       "led a team or a project end to end",
+       "managed multiple teams or set org-level technical direction"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "python_depth": {
+      "score_lte": 1.6
+     },
+     "leadership": {
+      "score_gte": 1.8
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-06-lead-qualified-gates-route",
+   "description": "LEADS (noul gates + choice route): VP with approved budget, authority and deadline; gates true, route sales. Here 'weights' become gate thresholds, not sums",
+   "request": {
+    "model": "openjev-latest",
+    "state": "INBOUND LEAD FORM\nName: Dana Whitfield, VP Engineering at Helio Logistics (1,800 employees)\nMessage: We are replacing our current vendor before the contract ends on Nov 30. Budget of $250k for this fiscal year is approved by our CFO and I sign off on tooling purchases. We need SSO and audit logs. Can we get a demo this week?",
+    "questions": {
+     "has_budget": {
+      "type": "noul",
+      "instructions": "Does the lead state that a concrete budget is available?",
+      "criteria": {
+       "true": "a budget amount or approved funding is stated",
+       "false": "no budget is mentioned or budget is explicitly absent"
+      }
+     },
+     "has_authority": {
+      "type": "noul",
+      "instructions": "Does the lead say they personally can approve or sign the purchase?",
+      "criteria": {
+       "true": "the lead is a decision maker or signs off on purchases",
+       "false": "the lead is not a decision maker or authority is unstated"
+      }
+     },
+     "route": {
+      "type": "choice",
+      "instructions": "Where should this inbound lead be routed?",
+      "criteria": {
+       "sales": "a qualified buyer with budget, authority and timeline; send to a sales rep now",
+       "nurture": "interested but not ready to buy; add to a marketing nurture sequence",
+       "support": "an existing customer with a support problem",
+       "discard": "spam, a job seeker, or an irrelevant message"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "has_budget": {
+      "noul_gte": 0.8
+     },
+     "has_authority": {
+      "noul_gte": 0.8
+     },
+     "route": {
+      "choice": "sales"
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-07-lead-student-discard",
+   "description": "LEADS (noul gates + choice route): student asking for free info; gates false, route nurture or discard",
+   "request": {
+    "model": "openjev-latest",
+    "state": "INBOUND LEAD FORM\nName: Tim, undergraduate student\nMessage: hi, I am writing a class report on logistics software. do you have a free version or some slides I can use? no budget, just for school. thanks",
+    "questions": {
+     "has_budget": {
+      "type": "noul",
+      "instructions": "Does the lead state that a concrete budget is available?",
+      "criteria": {
+       "true": "a budget amount or approved funding is stated",
+       "false": "no budget is mentioned or budget is explicitly absent"
+      }
+     },
+     "has_authority": {
+      "type": "noul",
+      "instructions": "Does the lead say they personally can approve or sign the purchase?",
+      "criteria": {
+       "true": "the lead is a decision maker or signs off on purchases",
+       "false": "the lead is not a decision maker or authority is unstated"
+      }
+     },
+     "route": {
+      "type": "choice",
+      "instructions": "Where should this inbound lead be routed?",
+      "criteria": {
+       "sales": "a qualified buyer with budget, authority and timeline; send to a sales rep now",
+       "nurture": "interested but not ready to buy; add to a marketing nurture sequence",
+       "support": "an existing customer with a support problem",
+       "discard": "spam, a job seeker, or an irrelevant message"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "has_budget": {
+      "noul_lte": 0.2
+     },
+     "has_authority": {
+      "noul_lte": 0.2
+     },
+     "route": {
+      "choice_in": [
+       "nurture",
+       "discard"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-08-lead-hard-nurture",
+   "description": "LEADS (choice + noul): real interest but nothing approved; must route nurture, not sales",
+   "request": {
+    "model": "openjev-latest",
+    "state": "INBOUND LEAD FORM\nName: Rosa Alvarez, Operations Analyst at a mid-size retailer\nMessage: My manager asked me to start collecting information on route-planning tools for next year. We are only in early research and nothing is approved yet. Could you send a general overview?",
+    "questions": {
+     "route": {
+      "type": "choice",
+      "instructions": "Where should this inbound lead be routed?",
+      "criteria": {
+       "sales": "a qualified buyer with budget, authority and timeline; send to a sales rep now",
+       "nurture": "interested but not ready to buy; add to a marketing nurture sequence",
+       "support": "an existing customer with a support problem",
+       "discard": "spam, a job seeker, or an irrelevant message"
+      }
+     },
+     "has_budget": {
+      "type": "noul",
+      "instructions": "Does the lead state that a concrete budget is available?",
+      "criteria": {
+       "true": "a budget amount or approved funding is stated",
+       "false": "no budget is mentioned or budget is explicitly absent"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "route": {
+      "choice": "nurture"
+     },
+     "has_budget": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-09-lead-fit-score-dims",
+   "description": "LEADS (score dims, weightable): mid-funnel lead scored on urgency and fit as 0-3 scores so a client-side weighted lead score can be computed like a candidate composite",
+   "request": {
+    "model": "openjev-latest",
+    "state": "INBOUND LEAD FORM\nName: Ken Oduya, IT Manager at a regional 300-person clinic group\nMessage: We must replace our ticketing tool before our license expires in 6 weeks. We run 40 clinics and need HIPAA-compliant audit trails. Budget is not fixed yet but finance said they will fund the right tool.",
+    "questions": {
+     "urgency": {
+      "type": "score",
+      "instructions": "Rate how urgent the lead's purchase timeline is.",
+      "criteria": [
+       "no timeline mentioned",
+       "vague future interest",
+       "timeline within a year",
+       "hard deadline within weeks"
+      ]
+     },
+     "fit": {
+      "type": "score",
+      "instructions": "Rate how well the lead's stated needs match a ticketing and audit-trail product.",
+      "criteria": [
+       "unrelated need",
+       "loose match",
+       "matches some stated needs",
+       "matches several explicit needs such as scale and compliance"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "urgency": {
+      "score_gte": 2.4
+     },
+     "fit": {
+      "score_gte": 2.2
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-10-doc-design-draft",
+   "description": "DOCUMENTS: design-doc draft, three dimensions in one request; good draft with a TBD testing section",
+   "request": {
+    "model": "openjev-latest",
+    "state": "DRAFT DESIGN DOC\nTitle: Rate limiter for public API\nProblem: Bursty clients cause p99 latency spikes on the orders API (measured 2.4s at peak on Sept 3).\nProposal: Token bucket per API key in Redis, 100 req/s sustained, burst 200. Return 429 with Retry-After. Fallback to local in-memory limiter if Redis is down (fail open, alert on-call).\nAlternatives considered: sliding window log (rejected: memory heavy), gateway-level limiting (rejected: no per-key data).\nTesting: TBD.\nRollout: TBD.",
+    "questions": {
+     "clarity": {
+      "type": "score",
+      "instructions": "Rate how clearly the problem and proposal are stated.",
+      "criteria": [
+       "unclear or missing",
+       "vague",
+       "clear but missing specifics",
+       "clear, specific and measurable"
+      ]
+     },
+     "alternatives": {
+      "type": "score",
+      "instructions": "Rate how well alternatives and tradeoffs are covered.",
+      "criteria": [
+       "none",
+       "named without reasoning",
+       "some reasoning",
+       "several alternatives with explicit rejection reasons"
+      ]
+     },
+     "testing_plan": {
+      "type": "score",
+      "instructions": "Rate how complete the testing plan section is.",
+      "criteria": [
+       "absent or TBD",
+       "one vague sentence",
+       "reasonable outline",
+       "detailed plan with unit, load and failure-injection tests"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "clarity": {
+      "score_gte": 2.2
+     },
+     "alternatives": {
+      "score_gte": 2.2
+     },
+     "testing_plan": {
+      "score_lte": 0.5
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-11-doc-postmortem-strong",
+   "description": "DOCUMENTS: complete incident postmortem; impact, root cause and action items all specific, scores high",
+   "request": {
+    "model": "openjev-latest",
+    "state": "POSTMORTEM\nIncident: checkout outage on Sept 12, 41 minutes, 8% of orders failed (about 3,100 orders, $190k GMV delayed).\nRoot cause: a config push lowered the DB connection pool from 200 to 20; pool exhaustion caused timeouts. The canary did not catch it because canary traffic was 1%.\nTimeline: 14:02 push, 14:09 alert, 14:31 rollback decision, 14:43 recovered.\nAction items: (1) block pool-size changes below 50% of current without review - owner Dev Patel, due Sept 26. (2) raise canary traffic to 10% for config pushes - owner Lin Zhao, due Oct 3. (3) add pool-saturation alert at 80% - owner Dev Patel, due Sept 22.",
+    "questions": {
+     "impact": {
+      "type": "score",
+      "instructions": "Rate how well the impact is quantified.",
+      "criteria": [
+       "not stated",
+       "qualitative only",
+       "partly quantified",
+       "quantified in duration, share of users and business cost"
+      ]
+     },
+     "root_cause": {
+      "type": "score",
+      "instructions": "Rate how specific and evidenced the root cause is.",
+      "criteria": [
+       "missing",
+       "generic like human error",
+       "plausible but shallow",
+       "specific mechanism and why it was not caught earlier"
+      ]
+     },
+     "action_items": {
+      "type": "score",
+      "instructions": "Rate how actionable the follow-up items are.",
+      "criteria": [
+       "none",
+       "vague intentions",
+       "some items missing owners or dates",
+       "every item has an owner and a due date"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "impact": {
+      "score_gte": 2.2
+     },
+     "root_cause": {
+      "score_gte": 2.2
+     },
+     "action_items": {
+      "score_gte": 2.4
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-12-doc-pr-description-weak",
+   "description": "DOCUMENTS: near-empty PR description; the same rubric style must return low scores, not politely high ones",
+   "request": {
+    "model": "openjev-latest",
+    "state": "PULL REQUEST DESCRIPTION\nTitle: fixes\nBody: updated some stuff, should work now.",
+    "questions": {
+     "what_changed": {
+      "type": "score",
+      "instructions": "Rate how clearly the description says what changed.",
+      "criteria": [
+       "absent or meaningless",
+       "vague",
+       "says what but not where or why",
+       "precise about what changed, where and why"
+      ]
+     },
+     "test_evidence": {
+      "type": "score",
+      "instructions": "Rate the evidence that the change was tested.",
+      "criteria": [
+       "none",
+       "a bare claim that it works",
+       "mentions some tests",
+       "names tests run and their results"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "what_changed": {
+      "score_lte": 0.8
+     },
+     "test_evidence": {
+      "score_lte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-13-doc-runbook-stub-vs-detail",
+   "description": "DOCUMENTS: runbook with detailed steps but no rollback and no escalation contact; dimensions must separate (steps high, rollback low)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RUNBOOK: Restarting the payments consumer\n1. Run `kubectl -n payments get pods -l app=consumer` and confirm at least one pod is CrashLoopBackOff.\n2. Run `kubectl -n payments rollout restart deploy/consumer`; wait until `rollout status` reports success (usually 90 seconds).\n3. Verify lag in Grafana dashboard 'payments-consumer' drops below 1,000 messages within 5 minutes.\nRollback: none listed.\nEscalation: none listed.",
+    "questions": {
+     "steps": {
+      "type": "score",
+      "instructions": "Rate how executable the procedure steps are.",
+      "criteria": [
+       "missing",
+       "vague prose",
+       "steps without commands or checks",
+       "exact commands with expected outcomes and verification"
+      ]
+     },
+     "rollback": {
+      "type": "score",
+      "instructions": "Rate how well rollback is described.",
+      "criteria": [
+       "absent",
+       "mentioned only",
+       "outlined",
+       "exact rollback commands and criteria"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "steps": {
+      "score_gte": 2.2
+     },
+     "rollback": {
+      "score_lte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-14-guard-score-without-evidence",
+   "description": "GUARD (any domain): score questions can return a number even when the state has no evidence; a recipe must give low leadership and a noul evidence gate near 0",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RECIPE\nTomato soup: dice 6 tomatoes, saute one onion in butter, add stock, simmer 20 minutes, blend and season with salt.",
+    "questions": {
+     "leadership": {
+      "type": "score",
+      "instructions": "Rate the leadership scope demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of leading anyone",
+       "informal mentoring or leading small tasks",
+       "led a team or a project end to end",
+       "managed multiple teams or set org-level technical direction"
+      ]
+     },
+     "has_evidence": {
+      "type": "noul",
+      "instructions": "Does the text contain any evidence about a person's work experience or leadership?",
+      "criteria": {
+       "true": "the text describes a person's work history or leadership",
+       "false": "the text has no information about a person's work history"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "leadership": {
+      "score_lte": 0.8
+     },
+     "has_evidence": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-15-weights-field-ignored",
+   "description": "KNOWN LIMITATION: the server has no weight parameter. A top-level 'weights' object and a per-question 'weight' key are accepted with 200 and silently ignored, so weighting exists only client-side; an MCP tool must not pass them",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nJon Bell - Principal Engineer, 10 years\n- Wrote a C extension and profiled CPython hot paths with py-spy; merged two patches into the CPython standard library.\n- Works solo; has never led or mentored anyone.",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ],
+      "weight": 0.7
+     }
+    },
+    "weights": {
+     "python_depth": 0.7
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "python_depth": {
+      "score_gte": 2.4
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-16-six-dims-samples-think",
+   "description": "EXTENSION: 6 dimensions with samples=3 and think=256 on a frontend-heavy resume; strong signals high, absent signals low (not saturated by listing many dimensions)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nNoa Berg - Senior Frontend Engineer, 8 years\n- Built a React design system used by 14 product teams; wrote accessibility tests and cut bundle size 40% with code splitting.\n- Mentored 5 junior engineers through a formal onboarding program and code-review pairing.\n- No backend or machine learning work.",
+    "questions": {
+     "frontend": {
+      "type": "score",
+      "instructions": "Rate evidence of frontend (browser UI) engineering experience.",
+      "criteria": [
+       "no evidence",
+       "minor",
+       "solid",
+       "deep"
+      ]
+     },
+     "mentoring": {
+      "type": "score",
+      "instructions": "Rate evidence of mentoring or growing other engineers.",
+      "criteria": [
+       "no evidence",
+       "hinted",
+       "clear mentoring",
+       "systematic mentoring program"
+      ]
+     },
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ]
+     },
+     "data_science": {
+      "type": "score",
+      "instructions": "Rate evidence of machine learning or data science experience.",
+      "criteria": [
+       "no evidence",
+       "minor",
+       "solid",
+       "deep"
+      ]
+     },
+     "system_design": {
+      "type": "score",
+      "instructions": "Rate the system design experience demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of system design",
+       "worked on components designed by others",
+       "designed services or components of moderate scale",
+       "architected distributed systems at high scale with explicit scale/latency/availability tradeoffs"
+      ]
+     },
+     "leadership": {
+      "type": "score",
+      "instructions": "Rate the leadership scope demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of leading anyone",
+       "informal mentoring or leading small tasks",
+       "led a team or a project end to end",
+       "managed multiple teams or set org-level technical direction"
+      ]
+     }
+    },
+    "samples": 3,
+    "think": 256
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "frontend": {
+      "score_gte": 2.2
+     },
+     "mentoring": {
+      "score_gte": 1.8
+     },
+     "python_depth": {
+      "score_lte": 0.7
+     },
+     "data_science": {
+      "score_lte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "rubric-17-error-criteria-dict",
+   "description": "ERROR: score criteria given as a dict instead of a list is a 422; the tool must send a list",
+   "request": {
+    "model": "openjev-latest",
+    "state": "RESUME\nPriya Nair - Staff Engineer, 12 years\n- Core contributor to CPython: fixed a GIL-related refcount bug in the asyncio C accelerator (bpo merged), wrote a C extension for fast varint decoding, profiled and cut p99 of a Python ingestion service from 900ms to 120ms with py-spy and Cython.\n- Directed 3 teams (22 engineers) building the payments platform; set the org's technical roadmap and ran the architecture review board.\n- Architected an event-sourced ledger on Kafka + Postgres handling 40k TPS at 99.99% availability; documented CAP tradeoffs, partitioning and backpressure strategy.",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate Python depth.",
+      "criteria": {
+       "0": "none",
+       "3": "deep"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 422,
+    "body_contains": "valid list"
+   }
+  },
+  {
+   "id": "rubric-18-error-unknown-model",
+   "description": "ERROR: unknown model must fail clearly (400) rather than silently",
+   "request": {
+    "model": "no-such-model",
+    "state": "RESUME\nPriya Nair - Staff Engineer, 12 years\n- Core contributor to CPython: fixed a GIL-related refcount bug in the asyncio C accelerator (bpo merged), wrote a C extension for fast varint decoding, profiled and cut p99 of a Python ingestion service from 900ms to 120ms with py-spy and Cython.\n- Directed 3 teams (22 engineers) building the payments platform; set the org's technical roadmap and ran the architecture review board.\n- Architected an event-sourced ledger on Kafka + Postgres handling 40k TPS at 99.99% availability; documented CAP tradeoffs, partitioning and backpressure strategy.",
+    "questions": {
+     "python_depth": {
+      "type": "score",
+      "instructions": "Rate the depth of Python expertise demonstrated by concrete evidence in this resume.",
+      "criteria": [
+       "no evidence of Python",
+       "basic scripting or coursework only",
+       "solid application development in Python with some libraries",
+       "deep expertise: internals, performance profiling, C extensions, or core-library/open-source contributions"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 400,
+    "body_contains": "nknown model"
+   }
+  }
+ ]
+}

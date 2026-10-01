@@ -1,0 +1,439 @@
+{
+ "use_case": "think-multistep-navigation",
+ "cases": [
+  {
+   "id": "nav-01-graph-hop-choice",
+   "description": "choice over legal neighbor nodes: the README points to charge_processor for charge attempts/outcomes",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find where failed payment retries are scheduled (the retry backoff logic).\nCURRENT NODE: services/billing/README.md\nCONTENT: Billing service overview. Invoices are generated monthly. For webhooks see webhooks/. For subscription plans see plans.py. Charge attempts and their outcomes are handled in charge_processor.py.\nNEIGHBORS (legal next hops): plans.py | webhooks/stripe_handler.py | charge_processor.py | invoice_pdf.py | ../../docs/onboarding.md",
+    "questions": {
+     "next_hop": {
+      "type": "choice",
+      "instructions": "Which single neighbor should be opened next to get closest to the GOAL?",
+      "criteria": {
+       "plans.py": "open plans.py",
+       "webhooks/stripe_handler.py": "open the Stripe webhook handler",
+       "charge_processor.py": "open charge_processor.py",
+       "invoice_pdf.py": "open invoice_pdf.py",
+       "onboarding": "open ../../docs/onboarding.md"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "next_hop": {
+      "choice": "charge_processor.py",
+      "prob_gte": {
+       "charge_processor.py": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-02-goal-reached-positive",
+   "description": "noul goal_reached: node content contains the retry backoff schedule",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find where failed payment retries are scheduled (the retry backoff logic).\nCURRENT NODE: services/billing/charge_processor.py\nCONTENT:\nRETRY_BACKOFF_HOURS = [1, 24, 72]\ndef schedule_retry(charge, attempt):\n    if attempt >= len(RETRY_BACKOFF_HOURS):\n        return mark_uncollectible(charge)\n    enqueue(charge, delay_hours=RETRY_BACKOFF_HOURS[attempt])",
+    "questions": {
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Does the CURRENT NODE itself contain the logic that schedules failed payment retries?",
+      "criteria": {
+       "true": "the node defines when and how retries are scheduled",
+       "false": "the node does not contain the retry scheduling logic"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "goal_reached": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-03-goal-reached-distractor",
+   "description": "noul goal_reached hard negative: worker.py CALLS the backoff function and mentions retries, but does not define the timing; agent must keep walking",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find the code that decides WHEN a failed job is retried (the backoff timing).\nCURRENT NODE: jobs/worker.py\nCONTENT:\ndef run(job):\n    try:\n        job.execute()\n    except RetryableError:\n        delay = compute_delay(job.attempts)  # imported from backoff.py\n        queue.enqueue(job, delay=delay)\n    except Exception:\n        dead_letter(job)",
+    "questions": {
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Does the CURRENT NODE itself define how long to wait before a retry (the delay computation), as opposed to only calling code that does?",
+      "criteria": {
+       "true": "the node contains the delay/backoff computation",
+       "false": "the node only calls or imports the delay computation from elsewhere"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "goal_reached": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-04-wikirace-link",
+   "description": "WikiRace: from Apollo 11 towards Margaret Hamilton, best link is MIT / Apollo Guidance Computer, not Moon or Cold War",
+   "request": {
+    "model": "openjev-latest",
+    "state": "WIKIRACE. START: Apollo 11. TARGET: Margaret Hamilton (software engineer).\nCURRENT PAGE: Apollo 11. Links on this page (legal moves only): Moon | Neil Armstrong | Cold War | Apollo Guidance Computer | Saturn V | Sea of Tranquility | NASA",
+    "questions": {
+     "link": {
+      "type": "choice",
+      "instructions": "Which link is the best next click to reach the TARGET page in the fewest clicks?",
+      "criteria": {
+       "Moon": "click Moon",
+       "Neil Armstrong": "click Neil Armstrong",
+       "Cold War": "click Cold War",
+       "Apollo Guidance Computer": "click Apollo Guidance Computer",
+       "Saturn V": "click Saturn V",
+       "Sea of Tranquility": "click Sea of Tranquility",
+       "NASA": "click NASA"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "link": {
+      "choice_in": [
+       "Apollo Guidance Computer",
+       "NASA"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-05-game-winning-move",
+   "description": "Game tick over legal moves: tic-tac-toe, X wins immediately at c3. Server-provided legal move list; think on",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TIC-TAC-TOE. You are X. Board (rows a,b,c; cols 1,2,3):\na: X O .\nb: O X .\nc: . . .\nEmpty cells are the only LEGAL MOVES: a3, b3, c1, c2, c3.\nX completes the main diagonal a1-b2-c3 by playing c3 and wins.",
+    "think": 512,
+    "questions": {
+     "move": {
+      "type": "choice",
+      "instructions": "Which legal move should X play now?",
+      "criteria": {
+       "a3": "play a3",
+       "b3": "play b3",
+       "c1": "play c1",
+       "c2": "play c2",
+       "c3": "play c3"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "move": {
+      "choice": "c3"
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-06-block-move",
+   "description": "Game tick: must block O's immediate win on row b at b3; legal-move-only choice",
+   "request": {
+    "model": "openjev-latest",
+    "state": "TIC-TAC-TOE. You are X. Board (rows a,b,c; cols 1,2,3):\na: X . .\nb: O O .\nc: . . X\nLEGAL MOVES: a2, a3, b3, c1, c2. X has no immediate win. O threatens to win on row b by playing b3.",
+    "think": 512,
+    "questions": {
+     "move": {
+      "type": "choice",
+      "instructions": "Which legal move must X play to stop O from winning next turn?",
+      "criteria": {
+       "a2": "play a2",
+       "a3": "play a3",
+       "b3": "play b3",
+       "c1": "play c1",
+       "c2": "play c2"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "move": {
+      "choice": "b3"
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-07-illegal-never-returned",
+   "description": "Illegal move never returned: only 3 legal moves listed; forbidden options are simply not in criteria, answer must be one of them",
+   "request": {
+    "model": "openjev-latest",
+    "state": "CHESS ENDGAME, White to move. Legal moves from the server (UCI): e1f1, e1d1, e1e2.\nWhite king e1, black rook h2 controlling the 2nd rank, black king e3 is far away. Squares on rank 2 are attacked by the rook. Rank 1 squares f1 and d1 are not attacked.\nThe move e1e2 walks into the rook attack.",
+    "questions": {
+     "move": {
+      "type": "choice",
+      "instructions": "Which legal move keeps the White king safe?",
+      "criteria": {
+       "e1f1": "king to f1",
+       "e1d1": "king to d1",
+       "e1e2": "king to e2, onto the attacked 2nd rank"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "move": {
+      "choice_in": [
+       "e1f1",
+       "e1d1"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-08-per-item-ready-tasks",
+   "description": "Planning tick split into per-task noul: each needs a dependency lookup against the DONE list (not a number comparison); code collects the ready set",
+   "request": {
+    "model": "openjev-latest",
+    "state": "BUILD PLAN. DONE: A, B.\nTasks and prerequisites:\nC: needs A and B\nD: needs C\nE: needs B\nF: needs A and D\nG: needs nothing",
+    "questions": {
+     "ready_c": {
+      "type": "noul",
+      "instructions": "Given the DONE list, can task C start right now (all its prerequisites are done)?",
+      "criteria": {
+       "true": "all prerequisites of task C are done",
+       "false": "at least one prerequisite of task C is not done"
+      }
+     },
+     "ready_d": {
+      "type": "noul",
+      "instructions": "Given the DONE list, can task D start right now (all its prerequisites are done)?",
+      "criteria": {
+       "true": "all prerequisites of task D are done",
+       "false": "at least one prerequisite of task D is not done"
+      }
+     },
+     "ready_e": {
+      "type": "noul",
+      "instructions": "Given the DONE list, can task E start right now (all its prerequisites are done)?",
+      "criteria": {
+       "true": "all prerequisites of task E are done",
+       "false": "at least one prerequisite of task E is not done"
+      }
+     },
+     "ready_f": {
+      "type": "noul",
+      "instructions": "Given the DONE list, can task F start right now (all its prerequisites are done)?",
+      "criteria": {
+       "true": "all prerequisites of task F are done",
+       "false": "at least one prerequisite of task F is not done"
+      }
+     },
+     "ready_g": {
+      "type": "noul",
+      "instructions": "Given the DONE list, can task G start right now (all its prerequisites are done)?",
+      "criteria": {
+       "true": "all prerequisites of task G are done",
+       "false": "at least one prerequisite of task G is not done"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "ready_c": {
+      "noul_gte": 0.8
+     },
+     "ready_d": {
+      "noul_lte": 0.2
+     },
+     "ready_e": {
+      "noul_gte": 0.8
+     },
+     "ready_f": {
+      "noul_lte": 0.2
+     },
+     "ready_g": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-09-sequential-plan-order",
+   "description": "Sequential planning: dependency order in a migration; each question sees prior answers (sequential true)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "MIGRATION PLAN for renaming column users.email to users.contact_email with zero downtime.\nSteps available: (1) add new column contact_email, (2) backfill contact_email from email, (3) deploy code that writes both columns, (4) deploy code that reads contact_email only, (5) drop old column email.\nCurrent status: step 1 is done. Code still writes only email, and new users keep signing up during the migration. A backfill run before dual-write is deployed would miss rows written after it finishes.",
+    "sequential": true,
+    "questions": {
+     "next_step": {
+      "type": "choice",
+      "instructions": "Which step should be done next so that no row is ever missed?",
+      "criteria": {
+       "backfill": "step 2, backfill now",
+       "dual_write": "step 3, deploy dual-write code",
+       "read_new": "step 4, read only the new column",
+       "drop_old": "step 5, drop the old column"
+      }
+     },
+     "drop_safe_now": {
+      "type": "noul",
+      "instructions": "Is it safe to drop the old column email right now?",
+      "criteria": {
+       "true": "dropping email now is safe",
+       "false": "dropping email now would break readers or lose data"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "next_step": {
+      "choice": "dual_write"
+     },
+     "drop_safe_now": {
+      "noul_lte": 0.1
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-10-think-vs-off-multistep",
+   "description": "think on for a multi-step reachability puzzle; think must be at least neutral: route needs 3 hops A->C->F->G",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GRAPH EDGES (directed): A->B, A->C, B->D, C->F, D->E, F->G, E->B.\nSTART: A. TARGET: G.\nCURRENT NODE: A. LEGAL MOVES: B, C.\nOnly one of the legal moves lies on a path that reaches G.",
+    "think": 768,
+    "questions": {
+     "hop": {
+      "type": "choice",
+      "instructions": "Which legal move from A leads to a path reaching G?",
+      "criteria": {
+       "B": "go to B",
+       "C": "go to C"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "hop": {
+      "choice": "C"
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-11-samples-stability-distractors",
+   "description": "samples=4 stability with distractors: README names backoff.py as the delay computation, so this checks a stable, confident answer despite errors.py/worker.py mentioning retries, not real ambiguity",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find the code that decides WHEN a failed job is retried (the backoff timing).\nCURRENT NODE: jobs/README.md\nCONTENT: The jobs package has three parts. worker.py pulls jobs off the queue and runs them. errors.py defines the exception classes, including RetryableError. backoff.py contains the delay computation used before a failed job is re-enqueued.\nNEIGHBORS: worker.py | errors.py | backoff.py",
+    "samples": 4,
+    "questions": {
+     "next_hop": {
+      "type": "choice",
+      "instructions": "Which neighbor should be opened next?",
+      "criteria": {
+       "worker.py": "open worker.py",
+       "errors.py": "open errors.py",
+       "backoff.py": "open backoff.py"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "next_hop": {
+      "choice": "backoff.py",
+      "prob_gte": {
+       "backoff.py": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-12-progress-score",
+   "description": "score: how close is the current node to the goal (0 unrelated .. 3 goal reached), dead-end page should score low",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find where failed payment retries are scheduled.\nCURRENT NODE: docs/brand/logo-usage.md\nCONTENT: Guidelines for using the company logo: minimum size, clear space, approved color variants, and what not to do with the wordmark.",
+    "questions": {
+     "progress": {
+      "type": "score",
+      "instructions": "How close is the CURRENT NODE to the GOAL? Judge by topical relevance of its content.",
+      "criteria": [
+       "unrelated dead end, backtrack",
+       "loosely related area",
+       "closely related, likely one hop away",
+       "contains the goal"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "progress": {
+      "score_lte": 0.7
+     }
+    }
+   }
+  },
+  {
+   "id": "nav-13-backtrack-visited",
+   "description": "graph tick with a visited set: the best neighbor is already visited, so the model must pick the next-best unvisited one (code-filtered list, visited shown in state)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "GOAL: find where API rate limits are configured.\nCURRENT NODE: gateway/middleware/__init__.py\nCONTENT: Middleware package. auth.py verifies tokens. throttle.py applies per-client request limits using values from settings. cors.py sets CORS headers.\nVISITED: gateway/middleware/throttle.py (it only reads RATE_LIMITS from settings, does not define them)\nNEIGHBORS (unvisited legal hops): auth.py | cors.py | ../settings.py",
+    "questions": {
+     "next_hop": {
+      "type": "choice",
+      "instructions": "throttle.py was already visited and only reads RATE_LIMITS from settings. Which unvisited neighbor should be opened next to find where the limits are configured?",
+      "criteria": {
+       "auth.py": "open auth.py",
+       "cors.py": "open cors.py",
+       "settings.py": "open ../settings.py"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "next_hop": {
+      "choice": "settings.py",
+      "prob_gte": {
+       "settings.py": 0.5
+      }
+     }
+    }
+   }
+  }
+ ]
+}

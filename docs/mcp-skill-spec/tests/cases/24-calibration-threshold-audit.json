@@ -1,0 +1,554 @@
+{
+ "use_case": "24-calibration-threshold-audit",
+ "cases": [
+  {
+   "id": "cal-01-labelled-positive",
+   "description": "Labelled fixture, human label = escalate. Threshold-fitting needs positives to sit high.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4412: Since the 14:05 deploy every checkout request returns HTTP 500. Payments are failing for all customers. Error rate 100%.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-02-labelled-negative",
+   "description": "Labelled fixture, human label = do not escalate. Negatives must sit low.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4440: There is a typo on the pricing page: 'Recieve' should be 'Receive'. Not urgent at all.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-03-fit-leak",
+   "description": "Threshold-fit set: label=escalate (security exposure); must sit above t=0.5 with margin.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4420: Support agent noticed the /export endpoint returns other customers' invoices when the account id is incremented by one. Looks like an IDOR, customer PII exposed.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-03-fit-dataloss",
+   "description": "Threshold-fit set, high band: label=escalate; clear data loss must clear the provisional t_hi=0.95 so the auto-act band has no false negatives.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4431: After the migration ran, about 2,000 users report their saved projects are gone. Backups not yet checked.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.95
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-03-fit-howto",
+   "description": "Threshold-fit set: label=no escalate (how-to); must sit below t=0.5 with margin.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4441: How do I change the language of my dashboard to German? Could not find the setting.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.4
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-03-fit-feature",
+   "description": "Threshold-fit set, low band: label=no escalate (feature request); must clear provisional t_lo=0.05 so the auto-close band has no false positives.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4442: Would be nice to have a dark mode option in the mobile app someday.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.05
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-04-monotonic-score-high",
+   "description": "Monotonicity, top rung: total outage must land in the top severity band.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4412: Since the 14:05 deploy every checkout request returns HTTP 500. Payments are failing for all customers. Error rate 100%.",
+    "questions": {
+     "sev": {
+      "type": "score",
+      "instructions": "Rate the severity of this ticket.",
+      "criteria": [
+       "cosmetic or question",
+       "minor, single user, workaround exists",
+       "significant, many users degraded",
+       "critical outage, data loss or security breach"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "sev": {
+      "score_gte": 2.4
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-05-monotonic-score-low",
+   "description": "Monotonicity, bottom rung: typo must land in the bottom severity band.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4440: There is a typo on the pricing page: 'Recieve' should be 'Receive'. Not urgent at all.",
+    "questions": {
+     "sev": {
+      "type": "score",
+      "instructions": "Rate the severity of this ticket.",
+      "criteria": [
+       "cosmetic or question",
+       "minor, single user, workaround exists",
+       "significant, many users degraded",
+       "critical outage, data loss or security breach"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "sev": {
+      "score_lte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-06-repeat-agree-samples",
+   "description": "Repeat-and-agree: samples=8 with a fresh uid; a clear item must stay saturated after averaging (spread would show as a mid value).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4420: Support agent noticed the /export endpoint returns other customers' invoices when the account id is incremented by one. Looks like an IDOR, customer PII exposed.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    },
+    "samples": 8,
+    "uid": "audit-rep-a"
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-07-repeat-fresh-uid-negative",
+   "description": "Repeat read with a different uid on a clear negative: same side, low value. Compare with cal-02 for stability.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4440: There is a typo on the pricing page: 'Recieve' should be 'Receive'. Not urgent at all.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    },
+    "uid": "audit-rep-b"
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-08-model-string-logged",
+   "description": "Alias resolution: request openjev-latest, the response must name the concrete model so audits can log it and detect drift.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4412: Since the 14:05 deploy every checkout request returns HTTP 500. Payments are failing for all customers. Error rate 100%.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "body_contains": "\"model\":\"openjev-0.1\"",
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-09-pinned-model-canary",
+   "description": "Drift canary on a pinned model id: the same labelled canary must pass on the pinned version (rerun against a new alias to detect movement).",
+   "request": {
+    "model": "openjev-0.1",
+    "state": "Ticket #4441: How do I change the language of my dashboard to German? Could not find the setting.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "body_contains": "\"model\":\"openjev-0.1\"",
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.2
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-10-hard-decidable-think",
+   "description": "Hard but decidable: single-customer report but describes a security-relevant flaw. A careful human escalates. Uses think.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4450: One customer says that after logging out, pressing the browser Back button still shows their account page with saved card last-4 digits. Reproduced on a shared library computer.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    },
+    "think": 256
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.55
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-11-choice-labelled-fixture",
+   "description": "Choice on labelled fixtures: label=security; used for per-class threshold tables.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4420: Support agent noticed the /export endpoint returns other customers' invoices when the account id is incremented by one. Looks like an IDOR, customer PII exposed.",
+    "questions": {
+     "cat": {
+      "type": "choice",
+      "instructions": "Which category best fits this ticket?",
+      "criteria": {
+       "security": "exposure of data or access control flaw",
+       "outage": "service down or errors for many users",
+       "billing": "charges, invoices, refunds",
+       "ui": "cosmetic or usability"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "cat": {
+      "choice": "security",
+      "prob_gte": {
+       "security": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-03-fit-single",
+   "description": "Monotonicity, rung 1: single-user glitch with a workaround must land near rung 1, between the typo and the outage rungs.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4443: My profile picture is not updating in the header, only on my own account. Refreshing sometimes fixes it.",
+    "questions": {
+     "sev": {
+      "type": "score",
+      "instructions": "Rate the severity of this ticket.",
+      "criteria": [
+       "cosmetic or question",
+       "minor, single user, workaround exists",
+       "significant, many users degraded",
+       "critical outage, data loss or security breach"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "sev": {
+      "score_gte": 0.6,
+      "score_lte": 1.5
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-03-fit-mobile-layout",
+   "description": "Threshold-fit set: label=no escalate (cosmetic layout issue a human would file as low priority); ladder should also read rung 0.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4445: The footer links on the marketing site wrap onto two lines on small phones.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     },
+     "sev": {
+      "type": "score",
+      "instructions": "Rate the severity of this ticket.",
+      "criteria": [
+       "cosmetic or question",
+       "minor, single user, workaround exists",
+       "significant, many users degraded",
+       "critical outage, data loss or security breach"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.15
+     },
+     "sev": {
+      "score_lte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-15-borderline-band",
+   "description": "Borderline item (degraded for some, retry works): ladder score must land between rung 1 and rung 2, not saturate, so it belongs in the human-review band. Escalate stays low.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4460: Checkout takes about 8 seconds instead of 2 for some users on mobile networks. Retrying usually works.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     },
+     "sev": {
+      "type": "score",
+      "instructions": "Rate the severity of this ticket.",
+      "criteria": [
+       "cosmetic or question",
+       "minor, single user, workaround exists",
+       "significant, many users degraded",
+       "critical outage, data loss or security breach"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.4
+     },
+     "sev": {
+      "score_gte": 1.1,
+      "score_lte": 1.9
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-12-choice-negative-class",
+   "description": "Choice per-class table, negative-class fixture: label=ui; probabilities for the non-ui classes must be small so a per-class threshold exists.",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4445: The footer links on the marketing site wrap onto two lines on small phones.",
+    "questions": {
+     "cat": {
+      "type": "choice",
+      "instructions": "Which category best fits this ticket?",
+      "criteria": {
+       "security": "exposure of data or access control flaw",
+       "outage": "service down or errors for many users",
+       "billing": "charges, invoices, refunds",
+       "ui": "cosmetic or usability"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "cat": {
+      "choice": "ui",
+      "prob_gte": {
+       "ui": 0.6
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "cal-13-repeat-borderline-samples",
+   "description": "Repeat-and-agree on the borderline item: samples=8 with fresh uid must keep the score mid-range (spread would not collapse it to a rung).",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Ticket #4460: Checkout takes about 8 seconds instead of 2 for some users on mobile networks. Retrying usually works.",
+    "questions": {
+     "sev": {
+      "type": "score",
+      "instructions": "Rate the severity of this ticket.",
+      "criteria": [
+       "cosmetic or question",
+       "minor, single user, workaround exists",
+       "significant, many users degraded",
+       "critical outage, data loss or security breach"
+      ]
+     }
+    },
+    "samples": 8,
+    "uid": "audit-rep-c"
+   },
+   "expect": {
+    "status": 200,
+    "answers": {
+     "sev": {
+      "score_gte": 1.0,
+      "score_lte": 2.0
+     }
+    }
+   }
+  }
+ ]
+}

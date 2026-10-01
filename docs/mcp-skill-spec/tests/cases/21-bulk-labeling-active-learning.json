@@ -1,0 +1,662 @@
+{
+ "use_case": "21-bulk-labeling-active-learning",
+ "cases": [
+  {
+   "id": "row-billing-pii",
+   "description": "Billing row with an email: topic=billing and PII true (tag topic and contains_PII in one request)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 1: Hi, I was charged $49 twice for the annual plan. Please refund one charge. My email is jane.doe@gmail.com.",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 1?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "pii": {
+      "type": "noul",
+      "instructions": "Does row 1 contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice": "billing",
+      "confidence_gte": 0.8
+     },
+     "pii": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "row-bug-nopii",
+   "description": "Bug row without personal data: topic=bug and PII false",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 2: The export button throws a NullPointerException when the report has zero rows. Stack trace points at ReportExporter.java:88. Started after release 4.2.1.",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 2?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "pii": {
+      "type": "noul",
+      "instructions": "Does row 2 contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice": "bug",
+      "confidence_gte": 0.8
+     },
+     "pii": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "row-feature",
+   "description": "Feature request row",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 3: It would be great if the dashboard could export charts to PDF and schedule a weekly email of it.",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 3?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "pii": {
+      "type": "noul",
+      "instructions": "Does row 3 contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice": "feature"
+     },
+     "pii": {
+      "noul_lte": 0.15
+     }
+    }
+   }
+  },
+  {
+   "id": "pii-phone-in-log",
+   "description": "PII embedded in a log-style row (phone number and full name)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 4: callback requested by Marko Horvat, tel +385 91 234 5678, re: delayed shipment ORD-88231",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 4?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "pii": {
+      "type": "noul",
+      "instructions": "Does row 4 contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "pii": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "pii-ids-only-negative",
+   "description": "Hard negative: user ids, order numbers and SKUs look like identifiers but are not personal data",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 5: user_id=48213 order=ORD-99120 sku=TS-BLK-M coupon=SPRING10 total=39.90 status=shipped",
+    "questions": {
+     "pii": {
+      "type": "noul",
+      "instructions": "Does row 5 contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "pii": {
+      "noul_lte": 0.3
+     }
+    }
+   }
+  },
+  {
+   "id": "batch-4-rows",
+   "description": "Batching: four rows in one request, each with its own id-tagged question, all four correct (test: batching does not change answers)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "ROWS:\nR1: My password reset link says expired every time I click it, I cannot log in.\nR2: Please add dark mode to the mobile app.\nR3: The invoice for March shows VAT twice, need a corrected invoice.\nR4: App crashes on launch on Android 14 after the latest update.",
+    "questions": {
+     "R1_topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row R1?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "R2_topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row R2?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "R3_topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row R3?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "R4_topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row R4?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "R1_topic": {
+      "choice": "account"
+     },
+     "R2_topic": {
+      "choice": "feature"
+     },
+     "R3_topic": {
+      "choice": "billing"
+     },
+     "R4_topic": {
+      "choice": "bug"
+     }
+    }
+   }
+  },
+  {
+   "id": "batch-single-r3",
+   "description": "Same row R3 alone; must give the same label as inside the batch (batch invariance, compare with batch-4-rows)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "R3: The invoice for March shows VAT twice, need a corrected invoice.",
+    "questions": {
+     "R3_topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row R3?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "R3_topic": {
+      "choice": "billing",
+      "confidence_gte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "uncertain-row-decidable",
+   "description": "Ambiguous-but-decidable: a crash that also double-charged; the model must land on billing or bug, never feature/account/other",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 6: The app froze during checkout and now my card shows two pending charges for the same order.",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 6?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice_in": [
+       "billing",
+       "bug"
+      ],
+      "prob_gte": {
+       "billing": 0.05,
+       "bug": 0.05
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "uncertain-vague-row",
+   "description": "Vague row: for active learning, probability mass must not land on bug/billing with high confidence; feature/account/other should hold most mass",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 7: hello, following up on my earlier message, any news?",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 7?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice_in": [
+       "other",
+       "account"
+      ],
+      "prob_gte": {
+       "other": 0.3
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "feature-sentiment-high",
+   "description": "Numeric feature: glowing review has score expectation >= 3.3",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Review: Best blender I have owned. Crushes ice in seconds, easy to clean, and quieter than my old one. Bought a second one for my sister.",
+    "questions": {
+     "stars": {
+      "type": "score",
+      "instructions": "How satisfied is the author of this product review, from 0 (furious) to 4 (delighted)?",
+      "criteria": [
+       "furious, wants a refund",
+       "disappointed",
+       "mixed or lukewarm",
+       "satisfied",
+       "delighted, would recommend"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "stars": {
+      "score_gte": 3.3
+     }
+    }
+   }
+  },
+  {
+   "id": "feature-sentiment-low",
+   "description": "Numeric feature: hostile review has score expectation <= 0.8",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Review: Stopped working after 9 days. Support ignored me for two weeks. Total waste of money, I want a refund and I am telling everyone.",
+    "questions": {
+     "stars": {
+      "type": "score",
+      "instructions": "How satisfied is the author of this product review, from 0 (furious) to 4 (delighted)?",
+      "criteria": [
+       "furious, wants a refund",
+       "disappointed",
+       "mixed or lukewarm",
+       "satisfied",
+       "delighted, would recommend"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "stars": {
+      "score_lte": 0.8
+     }
+    }
+   }
+  },
+  {
+   "id": "feature-sentiment-mixed",
+   "description": "Numeric feature: lukewarm review lands in the middle band (1.4 to 2.6), which is what makes score expectation useful as a regressor feature",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Review: Does the job, but the lid feels flimsy and the cord is short. Fine for the price, not something I would rave about.",
+    "questions": {
+     "stars": {
+      "type": "score",
+      "instructions": "How satisfied is the author of this product review, from 0 (furious) to 4 (delighted)?",
+      "criteria": [
+       "furious, wants a refund",
+       "disappointed",
+       "mixed or lukewarm",
+       "satisfied",
+       "delighted, would recommend"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "stars": {
+      "score_gte": 1.4,
+      "score_lte": 2.6
+     }
+    }
+   }
+  },
+  {
+   "id": "multi-feature-vector",
+   "description": "Feature vector from one read: sentiment score + refund-intent noul + PII noul for a complaint (three columns for a classical model)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Review: Terrible. Box arrived crushed and the blender leaks. Send a refund to lena.k@example.org right now or I dispute the charge.",
+    "questions": {
+     "stars": {
+      "type": "score",
+      "instructions": "How satisfied is the author of this product review, from 0 (furious) to 4 (delighted)?",
+      "criteria": [
+       "furious, wants a refund",
+       "disappointed",
+       "mixed or lukewarm",
+       "satisfied",
+       "delighted, would recommend"
+      ]
+     },
+     "refund": {
+      "type": "noul",
+      "instructions": "Does the author ask for a refund or threaten a chargeback?",
+      "criteria": {
+       "true": "asks for money back or threatens a dispute",
+       "false": "no refund request"
+      }
+     },
+     "pii": {
+      "type": "noul",
+      "instructions": "Does this row contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "stars": {
+      "score_lte": 1.0
+     },
+     "refund": {
+      "noul_gte": 0.9
+     },
+     "pii": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "many-options-topic",
+   "description": "Many options (8 criteria as descriptions) for a fine-grained taxonomy; picks the right one",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 8: Can you confirm you delete my data after I close the account? Under GDPR I want a written confirmation.",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "Which category fits this row best?",
+      "criteria": {
+       "billing": "payments, invoices, refunds",
+       "bug": "software defect or crash",
+       "feature": "new functionality request",
+       "account": "login, password, profile",
+       "privacy": "data protection, GDPR, data deletion or export requests",
+       "shipping": "delivery of physical goods",
+       "praise": "positive feedback only",
+       "other": "none of the above"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice": "privacy",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "ext-samples-borderline",
+   "description": "samples:4 on a borderline PII row (a company mailbox is not a personal identity); expects the calibrated call to stay decidable",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 9: Please forward this to support@acme-corp.com and cc the billing team.",
+    "questions": {
+     "pii": {
+      "type": "noul",
+      "instructions": "Does row 9 contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    },
+    "samples": 4
+   },
+   "expect": {
+    "answers": {
+     "pii": {
+      "noul_lte": 0.5
+     }
+    }
+   }
+  },
+  {
+   "id": "ext-sequential-think",
+   "description": "sequential + think on a two-question read still separates the classes",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 10: My name is Ana Petrovi\u0107, I live at Ilica 12, Zagreb. The router you sent keeps rebooting every hour.",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 10?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     },
+     "pii": {
+      "type": "noul",
+      "instructions": "Does row 10 contain personal data that identifies a real person, such as a name, email address, phone number or home address? Internal ids, order numbers and SKUs do not count.",
+      "criteria": {
+       "true": "a person's name, email, phone number or address appears in the text",
+       "false": "no such personal data; only ids, codes, or generic text"
+      }
+     }
+    },
+    "sequential": true,
+    "think": 64
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice": "bug"
+     },
+     "pii": {
+      "noul_gte": 0.85
+     }
+    }
+   }
+  },
+  {
+   "id": "empty-row-own-bucket",
+   "description": "Edge: an empty CSV cell (state '') with an explicit 'empty' option is routed there instead of being forced into billing/bug (without the option it was a weak coin-flip)",
+   "request": {
+    "model": "openjev-latest",
+    "state": "",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "Topic of the row?",
+      "criteria": {
+       "billing": "payments, invoices, refunds",
+       "bug": "a software defect, crash or error",
+       "empty": "the row has no readable content"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "topic": {
+      "choice": "empty",
+      "confidence_gte": 0.6
+     }
+    }
+   }
+  },
+  {
+   "id": "err-labeler-typo-type",
+   "description": "Labeling-config error: a bulk-labeling job whose question type is misspelled ('category' instead of 'choice') is rejected with 400 before any row is labeled; the tool must validate the type",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 11: I was charged twice for my subscription.",
+    "questions": {
+     "topic": {
+      "type": "category",
+      "instructions": "What is the main topic of row 11?",
+      "criteria": {
+       "billing": "payments, invoices, refunds, pricing, charges",
+       "bug": "a software defect, crash or error",
+       "feature": "a request for new functionality",
+       "account": "login, password, profile or access to the account",
+       "other": "none of the above"
+      }
+     }
+    }
+   },
+   "expect": {
+    "status": 400
+   }
+  },
+  {
+   "id": "err-taxonomy-as-list",
+   "description": "Labeling-config error: a label taxonomy passed as a plain list (as it would come from a CSV header) instead of a label-to-description map is rejected with 422; the tool must convert labels to a dict with descriptions",
+   "request": {
+    "model": "openjev-latest",
+    "state": "Row 12: Please add dark mode.",
+    "questions": {
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the main topic of row 12?",
+      "criteria": [
+       "billing",
+       "bug",
+       "feature",
+       "account",
+       "other"
+      ]
+     }
+    }
+   },
+   "expect": {
+    "status": 422
+   }
+  }
+ ]
+}
