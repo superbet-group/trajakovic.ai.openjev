@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+#MISE description="Install everything OpenJev needs (Python 3.12 + Node via mise, Python packages, the ~16.5 GB MLX model); safe to re-run"
+set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+oj_require_macos_arm64
+oj_require_cmds curl lsof ps sysctl vm_stat df sw_vers shasum
+
+M="$(oj_mise_bin)"
+oj_info "Installing tools from mise.toml..."
+"$M" install python node
+oj_require_mise_tool python
+oj_require_mise_tool node
+
+oj_check_ram
+
+need_venv=0
+oj_installed || need_venv=1
+if [ "$need_venv" = 1 ]; then
+  free="$(oj_free_disk_gb "$OJ_ROOT")"
+  if [ "$free" -lt "$OJ_VENV_DISK_GB" ]; then
+    oj_die "only $free GB free in $OJ_ROOT, the Python environment needs about $OJ_VENV_DISK_GB GB; free some space, or set HF_HOME to a bigger disk"
+  fi
+fi
+if [ "${OPENJEV_SKIP_MODEL_DOWNLOAD:-}" != "1" ] && ! oj_model_cached; then
+  hub="$(oj_hf_hub_dir)"
+  free="$(oj_free_disk_gb "$hub")"
+  if [ "$free" -lt "$OJ_MODEL_DISK_GB" ]; then
+    oj_die "only $free GB free for $hub, the model needs about $OJ_MODEL_DISK_GB GB; free some space, or set HF_HOME to a bigger disk"
+  fi
+fi
+
+if [ ! -x "$OJ_PY" ]; then
+  oj_info "Creating .venv..."
+  "$("$M" which python)" -m venv "$OJ_ROOT/.venv"
+fi
+venv_ver="$("$OJ_PY" -c 'import platform; print(platform.python_version())')"
+case "$venv_ver" in
+  3.12.*) ;;
+  *) oj_die ".venv uses Python $venv_ver but mise.toml pins 3.12. Run: mise run stop && rm -rf .venv && mise run install" ;;
+esac
+# venvs created by uv (mise's default when uv is present) ship without pip
+"$OJ_PY" -m pip --version >/dev/null 2>&1 || "$OJ_PY" -m ensurepip --upgrade >/dev/null || oj_die "could not bootstrap pip in .venv"
+
+stamp="$OJ_ROOT/.venv/.openjev-install-stamp"
+want="$(shasum -a 256 "$OJ_ROOT/pyproject.toml" | awk '{print $1}')"
+have=""
+[ -f "$stamp" ] && have="$(cat "$stamp")"
+if [ "${OPENJEV_REINSTALL:-}" != "1" ] && [ "$have" = "$want" ] \
+   && "$OJ_PY" -c 'import openjev, fastapi, uvicorn, httpx, pytest, mlx.core, mlx_vlm' >/dev/null 2>&1; then
+  oj_info "Python packages are up to date"
+else
+  oj_info "Installing Python packages (pip install -e '.[mlx,test]')..."
+  "$OJ_PY" -m pip install --upgrade --quiet pip
+  (cd "$OJ_ROOT" && "$OJ_PY" -m pip install -e ".[mlx,test]")
+  "$OJ_PY" -c 'import openjev, fastapi, uvicorn, httpx, pytest, mlx.core, mlx_vlm' \
+    || oj_die "packages installed but imports fail; try: OPENJEV_REINSTALL=1 mise run install"
+  printf '%s\n' "$want" > "$stamp"
+fi
+
+if [ "${OPENJEV_SKIP_MODEL_DOWNLOAD:-}" != "1" ]; then
+  if oj_model_cached; then
+    oj_info "Model already downloaded"
+  else
+    oj_info "Downloading $OJ_MODEL (~16.5 GB) into $(oj_hf_hub_dir); re-run to resume if interrupted; set HF_TOKEN for faster downloads"
+    "$OJ_PY" -c 'import sys; from mlx_vlm.utils import get_model_path; print(get_model_path(sys.argv[1]))' "$OJ_MODEL"
+  fi
+fi
+
+oj_ok "OpenJev is installed. Start it with: mise run start  (or just: mise run)"

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+#MISE description="Show whether OpenJev and the UI are running and ready"
+set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+oj_require_cmds curl lsof ps
+
+show() {
+  local svc="$1" pid state foreign
+  oj_svc "$svc"
+  if pid="$(oj_find "$svc")"; then
+    if oj_http_up "$SVC_HEALTH"; then state="ready  "; else state="loading"; fi
+    printf '%-8s running  PID %s  %s  %s\n' "$SVC_LABEL" "$pid" "$state" "$SVC_URL"
+  elif foreign="$(oj_port_foreign "$SVC_PORT")"; then
+    printf '%-8s stopped, port %s used by %s\n' "$SVC_LABEL" "$SVC_PORT" "$foreign"
+  else
+    printf '%-8s stopped\n' "$SVC_LABEL"
+  fi
+}
+
+show server
+show ui
+exit 0

@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+#MISE description="Start OpenJev (:8080) and the UI (:8090) in the background, then open the UI in your browser"
+#MISE alias="default"
+set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+oj_require_macos_arm64
+oj_require_cmds curl sw_vers lsof ps sysctl vm_stat open tail
+oj_require_installed
+
+# Preflight both services before spawning anything, so a conflict on one
+# port never leaves the other service started (and loading the model).
+preflight_one() {
+  local svc="$1" foreign hint
+  oj_svc "$svc"
+  if oj_find "$svc" >/dev/null; then return 0; fi
+  if foreign="$(oj_port_foreign "$SVC_PORT")"; then
+    if [ "$svc" = server ]; then hint="OPENJEV_PORT=$((OPENJEV_PORT + 1))"; else hint="UI_PORT=$((UI_PORT + 1))"; fi
+    oj_die "port $SVC_PORT is in use by $foreign. Stop that process, or pick another port (check it is free): $hint mise run start. Nothing was started."
+  fi
+}
+
+preflight_one server
+preflight_one ui
+if ! oj_find server >/dev/null; then
+  oj_check_ram
+  if ! oj_model_cached; then
+    oj_warn "the model is not in the Hugging Face cache yet; this first start downloads ~16.5 GB (mise run install does it up front)"
+  fi
+fi
+
+SERVER_SPAWNED=0
+start_one() {
+  local svc="$1" pid
+  oj_svc "$svc"
+  if pid="$(oj_find "$svc")"; then
+    oj_info "$SVC_LABEL already running (PID $pid)"
+  else
+    pid="$(oj_spawn "$svc")" || {
+      if [ "$svc" = ui ] && [ "$SERVER_SPAWNED" = 1 ]; then
+        oj_warn "OpenJev was started by this run and is still loading in the background; run 'mise run stop' to stop it"
+      fi
+      exit 1
+    }
+    if [ "$svc" = server ]; then SERVER_SPAWNED=1; fi
+    oj_info "Started $SVC_LABEL (PID $pid), log: $(basename "$SVC_LOG")"
+  fi
+  STARTED_PID="$pid"
+}
+
+STARTED_PID=""
+start_one server
+server_pid="$STARTED_PID"
+start_one ui
+ui_pid="$STARTED_PID"
+
+oj_svc ui
+rc=0
+oj_wait_up "$OJ_UI_URL/ui/api/config" 20 "$ui_pid" || rc=$?
+if [ "$rc" != 0 ]; then
+  oj_tail ui 30 >&2
+  if [ "$SERVER_SPAWNED" = 1 ]; then
+    oj_warn "OpenJev was started by this run and is still loading in the background; run 'mise run stop' to stop it"
+  fi
+  oj_die "the UI did not come up on $OJ_UI_URL (full log: mise run logs ui)"
+fi
+
+trap 'echo; echo "Stopped waiting. OpenJev keeps loading in the background: mise run status / mise run logs"; exit 130' INT
+
+if ! oj_http_up "$OJ_SERVER_URL/v1/models"; then
+  oj_info "Loading the model (first load can take a few minutes; Ctrl+C stops waiting, not the servers)..."
+  rc=0
+  timeout="${OPENJEV_START_TIMEOUT:-600}"
+  oj_wait_up "$OJ_SERVER_URL/v1/models" "$timeout" "$server_pid" || rc=$?
+  if [ "$rc" = 2 ]; then
+    oj_svc server
+    oj_tail server 40 >&2
+    oj_warn "the UI is still running; 'mise run stop' stops it"
+    oj_die "OpenJev exited during startup (full log: mise run logs server)"
+  elif [ "$rc" = 1 ]; then
+    oj_warn "still not ready after ${timeout}s; it keeps loading in the background"
+  fi
+fi
+trap - INT
+
+if [ "${OPENJEV_NO_BROWSER:-}" != "1" ]; then
+  open "$OJ_UI_URL" || oj_warn "could not open the browser; open $OJ_UI_URL yourself"
+fi
+
+oj_ok "OpenJev: $OJ_SERVER_URL"
+oj_ok "UI:      $OJ_UI_URL"
+echo "Logs: mise run logs   Status: mise run status   Stop: mise run stop"

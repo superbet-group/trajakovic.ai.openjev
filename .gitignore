@@ -17,4 +17,6 @@ skills-lock.json
 uv.lock
 .openjev.log
 .openjev.pid
+.openjev-ui.log
+.openjev-ui.pid
 .playwright-mcp/

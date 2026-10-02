@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Stop, then start again (debug logging: OPENJEV_LOG_LEVEL=debug mise run restart)"
+set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+oj_require_cmds lsof ps
+"$OJ_ROOT/mise-tasks/stop" && exec "$OJ_ROOT/mise-tasks/start" "$@"
