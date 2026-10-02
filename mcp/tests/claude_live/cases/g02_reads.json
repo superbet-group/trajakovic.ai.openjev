@@ -1,0 +1,209 @@
+{
+ "group": "g02",
+ "cases": {
+  "T009": {
+   "slug": "ask_noul",
+   "feature": "ask noul",
+   "spec": "build 2.6; mcp/spec.md tools",
+   "prompt": "Call the tool mcp__openjev__ask exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "ask"
+   ],
+   "covers": [
+    "tool:ask"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "args": {
+    "state": "deploy failed with exit 1",
+    "questions": {
+     "q": {
+      "type": "noul",
+      "instructions": "Did the deploy succeed?"
+     }
+    }
+   }
+  },
+  "T010": {
+   "slug": "ask_mixed_types",
+   "feature": "ask mixed types",
+   "spec": "build 2.6, 1.6",
+   "prompt": "Call the tool mcp__openjev__ask exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "ask"
+   ],
+   "covers": [
+    "tool:ask"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "pins": {
+    "00": "ex-ask"
+   }
+  },
+  "T011": {
+   "slug": "ask_options_samples",
+   "feature": "ask options",
+   "spec": "build 2.6, 3.6",
+   "prompt": "Call the tool mcp__openjev__ask exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "ask"
+   ],
+   "covers": [
+    "tool:ask"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "args": {
+    "state": "The build log ends with 'All 212 tests passed'.",
+    "questions": {
+     "q": {
+      "type": "noul",
+      "instructions": "Did the tests pass?",
+      "criteria": {
+       "true": "the log reports all tests passing",
+       "false": "the log reports failures or errors"
+      }
+     }
+    },
+    "options": {
+     "samples": 4
+    }
+   }
+  },
+  "T012": {
+   "slug": "yes_no_clear",
+   "feature": "yes_no clear",
+   "spec": "build 2.7",
+   "prompt": "Call the tool mcp__openjev__yes_no exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "yes_no"
+   ],
+   "covers": [
+    "tool:yes_no"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "pins": {
+    "00": "ex-yes-no"
+   }
+  },
+  "T013": {
+   "slug": "yes_no_thresholds_means",
+   "feature": "yes_no thresholds/means",
+   "spec": "build 2.7",
+   "prompt": "Call the tool mcp__openjev__yes_no exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "yes_no"
+   ],
+   "covers": [
+    "tool:yes_no"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "pins": {
+    "00": "ex-yes-no"
+   }
+  },
+  "T014": {
+   "slug": "yes_no_grey_invariant",
+   "feature": "yes_no grey invariant",
+   "spec": "build 2.7 (grey-band re-read)",
+   "prompt": "Call the tool mcp__openjev__yes_no exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "yes_no"
+   ],
+   "covers": [
+    "tool:yes_no"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "pins": {
+    "02": "gate-16-thin-evidence-fix-fails-095-bar"
+   }
+  },
+  "T015": {
+   "slug": "classify_label",
+   "feature": "classify",
+   "spec": "build 2.8",
+   "prompt": "Call the tool mcp__openjev__classify exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "classify"
+   ],
+   "covers": [
+    "tool:classify"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "pins": {
+    "01": "triage-01"
+   }
+  },
+  "T016": {
+   "slug": "classify_abstain",
+   "feature": "classify abstain",
+   "spec": "build 2.8; mcp/spec.md escape",
+   "prompt": "Call the tool mcp__openjev__classify exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "classify"
+   ],
+   "covers": [
+    "tool:classify"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "args": {
+    "state": "The sunset over the bay was lovely last night.",
+    "question": "Which team should own this ticket?",
+    "labels": {
+     "billing": "charges, invoices, refunds, payment methods, plan pricing",
+     "technical": "bugs, errors, outages, integrations, performance, login problems",
+     "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing"
+    }
+   }
+  },
+  "T017": {
+   "slug": "classify_multi_label",
+   "feature": "classify multi_label",
+   "spec": "build 2.8; mcp/spec.md multi_label",
+   "prompt": "Call the tool mcp__openjev__classify exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "classify"
+   ],
+   "covers": [
+    "tool:classify"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "pins": {
+    "01": "triage-08"
+   }
+  },
+  "T018": {
+   "slug": "score_one_based",
+   "feature": "score",
+   "spec": "build 2.9",
+   "prompt": "Call the tool mcp__openjev__score exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "primary": [
+    "score"
+   ],
+   "covers": [
+    "tool:score"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "args": {
+    "state": "Absolutely fantastic! Best purchase I have made all year, it works flawlessly and support was wonderful. Five stars, I recommend it to everyone.",
+    "question": "How positive is this product review?",
+    "levels": [
+     "hostile, demands a refund",
+     "disappointed",
+     "mixed or neutral",
+     "satisfied",
+     "glowing, enthusiastic praise"
+    ],
+    "one_based": true
+   }
+  }
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "group": "g09",
+ "cases": {
+  "T083": {
+   "slug": "skills_loaded",
+   "feature": "skills load",
+   "spec": "spec 1 Skills; build 4",
+   "prompt": "Reply OK",
+   "primary": [],
+   "covers": ["skills:loaded"],
+   "skills": true,
+   "max_turns": 1
+  },
+  "T084": {
+   "slug": "gates_command_gate",
+   "feature": "agent-gates command gate",
+   "spec": "build 4.4 section 1; skill openjev-agent-gates",
+   "prompt": "/openjev-skills:openjev-agent-gates Gate this shell command before anyone runs it: terraform destroy -auto-approve\nThe user's task was: list the files\nDo not run the command; just gate it and report the decision.",
+   "primary": ["recipe"],
+   "covers": ["skill:openjev-agent-gates"],
+   "skills": true,
+   "max_turns": 4
+  },
+  "T085": {
+   "slug": "decisions_claim",
+   "feature": "decisions yes/no",
+   "spec": "build 4.1 precedence rule; skill openjev-decisions",
+   "prompt": "/openjev-skills:openjev-decisions Is the claim \"the build passed\" supported by this build output: \"ERROR: 3 tests failed\"? Decide it with OpenJev and report the result.",
+   "primary": ["yes_no", "ask", "recipe"],
+   "covers": ["skill:openjev-decisions"],
+   "skills": true,
+   "max_turns": 4
+  },
+  "T086": {
+   "slug": "triage_routing_ticket",
+   "feature": "triage-routing ticket",
+   "spec": "build 4.3; skill openjev-triage-routing; case 01 triage-01",
+   "prompt": "/openjev-skills:openjev-triage-routing Route this support ticket to one of these teams: billing (charges, invoices, refunds, payment methods, plan pricing), technical (bugs, errors, outages, integrations, performance, login problems), sales (pre-purchase questions, quotes, upgrades, demos, enterprise pricing).\n\nTicket:\n{seed:ticket}",
+   "primary": ["recipe", "classify", "ask"],
+   "covers": ["skill:openjev-triage-routing"],
+   "pins": {"01": "triage-01"},
+   "skills": true,
+   "max_turns": 4
+  },
+  "T087": {
+   "slug": "data_records_batch",
+   "feature": "data-records bulk labelling",
+   "spec": "build 4.8 batch jobs; skill openjev-data-records",
+   "prompt": "/openjev-skills:openjev-data-records Label every row of the CSV {cwd}/items.csv (columns id, state) with the single yes/no question \"urgent\": \"Does this need a human to look at it today?\" (true: something is broken, blocked, leaking money or data, or has a deadline; false: routine, informational, or can wait). Write the labelled rows to {cwd}/out.jsonl. Use concurrency 2 at most. Follow the skill's batch procedure to the end of the job.",
+   "primary": ["batch"],
+   "covers": ["skill:openjev-data-records"],
+   "skills": true,
+   "tier": "strong",
+   "max_turns": 10,
+   "timeout_s": 420
+  },
+  "T088": {
+   "slug": "authoring_compile_first",
+   "feature": "question-authoring compile/lint first",
+   "spec": "build 4.2; skill openjev-question-authoring",
+   "prompt": "/openjev-skills:openjev-question-authoring Write an OpenJev question for this intent: \"is this log line a real failure\". I am not available for an interview: assume sensible poles yourself and finish by linting your draft.",
+   "primary": ["compile", "lint"],
+   "covers": ["skill:openjev-question-authoring"],
+   "skills": true,
+   "max_turns": 5
+  },
+  "T089": {
+   "slug": "calibration_case_file",
+   "feature": "calibration case_file",
+   "spec": "build 4.11; skill openjev-calibration",
+   "prompt": "/openjev-skills:openjev-calibration Calibrate the escalation question on the 7 labelled tickets in the run_cases.py case file {cwd}/ex-cal.json. Use the calibrate tool with that case_file and report separable, gap and the most borderline item.",
+   "primary": ["calibrate"],
+   "covers": ["skill:openjev-calibration"],
+   "skills": true,
+   "max_turns": 5
+  },
+  "T090": {
+   "slug": "implicit_decision",
+   "feature": "implicit skill use, precedence rule",
+   "spec": "build 4.1 precedence rule",
+   "prompt": "I am working on the task: \"update the README\". Decide whether running `rm -rf build/` fits that task. You are about to judge a risky shell command, so get a typed read of it before you answer, then tell me your verdict in one line.",
+   "primary": ["recipe", "yes_no", "ask"],
+   "covers": ["skill:openjev-agent-gates"],
+   "skills": true,
+   "tier": "strong",
+   "max_turns": 5
+  }
+ }
+}

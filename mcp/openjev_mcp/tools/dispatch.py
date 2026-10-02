@@ -61,14 +61,19 @@ PHASE_TOOLS: list[Callable[[Config], ToolSpec]] = [
     batch_results.register,
 ]
 
-_SPECS: dict[int, tuple[ToolSpec, ...]] = {}   # keyed by len(PHASE_TOOLS) so a list extended later rebuilds
+_SPECS: dict[tuple, tuple[ToolSpec, ...]] = {}   # keyed by len(PHASE_TOOLS) so a list extended later rebuilds, and by recipes_dir
+_ACTIVE: list = []   # the key whose recipe enum is in the global INPUT_SCHEMAS
 
 
 def specs(config: Config) -> tuple[ToolSpec, ...]:
     """Every tool spec, built once per process (identical lists for every connection)."""
-    key = len(PHASE_TOOLS)
+    key = (len(PHASE_TOOLS), config.recipes_dir)   # the recipe enum lists OPENJEV_MCP_RECIPES ids (spec 2.16)
     if key not in _SPECS:
         _SPECS[key] = tuple(f(config) for f in PHASE_TOOLS)
+    elif _ACTIVE != [key]:
+        recipe_tool.register(config)   # put this config's recipe enum back into the global registry
+        _validator.cache_clear()
+    _ACTIVE[:] = [key]
     return _SPECS[key]
 
 

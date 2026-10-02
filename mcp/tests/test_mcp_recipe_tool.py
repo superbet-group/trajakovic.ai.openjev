@@ -160,3 +160,15 @@ async def test_options_model_and_timeout_reach_the_request():
     await rt.recipe(ctx_for(t), args(options={"model": "openjev-0.1", "samples": 2, "timeout_ms": 5000}))
     body = json.loads(t.requests[0].content)
     assert body["model"] == "openjev-0.1" and body["samples"] == 2
+
+
+async def test_dispatch_accepts_extra_dir_recipe(tmp_path):
+    from openjev_mcp.tools import dispatch
+    doc = json.loads(registry.resources.files("openjev_mcp.recipes").joinpath("builtin", "command_gate.json").read_text())
+    (tmp_path / "mine.json").write_text(json.dumps({**doc, "id": "my_gate"}))
+    cfg = load_config({"OPENJEV_MCP_RECIPES": str(tmp_path)})
+    tool = next(t for t in dispatch.tools_for(cfg) if t.name == "recipe")
+    assert "my_gate" in tool.input_schema["properties"]["recipe"]["enum"]
+    assert validate_args("recipe", {"recipe": "my_gate", "inputs": {}}) is None
+    dispatch.tools_for(load_config({}))   # default config restores the built-in enum
+    assert validate_args("recipe", {"recipe": "my_gate", "inputs": {}}).code == "OJ_INVALID_INPUT"

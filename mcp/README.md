@@ -204,4 +204,12 @@ No model and no running OpenJev: tests use a stub engine.
 
 `mise run test` runs the same suite.
 
+A separate live suite drives Claude Code headless (`claude -p`, your subscription login) against this server and the running OpenJev, 100 cases in 10 groups. It spends subscription usage, starts its own MCP on a port in 8200-8299, never starts or stops services, and is not part of `mise run test`:
+
+```sh
+mise run test-claude-live        # see tests/claude_live/README.md
+```
+
+Details: [tests/claude_live/README.md](tests/claude_live/README.md).
+
 More: [spec.md](spec.md) · [docs/architecture.md](docs/architecture.md) · [build spec](../docs/mcp-skill-spec/OPENJEV_MCP_SKILLS_SPEC.md)

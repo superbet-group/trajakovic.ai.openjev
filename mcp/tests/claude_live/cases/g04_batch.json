@@ -1,0 +1,169 @@
+{
+ "group": "g04",
+ "cases": {
+  "T029": {
+   "slug": "batch_dry_run",
+   "feature": "dry_run",
+   "spec": "build 2.11 batch input/output; spec 1 batch dry_run",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"items\":[{\"id\":\"a1\",\"state\":\"Checkout returns HTTP 500 for every customer since the 14:05 deploy; payments are failing.\"},{\"id\":\"a2\",\"state\":\"Could you change the colour of the footer links to dark blue? Purely cosmetic.\"},{\"id\":\"a3\",\"state\":\"Customer data export is leaking other tenants' rows; security exposure confirmed.\"}],\"questions\":{seed:q1},\"dry_run\":true,\"output_path\":\"{cwd}/t029.jsonl\"}. Then reply with the stopped_reason.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch"
+   ],
+   "max_turns": 3
+  },
+  "T030": {
+   "slug": "batch_inline_run",
+   "feature": "inline run",
+   "spec": "build 2.11 batch input/output",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"items\":[{\"id\":\"a1\",\"state\":\"Checkout returns HTTP 500 for every customer since the 14:05 deploy; payments are failing.\"},{\"id\":\"a2\",\"state\":\"Could you change the colour of the footer links to dark blue? Purely cosmetic.\"},{\"id\":\"a3\",\"state\":\"Customer data export is leaking other tenants' rows; security exposure confirmed.\"},{\"id\":\"a4\",\"state\":\"How do I rename a project in the settings page? Just curious.\"}],\"questions\":{seed:qs},\"concurrency\":2}. Then reply with status.ok.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch"
+   ],
+   "max_turns": 3
+  },
+  "T031": {
+   "slug": "batch_items_file_output",
+   "feature": "items_file + output_path",
+   "spec": "build 2.11 Import rules; spec 1 resource_link",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"items_file\":{\"path\":\"{cwd}/items.csv\",\"state_field\":\"state\",\"id_field\":\"id\"},\"questions\":{seed:q1},\"concurrency\":2,\"output_path\":\"{cwd}/t031.jsonl\"}. Then reply with status.ok.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch"
+   ],
+   "max_turns": 3,
+   "timeout_s": 240
+  },
+  "T032": {
+   "slug": "batch_cursor_chain",
+   "feature": "cursor chain",
+   "spec": "build 2.11 pagination/resume/progress",
+   "prompt": "Use mcp__openjev__batch. First call it with exactly these arguments (JSON): {\"items\":[{\"id\":\"a1\",\"state\":\"Checkout returns HTTP 500 for every customer since the 14:05 deploy; payments are failing.\"},{\"id\":\"a2\",\"state\":\"Could you change the colour of the footer links to dark blue? Purely cosmetic.\"},{\"id\":\"a3\",\"state\":\"Customer data export is leaking other tenants' rows; security exposure confirmed.\"},{\"id\":\"a4\",\"state\":\"How do I rename a project in the settings page? Just curious.\"},{\"id\":\"a5\",\"state\":\"All users are blocked: login loops forever after the SSO change.\"}],\"questions\":{seed:q1},\"concurrency\":2,\"output_path\":\"{cwd}/t032.jsonl\",\"max_items_per_call\":2}. Whenever the result's next_cursor is not null, call mcp__openjev__batch again with the very same arguments plus \"cursor\" set to that next_cursor, and keep calling until next_cursor is null. Then reply with the number of calls.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch",
+    "loop:batch_cursor"
+   ],
+   "max_turns": 8,
+   "timeout_s": 420
+  },
+  "T033": {
+   "slug": "batch_resume",
+   "feature": "resume without cursor",
+   "spec": "build 2.11 resume; mcp/spec.md deviation 34",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"items_file\":{\"path\":\"{cwd}/items.csv\",\"state_field\":\"state\",\"id_field\":\"id\"},\"questions\":{seed:q1},\"concurrency\":2,\"output_path\":\"{cwd}/t033.jsonl\",\"resume\":true,\"max_items_per_call\":25}. Then reply with status.skipped and status.ok.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch",
+    "loop:batch_resume"
+   ],
+   "max_turns": 4,
+   "timeout_s": 240
+  },
+  "T034": {
+   "slug": "batch_cursor_args_changed",
+   "feature": "cursor of other arguments",
+   "spec": "build 2.11 checks; mcp/spec.md 22-70",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"items\":[{\"id\":\"a1\",\"state\":\"Checkout returns HTTP 500 for every customer since the 14:05 deploy; payments are failing.\"},{\"id\":\"a2\",\"state\":\"Could you change the colour of the footer links to dark blue? Purely cosmetic.\"},{\"id\":\"a3\",\"state\":\"Customer data export is leaking other tenants' rows; security exposure confirmed.\"},{\"id\":\"a4\",\"state\":\"How do I rename a project in the settings page? Just curious.\"},{\"id\":\"a5\",\"state\":\"All users are blocked: login loops forever after the SSO change.\"}],\"questions\":{seed:qchanged},\"concurrency\":2,\"output_path\":\"{cwd}/t034.jsonl\",\"max_items_per_call\":2,\"cursor\":\"{seed:cursor}\"}. If it returns an error, do not retry; just report the error code and message.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch",
+    "error:OJ_INVALID_INPUT:cursor"
+   ],
+   "max_turns": 3
+  },
+  "T035": {
+   "slug": "batch_invalid_cursor",
+   "feature": "invalid cursor",
+   "spec": "build 2.11 checks",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"items\":[{\"id\":\"a1\",\"state\":\"Checkout returns HTTP 500 for every customer since the 14:05 deploy; payments are failing.\"},{\"id\":\"a2\",\"state\":\"Could you change the colour of the footer links to dark blue? Purely cosmetic.\"},{\"id\":\"a3\",\"state\":\"Customer data export is leaking other tenants' rows; security exposure confirmed.\"}],\"questions\":{seed:q1},\"output_path\":\"{cwd}/t035.jsonl\",\"cursor\":\"not-a-cursor\"}. If it returns an error, do not retry; just report the error code and message.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch",
+    "error:OJ_INVALID_INPUT:cursor"
+   ],
+   "max_turns": 3
+  },
+  "T036": {
+   "slug": "batch_template",
+   "feature": "template",
+   "spec": "build 2.18 templates; spec 1 templates",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"template\":\"spec_examples_escalate\",\"concurrency\":2}. Then reply with status.ok.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch"
+   ],
+   "max_turns": 3,
+   "timeout_s": 240
+  },
+  "T037": {
+   "slug": "batch_exports",
+   "feature": "csv + ojui-batch exports",
+   "spec": "build 2.11 Exports; mcp/spec.md deviation 34",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (JSON, do not change anything): {\"items\":[{\"id\":\"a1\",\"state\":\"Checkout returns HTTP 500 for every customer since the 14:05 deploy; payments are failing.\"},{\"id\":\"a2\",\"state\":\"Could you change the colour of the footer links to dark blue? Purely cosmetic.\"},{\"id\":\"a3\",\"state\":\"Customer data export is leaking other tenants' rows; security exposure confirmed.\"}],\"questions\":{seed:qs},\"concurrency\":2,\"output_path\":\"{cwd}/t037.jsonl\",\"export\":[{\"format\":\"csv\",\"path\":\"{cwd}/t037.csv\"},{\"format\":\"ojui-batch\",\"path\":\"{cwd}/t037.json\"}]}. Then reply with the export paths.",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch"
+   ],
+   "max_turns": 3
+  },
+  "T038": {
+   "slug": "batch_results_review",
+   "feature": "batch_results review",
+   "spec": "build 2.21 batch_results",
+   "prompt": "Call the tool mcp__openjev__batch_results exactly once with exactly these arguments (JSON, do not change anything): {\"path\":\"{seed:out}\",\"view\":\"review\"}. Then reply with the number of review_queue entries.",
+   "primary": [
+    "batch_results"
+   ],
+   "covers": [
+    "tool:batch_results"
+   ],
+   "max_turns": 3
+  },
+  "T039": {
+   "slug": "batch_results_rows_paging",
+   "feature": "rows paging sorted by confidence",
+   "spec": "build 2.21 batch_results",
+   "prompt": "Use mcp__openjev__batch_results. First call it with exactly these arguments (JSON): {\"path\":\"{seed:out}\",\"view\":\"rows\",\"sort_by\":\"confidence\",\"limit\":2}. Whenever the result's next_cursor is not null, call it again with the very same arguments plus \"cursor\" set to that next_cursor, until next_cursor is null. Then reply with the number of calls.",
+   "primary": [
+    "batch_results"
+   ],
+   "covers": [
+    "tool:batch_results"
+   ],
+   "max_turns": 6
+  },
+  "T040": {
+   "slug": "batch_results_compare",
+   "feature": "compare_to",
+   "spec": "build 2.21 batch_results; mcp/spec.md deviation 35",
+   "prompt": "Call the tool mcp__openjev__batch_results exactly once with exactly these arguments (JSON, do not change anything): {\"path\":\"{seed:out}\",\"view\":\"stats\",\"compare_to\":{\"path\":\"{seed:out2}\"}}. Then reply with the agreement per question.",
+   "primary": [
+    "batch_results"
+   ],
+   "covers": [
+    "tool:batch_results"
+   ],
+   "max_turns": 3
+  }
+ }
+}

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#MISE description="Live Claude Code suite: claude -p with your subscription login against an own MCP (8200-8299) and the running OpenJev; spends subscription usage; never starts or stops services"
+set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+oj_require_mcp_installed
+oj_require_cmds claude curl
+cd "$OJ_ROOT"
+
+export OPENJEV_BASE_URL="${OPENJEV_BASE_URL:-$OJ_SERVER_URL}"
+curl -fsS --max-time 5 "$OPENJEV_BASE_URL/health" >/dev/null 2>&1 \
+  || oj_die "OpenJev does not answer at $OPENJEV_BASE_URL/health. This task never starts it: run 'mise run start' yourself."
+export OPENJEV_CLAUDE_LIVE=1
+oj_info "live Claude suite against $OPENJEV_BASE_URL (spends subscription usage)"
+exec "$OJ_PY" mcp/tests/claude_live/run_claude_live.py "$@"

@@ -1,0 +1,198 @@
+{
+ "group": "g07",
+ "cases": {
+  "T062": {
+   "slug": "resources_list",
+   "feature": "resources/list",
+   "spec": "spec.md 71-83 resources",
+   "prompt": "Call ListMcpResourcesTool exactly once (no server argument needed), then reply with just the number of openjev resources it returned.",
+   "primary": [
+    "ListMcpResourcesTool"
+   ],
+   "covers": [
+    "resource:openjev://schema",
+    "resource:openjev://limits",
+    "resource:openjev://recipes",
+    "resource:openjev://templates",
+    "resource:openjev://patterns",
+    "resource:openjev://guide/authoring"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": [
+    "mcp__openjev",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool"
+   ]
+  },
+  "T063": {
+   "slug": "schema_limits",
+   "feature": "schema + limits",
+   "spec": "spec.md 71-80; build 2.4",
+   "prompt": "Read two MCP resources, each exactly once: call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://schema\" then call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://limits\". Then reply DONE.",
+   "primary": [
+    "ReadMcpResourceTool"
+   ],
+   "covers": [
+    "resource:openjev://schema",
+    "resource:openjev://limits"
+   ],
+   "tier": "cheap",
+   "max_turns": 4,
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": [
+    "mcp__openjev",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool"
+   ]
+  },
+  "T064": {
+   "slug": "recipes_index_doc",
+   "feature": "recipes index and recipe template",
+   "spec": "spec.md 71-90; build 2.18",
+   "prompt": "Read two MCP resources, each exactly once, in this order: call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://recipes\" then call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://recipes/command_gate\". Then reply DONE.",
+   "primary": [
+    "ReadMcpResourceTool"
+   ],
+   "covers": [
+    "resource:openjev://recipes",
+    "template:openjev://recipes/{id}",
+    "recipe:command_gate"
+   ],
+   "tier": "cheap",
+   "max_turns": 4,
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": [
+    "mcp__openjev",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool"
+   ]
+  },
+  "T065": {
+   "slug": "templates_patterns_guide",
+   "feature": "templates, patterns, guide",
+   "spec": "spec.md 71-90; build 2.18",
+   "prompt": "Read four MCP resources, each exactly once, in this order: call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://templates\" then call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://templates/spec_examples_escalate\" then call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://patterns\" then call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://guide/authoring\". Then reply DONE.",
+   "primary": [
+    "ReadMcpResourceTool"
+   ],
+   "covers": [
+    "resource:openjev://templates",
+    "resource:openjev://patterns",
+    "resource:openjev://guide/authoring",
+    "template:openjev://templates/{id}"
+   ],
+   "tier": "cheap",
+   "max_turns": 6,
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": [
+    "mcp__openjev",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool"
+   ]
+  },
+  "T066": {
+   "slug": "unknown_uri",
+   "feature": "unknown URI -32602",
+   "spec": "spec.md 71-95 (unknown URI)",
+   "prompt": "Call ReadMcpResourceTool exactly once with server \"openjev\" and uri \"openjev://nope\". Do not retry. Then reply with the error text.",
+   "primary": [
+    "ReadMcpResourceTool"
+   ],
+   "covers": [
+    "jsonrpc:-32602"
+   ],
+   "tier": "cheap",
+   "max_turns": 3,
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": [
+    "mcp__openjev",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool"
+   ]
+  },
+  "T067": {
+   "slug": "file_uri",
+   "feature": "file:// batch output",
+   "spec": "spec.md 85-87; deviation 28",
+   "prompt": "Read two MCP resources, each exactly once, in this order: call ReadMcpResourceTool with server \"openjev\" and uri \"file://{seed:out}\" then call ReadMcpResourceTool with server \"openjev\" and uri \"file:///etc/hosts\". Do not retry failures. Then reply DONE.",
+   "primary": [
+    "ReadMcpResourceTool"
+   ],
+   "covers": [
+    "file://"
+   ],
+   "tier": "cheap",
+   "max_turns": 4,
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": [
+    "mcp__openjev",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool"
+   ]
+  },
+  "T068": {
+   "slug": "prompt_start_batch",
+   "feature": "prompt start_batch",
+   "spec": "spec.md 89-95; build 2.18 prompts",
+   "prompt": "/mcp__openjev__start_batch spec_examples_escalate",
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "prompt:start_batch"
+   ],
+   "tier": "cheap",
+   "max_turns": 4
+  },
+  "T069": {
+   "slug": "prompt_review_batch",
+   "feature": "prompt review_batch",
+   "spec": "spec.md 89-95",
+   "prompt": "/mcp__openjev__review_batch {seed:out} 5",
+   "primary": [],
+   "covers": [
+    "prompt:review_batch"
+   ],
+   "tier": "cheap",
+   "max_turns": 3
+  },
+  "T070": {
+   "slug": "prompt_author_question",
+   "feature": "prompt author_question",
+   "spec": "spec.md 89-95",
+   "prompt": "/mcp__openjev__author_question flag_angry_support_emails",
+   "primary": [],
+   "covers": [
+    "prompt:author_question"
+   ],
+   "tier": "cheap",
+   "max_turns": 2
+  },
+  "T071": {
+   "slug": "prompt_audit_question",
+   "feature": "prompt audit_question",
+   "spec": "spec.md 89-95",
+   "prompt": "/mcp__openjev__audit_question {seed:schema} {seed:labels}",
+   "primary": [],
+   "covers": [
+    "prompt:audit_question"
+   ],
+   "tier": "cheap",
+   "max_turns": 4
+  },
+  "T072": {
+   "slug": "prompt_explain_answer",
+   "feature": "prompt explain_answer",
+   "spec": "spec.md 89-95",
+   "prompt": "/mcp__openjev__explain_answer {\"decision\":\"yes\",\"p\":0.93}",
+   "primary": [],
+   "covers": [
+    "prompt:explain_answer"
+   ],
+   "tier": "cheap",
+   "max_turns": 1
+  }
+ }
+}

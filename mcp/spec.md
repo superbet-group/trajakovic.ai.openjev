@@ -276,6 +276,21 @@ Deliberately not built, with the reason:
 - Live defects still open (section 10): the legacy-era `batch` cancel (row 20), four recipe cases whose raw case passes in `run_cases` but fails through the recipe's own questions, and an intermittent empty completion from the chat model (`generate`, ~1 in 5 once, 0 of 5 direct).
 - Tool schemas are not generated from one source: a new field must be added in `schemas.py` (or the tool module) and in the README table by hand.
 
+### Behaviour confirmed by the Claude Code live suite (2026-10-02)
+
+Found while running `claude -p` against this server (section 8). None is a server defect; callers and test writers must account for them.
+
+- **Claude Code client**
+  - It renders an unknown or non-`batch` resource URI as a normal result, so the protocol-level `-32602` is not visible through it. Assert resource errors with an SDK client, not through `claude -p`.
+  - It replaces an oversized resource with a "persisted output" notice instead of the body. Read large resources in pieces or through the file link.
+- **Server behaviour to document, not change**
+  - `ToolError.path` for a path refusal carries the offending value, so a client can show which path was refused.
+  - The allowed-roots hint in a path refusal can list one root twice (cosmetic).
+  - `ask_image` rejects the `think` option.
+  - `dry_run` writes no audit line: nothing was sent to the model.
+  - A 404 from `/v1/limits` is not an error: it means `limit_source: "default"`.
+- **Model behaviour a test must tolerate:** with a cheap model, `claude -p` may answer a refused call (for example `OJ_INVALID_INPUT` for a relative `output_path`) by retrying it corrected. Assert on the last call of a tool, not on "called exactly once", unless the retry itself is what is tested.
+
 ## 4. Configuration
 
 Read once by `config.load_config()`; bad values raise `ConfigError` (exit 2). `OPENJEV_MODEL` and `OPENJEV_URL` are never read. `Config.__repr__` hides `api_key`, `origin_secret` and `token`.
@@ -438,7 +453,10 @@ pytest's rootdir is `mcp/` (its `pyproject.toml`), `--import-mode=importlib`, `p
 | `test_mcp_server`, `_protocol`, `_protocol_gaps`, `_http_transport`, `_cancel_progress`, `_stdio`, `_tasks` | the SDK server and capabilities, protocol ladder in both eras, extensions/prompts/completion/`_meta`/`resource_link`, HTTP statuses and token mode, cancellation/progress, stdio hygiene, the Tasks extension |
 | `test_mcp_skills`, `_docs_consistency` | the 11 skills against `TOOL_NAMES`, README/env/mise names against code |
 | `test_mcp_e2e` | stub OpenJev under uvicorn on a spare port, the server as a subprocess on another, SDK clients over HTTP and stdio, token mode, exposed-bind exit 2, port-in-use exit 3, the hook CLI |
+| `claude_live/` (10 group files `test_g01`..`test_g10`, harness `cl_*.py`, no-model self-tests `test_cl_selftest*.py`) | 100 cases (T001-T100) driven by headless `claude -p` on the subscription login against an own MCP instance (ports 8200-8299) and the running OpenJev; see below |
 | `live/test_live_tools.py`, `test_live_recipes_p2.py`, `_p3a.py`, `_p3b.py`, `live/run_live.py` | `@pytest.mark.live`: the tools and hook events against the real model, each recipe's case-file expectations, and the full runner that writes `live/results/2026-10-phase2-3.json` |
+
+The Claude Code live suite (`mcp/tests/claude_live/`, run with `mise run test-claude-live [--procs N]`) needs OpenJev running and a logged-in `claude`; it is skipped unless `OPENJEV_CLAUDE_LIVE=1` and never part of `mise run test`. It asserts on parsed tool calls and tool results (prose only as a weak secondary check), caps concurrent `claude -p` processes with a cross-process file-lock semaphore (`OJ_CLAUDE_SLOTS`, default 3), and spends subscription usage (first full run: 100 cases, about $1.40, 316 s, mostly `haiku`). Triage policy for a failing case: up to three attempts, each after re-reading the governing spec section and rewriting the test; then spec, test, code, in that order. Result at the first full run: 98 of 100; T029 (shared work dir between pytest processes; now per process) and T030 (one corrective retry by the model; now asserts the last `batch` call) were harness defects, and T100 was a real bug (see "Fixed since"); all 100 pass after the fixes. Details: `mcp/tests/claude_live/{ARCHITECTURE,TASKS,README,RESULTS}.md`.
 
 `mcp/spec.md` itself is not parsed by a test; section 11's release checklist (step 4) is the manual check of its env, tool and mise names against the code.
 
@@ -535,7 +553,7 @@ What is left after 1.4. Spec sections are in `docs/mcp-skill-spec/OPENJEV_MCP_SK
 | Known model limitations (spec 6.4) | `02` gate-19, `06` secrets-real-token-flagged and coasked-interference, `20` tax-18 fail in `run_cases` too | none (model) |
 | `classify` abstain wording | A spec example says the abstain "lands on the escape option"; the tool returns `label: null`, `abstained: true`, `top: <escape>` | docs only; callers check `abstained` and `top` |
 
-Fixed since the first live run (2026-10-02): the `batch_results` export mismatch (row 35); `command_gate` over-denying `curl | sh` (gate-10, row 29); the reviewer findings on `.ndjson` resource links, `O_NOFOLLOW` and mode 0600 on batch outputs, the `calibrate` work-file lock and the Tasks live-task cap (`4 x max_running`, then the synchronous result).
+Fixed since the first live run (2026-10-02): recipes from `OPENJEV_MCP_RECIPES` rejected by the `recipe` tool (found by claude_live T100; `dispatch.specs()` cached the recipe schema by tool count only, now keyed by `(len, config.recipes_dir)`, test `test_dispatch_accepts_extra_dir_recipe`); the `batch_results` export mismatch (row 35); `command_gate` over-denying `curl | sh` (gate-10, row 29); the reviewer findings on `.ndjson` resource links, `O_NOFOLLOW` and mode 0600 on batch outputs, the `calibrate` work-file lock and the Tasks live-task cap (`4 x max_running`, then the synchronous result).
 
 ### Not built, in scope of the build spec
 
