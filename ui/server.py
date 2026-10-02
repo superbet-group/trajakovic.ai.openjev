@@ -28,7 +28,7 @@ from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
 from uvicorn.server import HANDLED_SIGNALS
 
-UI_VERSION = "0.1.0"
+UI_VERSION = "0.5.0"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 START_HINT = "mise run start"
 UPSTREAM_TIMEOUT = httpx.Timeout(connect=3.0, read=900.0, write=120.0, pool=10.0)
