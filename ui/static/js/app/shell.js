@@ -74,7 +74,7 @@ function healthPopover(anchor) {
           h('span', { class: ['mono hp-mname', m.name === 'diffusiongemma-26b' && 'accent-2'] }, m.name),
           h('span', { class: 'faint hp-mdesc' }, m.description || ''),
           m.release_date ? h('span', { class: 'faint mono hp-mdate' }, m.release_date) : null)))
-        : h('div', { class: 'faint' }, 'none: start OpenJev with mise run startOpenJev'),
+        : h('div', { class: 'faint' }, 'none: start OpenJev with mise run start'),
       h('div', { class: 'hp-hints' }, ['start', 'logs', 'status', 'stop'].map((k) => {
         const cmd = cfg?.hints?.[k];
         return cmd ? h('button', { class: 'cmd-chip mono', onClick: () => copyText(cmd) }, icon('terminal', 12), cmd) : null;

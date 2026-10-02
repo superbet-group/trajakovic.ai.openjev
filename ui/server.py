@@ -2,7 +2,7 @@
 
 Owns: the /ui/api/config and /ui/api/health endpoints, the streaming /v1 passthrough (JSON and
 SSE on one code path, API key kept server-side), no-store static serving and the startup banner.
-Run with `mise run ui` (see ui/README.md and ui/CONTRACT.md section 2).
+Started in the background by `mise run start` (log: .openjev-ui.log); see ui/README.md and ui/CONTRACT.md section 2.
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ from uvicorn.server import HANDLED_SIGNALS
 
 UI_VERSION = "0.1.0"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-START_HINT = "mise run startOpenJev"
+START_HINT = "mise run start"
 UPSTREAM_TIMEOUT = httpx.Timeout(connect=3.0, read=900.0, write=120.0, pool=10.0)
 HEALTH_TIMEOUT = 2.5
 HOP_BY_HOP = {"connection", "keep-alive", "transfer-encoding", "te", "trailer", "upgrade",
@@ -40,8 +40,8 @@ LIMITS = {"maxImages": 8, "maxImageBytes": 5 * 1024 * 1024, "maxQuestions": 256,
           "stepsMax": 8, "samplesMax": 32, "thinkMax": 4096,
           "chatMaxTokensDefault": 1024, "chatMaxTokensCap": 8192,
           "choiceMaxOptions": 255, "scoreMaxLevels": 10}
-HINTS = {"start": START_HINT, "logs": "mise run logsOpenJev",
-         "status": "mise run statusOpenJev", "stop": "mise run stopOpenJev"}
+HINTS = {"start": START_HINT, "logs": "mise run logs",
+         "status": "mise run status", "stop": "mise run stop"}
 
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/javascript", ".mjs")
@@ -433,8 +433,8 @@ def main(argv: list[str] | None = None) -> None:
     ui_url = f"http://{shown_host}:{args.port}"
 
     if not _port_free(args.host, args.port):
-        sys.exit(f"Port {args.port} on {args.host} is already in use. Is `mise run ui` already running? "
-                 f"Try UI_PORT={args.port + 1} mise run ui")
+        sys.exit(f"Port {args.port} on {args.host} is already in use. Is the OpenJev UI already running (check: mise run status)? "
+                 f"Or try UI_PORT={args.port + 1} mise run start")
     if not STATIC_DIR.is_dir():
         print(f"warning: static dir {STATIC_DIR} does not exist; only the proxy will work", file=sys.stderr)
 

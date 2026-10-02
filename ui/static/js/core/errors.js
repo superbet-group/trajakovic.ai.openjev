@@ -49,7 +49,7 @@ export function renderError(error, { onRetry, onFix, onEdit, autoRetry, requestB
   if (e.kind === 'auth' || e.kind === 'forbidden') {
     card.appendChild(h('div', { class: 'err-extra' },
       h('p', {}, 'The UI proxy sends OPENJEV_API_KEY. Start it with the server\'s key:'),
-      cmdChip('OPENJEV_API_KEY=… mise run ui'),
+      cmdChip('OPENJEV_API_KEY=… mise run restart'),
       h('div', { class: 'err-kv mono' },
         h('span', {}, `proxy auth configured: ${config?.authConfigured ? 'yes' : 'no'}`),
         h('span', { class: settings.authOverride ? 'warn-text' : '' }, `auth override: ${settings.authOverride ? 'active' : 'off'}`))));
@@ -63,11 +63,11 @@ export function renderError(error, { onRetry, onFix, onEdit, autoRetry, requestB
     const hints = config?.hints || {};
     card.appendChild(h('div', { class: 'err-extra' },
       h('p', {}, `OpenJev is not reachable at ${config?.openjevUrl || 'http://127.0.0.1:8080'}.`),
-      h('div', { class: 'row wrap' }, cmdChip(hints.start || 'mise run startOpenJev'), cmdChip(hints.logs || 'mise run logsOpenJev')),
+      h('div', { class: 'row wrap' }, cmdChip(hints.start || 'mise run start'), cmdChip(hints.logs || 'mise run logs')),
       h('p', { class: 'faint' }, 'First start loads the model (~16 GB), may take a minute.')));
   }
   if (e.kind === 'timeout') card.appendChild(h('div', { class: 'err-extra' }, 'No answer within 900 s.'));
-  if (e.kind === 'network') card.appendChild(h('div', { class: 'err-extra' }, 'The UI server itself is unreachable. Is ', h('code', {}, 'mise run ui'), ' still running?'));
+  if (e.kind === 'network') card.appendChild(h('div', { class: 'err-extra' }, 'The UI server itself is unreachable. Start it with ', h('code', {}, 'mise run start'), '.'));
 
   let timer = null;
   if ((e.kind === 'rate_limited' || e.kind === 'overloaded') && onRetry) {
@@ -144,15 +144,15 @@ export function renderUpstreamBanner(health) {
   let msg, extra = null;
   if (health.proxyDown) {
     msg = 'UI server unreachable';
-    extra = h('span', { class: 'muted' }, 'Is mise run ui still running?');
+    extra = h('span', { class: 'muted' }, 'Start the UI with mise run start.');
   } else if (isAuth) {
     msg = `OpenJev rejected the proxy's credentials: ${health.upstream?.error || 'auth error'}`;
-    extra = h('span', { class: 'row wrap' }, h('span', { class: 'muted' }, 'Start the UI with the server\'s key:'), cmdChip('OPENJEV_API_KEY=… mise run ui'));
+    extra = h('span', { class: 'row wrap' }, h('span', { class: 'muted' }, 'Start the UI with the server\'s key:'), cmdChip('OPENJEV_API_KEY=… mise run restart'));
   } else {
     msg = `OpenJev is not reachable at ${url}`;
     extra = h('span', { class: 'row wrap' },
-      cmdChip(hints.start || 'mise run startOpenJev'),
-      cmdChip(hints.logs || 'mise run logsOpenJev'),
+      cmdChip(hints.start || 'mise run start'),
+      cmdChip(hints.logs || 'mise run logs'),
       h('span', { class: 'faint' }, 'first start loads the model (~16 GB), may take a minute'));
   }
   el.append(

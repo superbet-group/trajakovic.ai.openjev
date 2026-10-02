@@ -1,9 +1,42 @@
 # OpenJev MCP server and Claude Code skill pack: build specification
 
-Status: build spec, version 1.1, 2026-09-30 (1.0: 2026-09-29). Source of truth for the OpenJev MCP
-server and the Claude Code skill pack. The MCP server is implemented in Python (decided in 1.1,
-section 2.0); every tool is still specified with JSON Schema (draft 2020-12), so the contract does
-not depend on the language. Build order and tasks: `TASKS.md`.
+Status: build spec, version 1.2, 2026-10-02 (1.1: 2026-09-30; 1.0: 2026-09-29). Source of truth for
+the OpenJev MCP server and the Claude Code skill pack. The MCP server is implemented in Python
+(section 2.0); every tool is specified with JSON Schema (draft 2020-12). It targets MCP revision
+2026-07-28 with a legacy fallback (2.0.1). Build order and tasks: `TASKS.md`.
+
+Changelog 1.2 (2026-10-02, from three reviews of 1.1 against MCP 2026-07-28, the OpenJev server code and the Playground batch UI; G-numbers are the 1.2 findings, F-numbers stay those of 1.1):
+
+- G1 Protocol revision: target MCP 2026-07-28 (stateless, server/discover, per-request _meta, resultType) with a dual-era fallback to 2025-06-18 and 2025-11-25 (initialize); -32022 for unsupported versions; SDK floor is a release implementing 2026-07-28 (2.0.1) [protocol G1, G14].
+- G2 Statelessness: no tool result depends on an earlier call; the in-flight semaphore, the limits cache and the body cache are optimisations only; skill step 0 is a hint, not a prerequisite (2.1 principle 10, 4.1) [protocol G2].
+- G3 Capabilities and caching: tools/resources/prompts declare listChanged:false (resources subscribe:false); every list, resources/read and server/discover result carries ttlMs and cacheScope; lists are one page in a fixed order (2.0.1) [protocol G5].
+- G4 Cancellation and progress: notifications/cancelled aborts in-flight HTTP, writes only complete JSONL lines, sends nothing further; notifications/progress payload and monotonic rule are specified (2.0.1, 2.11) [protocol G3, G4; UI G06].
+- G5 Tasks extension (io.modelcontextprotocol/tasks) is optional: MAY in phase 3, behind OPENJEV_MCP_TASKS=on and capability negotiation; the cursor path stays the normative contract every client can use (2.0.1, 2.19) [protocol G3].
+- G6 Resources: mimeType and annotations on every resource; openjev://recipes/{id}, openjev://templates/{id}, openjev://audits/{question_hash} via resources/templates/list; completion/complete for template arguments; tool results return resource_link blocks for files they write (2.18) [protocol G6].
+- G7 Prompts: typed arguments with required flags, defined PromptMessage sequences, no either/or arguments; new phase-2 prompts start_batch and review_batch (2.18) [protocol G7; UI G17].
+- G8 Deprecated MCP features: the normative root set is cwd + OPENJEV_MCP_ROOTS; roots/list is a legacy-era optional addition; no server-initiated requests, no MRTR, no sampling, no elicitation in 1.2; diagnostics go to stderr; notifications/message is never emitted (2.0.1, 2.2) [protocol G8, G12].
+- G9 Schemas: every inputSchema and outputSchema carries $schema 2020-12 and only local, inlined references; argument validation by the SDK is converted to isError OJ_INVALID_INPUT so F12 holds; the text fallback block is annotated audience:[assistant] (2.0.1, 2.4) [protocol G10].
+- G10 Future Streamable HTTP clause cites the 2026-07-28 transport rules (MCP-Protocol-Version, Mcp-Method, Mcp-Name, -32020, 403 on bad Origin, no sessions, RFC 9728); stdio credentials stay in the environment (2.0) [protocol G9].
+- G11 Batching model: three axes named (questions per request and images per request are server-native; states per call is client orchestration, one POST /v1/systemone per state); 'client pagination (cursor)' vs 'server canvas chunking (questions)' replaces the overloaded 'chunking'; cost line added (2.11) [API G1, G3].
+- G12 batch promoted from phase 3 to phase 2 together with the new batch_results tool: it is client orchestration over the ask pipeline with no server prerequisite, and the Playground already ships the feature (2.0, 2.5) [API G1; UI G01-G12].
+- G13 batch inputs: items (inline) and items_file (file) are separate properties (no nested oneOf); formats auto/jsonl/json/csv/tsv/lines/blocks/ojui-batch with the UI sniffing order, delimiter sniffing, text-column guess, array_key, encoding fallback, spreadsheet/binary rejection, multi-file merge, template source; max_items 5000 (2.11, 2.2) [UI G01-G04, G13; protocol G11].
+- G14 batch dry_run: no network; returns the import report, 3 preview states, the first HTTP body and an estimate (requests, tokens by the UI formula, time) (2.11) [UI G02, G15].
+- G15 batch concurrency 1-4 (default 1) bounded by OPENJEV_MCP_MAX_INFLIGHT_BATCH; shared cooldown on 429/503/529 with effective concurrency back to 1; stopped_reason backpressure instead of burning rows as errors; principle 6 rewritten (2.1, 2.11) [API G2; UI G05, G07].
+- G16 batch cursor: opaque base64url token {v, run, offset, args, out} validated every call; resume without a cursor from the output_path scan with a run_id header check; retry_errors and only_ids; idempotentHint true because resume deduplicates and resume:false never appends (2.11) [protocol G2, G11; UI G06].
+- G17 batch outputs: JSONL rows always full (answers with probabilities, usage, latency_ms, server_timing, request_id, body_hash, retried, status); inline detail compact|full; status block with progress and stopped_reason; pinned per_question statistics; exports csv/markdown/ojui-batch with the UI column layout (2.11) [UI G07, G09, G11, G12; protocol G12].
+- G18 New tool batch_results (phase 2, no network): query an output file (rows, review queue, stats), export it, and compare it with another output file by Jensen-Shannon divergence; so no read is ever repeated to re-sort, export or compare (2.21) [UI G10, G12, G18].
+- G19 Templates: openjev://templates and openjev://templates/{id} ({title, questions, options, states}) built from verified section 5 cases; batch accepts template as a source of questions and states; user templates (browser storage) are out of scope (2.18) [UI G13, G17].
+- G20 batch read parity: sampling fast|server_default (the UI sends no samples) and regrey_samples (default 4, 0 disables); shared images (1-8, re-encoded once) ship with ask_image in phase 3 (2.11) [UI G08, G14].
+- G21 calibrate: reliability diagram (10 bins over [0.5, 1]), Brier, ECE, 20-bin confidence and entropy histograms, exactly as the UI stats page; from_batch scores a finished batch output against a labels file with no reads; concurrency as in batch (2.15) [UI G16].
+- G22 Request snippets and correlation: lint emit returns the exact HTTP body, a curl and a Python snippet; Meta gains body_hashes (sha256 of the exact bytes sent, equal to the UI bodyHash) and server_timing (2.2, 2.13) [UI G09, G19].
+- G23 chunks_estimate is an estimate (+-25%) from canvas fit, not a count formula; W403 fires only for all-noul/choice sets of <= 10 questions (score-heavy sets of 10 can span 2 chunks) (2.3, 2.6, 2.13) [API G4].
+- G24 lint: E017 covers only non-object noul criteria (422); new E027 for unknown noul criteria keys, which the server silently drops (autofix yes->true, no->false); new E028 for options an encoder model rejects; per-model capability matrix (2.2, 2.13, 2.17) [API G5, G6].
+- G25 Error mapping: rows for '<model> does not support <field>', 'Too many choices for <model>', 'the model rejected this request', label-token and answer-template overflows, 405, and a generic plain-string 400 fallback (2.4) [API G6, G7].
+- G26 Limits fallback: with backend unknown, prompt_tokens is null (unknown) and E025 stays a warning that names both caps (32,768 MLX, 65,536 vLLM); GET /v1/limits is recommended before phase 2, not a hard prerequisite (2.2, TASKS 0.1) [API G8].
+- G27 Timeouts scale with the lint estimate and think (capped 600,000 ms); OJ_TIMEOUT is not retried when think > 0 (2.4, 2.6) [API G9].
+- G28 Seed inputs documented exactly: sha256 of (state, questions, images); steps, samples, think and sequential are not in the seed (2.1 principle 8) [API G10].
+- G29 Hook timing: 300 ms is the CLI's own overhead; the end-to-end budget is the hook timeout; --timeout-ms MUST be at least 1 s below it; the degraded decision on expiry is stated per event (2.20) [protocol G13].
+- G30 TASKS.md: phase 1 gains protocol-conformance tasks (discover, _meta, resultType, -32022, caching fields, cancellation, progress, stderr); phase 2 gains batch and batch_results; contract tests 6.6 and acceptance criteria 6.7 cover both eras. The phase-1 contract stays intact: phase-1 tool schemas gain only optional fields (lint emit, status capabilities and mcp, Meta body_hashes, server_timing, timeout_ms_used), and the section 2 replays of 6.6 are unchanged [protocol G14].
 
 Changelog 1.1 (2026-09-30, from a review of 1.0 against the server code; F-numbers are the review
 findings):
@@ -50,6 +83,7 @@ Inputs this spec is distilled from (all under `docs/mcp-skill-spec/`):
 | `tests/cases/00-spec-examples.json` | **every HTTP example in this document** (63 cases), 63/63 pass live |
 | `tests/run_cases.py` | stdlib runner used for all of the above |
 | `tests/spec_build/` | sources of this document (`p1-p7.md` with placeholders, generator, capture, renderer) |
+| `ui/static/js/jev/batch.js`, `batchImport.js`, `stats.js`, `compare.js`, `ui/CONTRACT.md` | Playground batch, stats and compare features that 1.2 brings to MCP (2.11, 2.15, 2.21) |
 
 Conventions:
 
@@ -68,7 +102,7 @@ Contents:
 
 1. Overview
 2. MCP server: delivery phases and packaging, principles, common types, error mapping, tool
-   catalogue, resources, prompts, hook CLI
+   catalogue, resources, prompts, hook CLI, batch_results
 3. Question-authoring guide
 4. Skill pack (embedded `SKILL.md` files)
 5. The 24 usage types
@@ -204,22 +238,31 @@ as design and are marked with their phase in 2.5.
 
 | Phase | Ships | Done when |
 |---|---|---|
-| 1 (v1) | tools `status`, `ask`, `yes_no`, `classify`, `score`, `lint`; `openjev-hook pretooluse` running the built-in `command_gate` recipe (the recipe engine is limited to `deterministic`, `compute` split and `read` steps plus the grammar of 2.18); resources `openjev://schema`, `openjev://limits`; skills `openjev-decisions` (v1 rows of its tool table only) and `openjev-question-authoring` (without `compile`) | contract tests of 6.6 green in CI; acceptance criteria of 6.7 for every phase-1 item; `03-agent-tool-call-gate.json` 14/14 through the hook against a live server |
-| 2 | `filter`, `recipe` with the gate recipes (`act_or_ask`, `injection_screen`, `done_gate`, `moderation`) and the dispatch recipes; hooks `stop`, `userprompt`, `posttooluse`; `openjev check`, `openjev filter`; resources `openjev://recipes*`, `openjev://patterns`, `openjev://guide/authoring`; skills agent-gates, code-checks, dispatch, triage-routing, retrieval-relevance, multistep | same, for the phase-2 items; each shipped recipe's `test_file` passes live |
-| 3 (deferred) | `batch`, `calibrate`, `ask_image`, `compile`, `generate`; the remaining recipes; prompts; `openjev://audits`; skills data-records, ui-vision, calibration | re-planned after phase 2 ships; not scheduled |
+| 1 (v1) | tools `status`, `ask`, `yes_no`, `classify`, `score`, `lint`; `openjev-hook pretooluse` running the built-in `command_gate` recipe (the recipe engine is limited to `deterministic`, `compute` split and `read` steps plus the grammar of 2.18); resources `openjev://schema`, `openjev://limits`; skills `openjev-decisions` (v1 rows of its tool table only) and `openjev-question-authoring` (without `compile`); protocol conformance of 2.0.1 (server/discover, legacy initialize, _meta checks, -32022, resultType, serverInfo _meta, ttlMs/cacheScope, cancellation, progress, stderr-only diagnostics) | contract tests of 6.6 green in CI; acceptance criteria of 6.7 for every phase-1 item; `03-agent-tool-call-gate.json` 14/14 through the hook against a live server; the protocol tests of 6.6 pass for both eras |
+| 2 | `batch` (2.11, without `images`), `batch_results` (2.21), resources `openjev://templates`, `openjev://templates/{id}`, prompts `start_batch` and `review_batch`, the `completions` capability, `filter`, `recipe` with the gate recipes (`act_or_ask`, `injection_screen`, `done_gate`, `moderation`) and the dispatch recipes; hooks `stop`, `userprompt`, `posttooluse`; `openjev check`, `openjev filter`; resources `openjev://recipes*`, `openjev://patterns`, `openjev://guide/authoring`; skills agent-gates, code-checks, dispatch, triage-routing, retrieval-relevance, multistep, and data-records limited to its batch parts (4.8; its recipe parts follow in phase 3) | same, for the phase-2 items; each shipped recipe's `test_file` passes live; the batch rows of 6.6 and 6.7 pass, and one live 200-row CSV run with concurrency 2 and one interrupted-then-resumed run are recorded |
+| 3 (deferred) | `calibrate` (with from_batch and the stats of 2.15), `batch.images`, `ask_image`, `compile`, `generate`; the remaining recipes; prompts author_question, audit_question, explain_answer; the optional Tasks extension (2.0.1); `openjev://audits`; skills data-records (recipe parts), ui-vision, calibration | re-planned after phase 2 ships; not scheduled |
 
 A tool whose phase has not shipped is absent from `tools/list` under every `OPENJEV_MCP_TOOLSETS`
-value, so in phase 1 both `all` and `core` expose exactly the six phase-1 tools.
+value, so in phase 1 both `all` and `core` expose exactly the six phase-1 tools. In phase 2, `core`
+still exposes only the six phase-1 tools.
+
+`batch` moved from phase 3 to phase 2 in 1.2 (G12): it is client orchestration over the ask pipeline
+(one POST /v1/systemone per state), needs no server change, and the Playground already ships the
+feature. `calibrate` stays in phase 3 and reuses the batch runner.
 
 Transport: **stdio only** (JSON-RPC over the process's stdin/stdout, launched by the client). The
 MCP layer opens no listening socket, so it adds no network exposure; its only outbound traffic is
 to `OPENJEV_BASE_URL` (and, in phase 3, opt-in image fetches under the rules of 2.2). Streamable
-HTTP is out of scope. If it is ever added, it MUST bind 127.0.0.1 by default, validate `Origin`,
-and require a bearer token. Protocol revision: 2025-06-18 or later (`outputSchema`,
-`structuredContent`, tool annotations).
+HTTP is out of scope. If it is ever added, it MUST bind 127.0.0.1 by default, validate `Origin` (403
+when invalid), require a bearer token, require the `MCP-Protocol-Version`, `Mcp-Method` and
+`Mcp-Name` headers and answer -32020 when they do not match the body, keep no sessions, answer each
+POST with `application/json` or a request-scoped SSE stream (`X-Accel-Buffering: no`, keep-alive
+comments), and follow the MCP authorization spec with RFC 9728 protected-resource metadata if OAuth
+is used. On stdio, credentials come from the environment (`OPENJEV_API_KEY`). Protocol revision and
+conformance: 2.0.1.
 
 Language and SDK: **Python >= 3.10** (the server's toolchain: mise, `.venv`, pytest) on the
-official MCP Python SDK (`mcp`, a release that implements protocol 2025-06-18; 1.10 or later).
+official MCP Python SDK (`mcp`, a release that implements protocol revision 2026-07-28 and still serves legacy `initialize`; the exact floor is pinned in `mcp/pyproject.toml` when the release is chosen, TASKS 1.1).
 
 Packaging: a separate distribution in this repository, so installing the MCP client does not pull
 in the server's model stack (`transformers`, `tokenizers`):
@@ -227,8 +270,8 @@ in the server's model stack (`transformers`, `tokenizers`):
 | Item | Value |
 |---|---|
 | directory | `mcp/` (own `pyproject.toml`), package `openjev_mcp` |
-| distribution | `openjev-mcp`, version tracks the spec (`1.1.x`) |
-| dependencies | `mcp>=1.10`, `httpx>=0.27`, `jsonschema>=4.18`, `google-re2>=1.1`; phase 3 adds `Pillow` (`ask_image`) |
+| distribution | `openjev-mcp`, version tracks the spec (`1.2.x`) |
+| dependencies | `mcp` (release implementing 2026-07-28), `httpx>=0.27`, `jsonschema>=4.18`, `google-re2>=1.1`; phase 3 adds `Pillow` (`ask_image`, `batch.images`) |
 | entrypoints | `[project.scripts] openjev-mcp = "openjev_mcp.server:main"`, `openjev-hook = "openjev_mcp.hook:main"`, `openjev = "openjev_mcp.cli:main"` |
 | test extra | `pytest`, and the server package itself (`openjev`, editable) for the contract tests of 6.6 only |
 
@@ -240,9 +283,97 @@ Tool names (F14) carry no `openjev_` prefix, because the client already namespac
 `mcp__openjev__ask`, `mcp__openjev__yes_no`, ... Where a name could also mean a question type
 (`score`) or a concept (`recipe`, `filter`), the text says "the `score` tool".
 
+#### 2.0.1 Protocol conformance (MCP 2026-07-28)
+
+The server targets MCP revision 2026-07-28 (stateless requests, `server/discover`, per-request
+`_meta`) and still serves the two earlier revisions. The rules below are normative; the table at the
+end lists each requirement with its MCP revision and status.
+
+1. **Revisions.** The server MUST implement `server/discover` and answer `supportedVersions:
+   ["2026-07-28", "2025-11-25", "2025-06-18"]`, `capabilities`, `serverInfo {name: "openjev-mcp",
+   version}` and `instructions` (three sentences: what OpenJev answers, call `status` if unsure,
+   tools never execute anything). A client that sends `initialize` is served under the legacy
+   revision it negotiates. An unsupported `protocolVersion` gets -32022
+   `UnsupportedProtocolVersionError` with the supported list.
+2. **Per-request metadata.** Every 2026-07-28 request MUST carry `_meta`
+   `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities`; a
+   missing one is JSON-RPC -32602 (a protocol fault, not a tool result). Legacy-era sessions are
+   exempt (`initialize` negotiated them). Every result carries `resultType: "complete"` and `_meta`
+   `io.modelcontextprotocol/serverInfo`.
+3. **Statelessness.** No result depends on an earlier request or on the connection (principle 10).
+   Lists are identical for every connection of a process.
+4. **Capabilities.** `tools {listChanged: false}`; `resources {listChanged: false, subscribe: false}`;
+   from phase 2 `prompts {listChanged: false}` and `completions {}`; `extensions` only under rule 9.
+5. **Caching.** tools/list, prompts/list, resources/list, resources/templates/list and
+   server/discover: `ttlMs: 3600000`, `cacheScope: "public"`. resources/read: static resources
+   (schema, recipes, templates, patterns, guide) 3600000 public; `openjev://limits` 60000 private;
+   audits and file outputs 0 private. Lists are one page (no `nextCursor`) in the order of 2.5
+   (tools) and 2.18 (resources, prompts).
+6. **Schemas.** Every `inputSchema` and `outputSchema` carries `"$schema":
+   "https://json-schema.org/draft/2020-12/schema"` and has no `$ref` after inlining; no network
+   `$ref` ever. The server validates arguments itself and registers tools so that SDK argument
+   validation never produces -32602; failures are `isError` `OJ_INVALID_INPUT` results (F12).
+   Success content: the text block (annotations `{audience: ["assistant"]}`), then `resource_link`
+   blocks (`{audience: ["user", "assistant"]}`) for files written. No icons in 1.2.
+7. **Cancellation.** On `notifications/cancelled` for an in-flight request the server cancels its
+   tasks and in-flight HTTP requests, writes only whole JSONL lines (2.11), releases locks and
+   semaphores, and MUST NOT send any further message for that request (no result, no progress).
+8. **Progress.** Only when the request `_meta` carries `progressToken`: `notifications/progress
+   {progressToken, progress, total, message}`. `progress` = rows finished in this call (ok + error +
+   skipped), `total` = rows the call will attempt, `message` = `"<done>/<total> ok=<n> err=<n> eta
+   <s>s"`. Progress MUST increase strictly, at most one notification per second. Nothing depends on
+   them.
+9. **Tasks extension (optional, phase 3).** Only when `OPENJEV_MCP_TASKS=on` and the client lists
+   `io.modelcontextprotocol/tasks` in its capabilities, the server lists it under
+   `capabilities.extensions`, and `batch`/`calibrate` MAY return `resultType: "task"`; `tasks/get`
+   reports status and the progress message. Tasks live in the process and die with it; `output_path`
+   plus resume recovers the work. The cursor path of 2.11 is the normative contract, the only one in
+   phase 2, and the only one tested on every client.
+10. **Deprecated features.** The server never sends a JSON-RPC request to a 2026-07-28 client: no
+    roots/list, sampling or elicitation, no `InputRequiredResult` in 1.2. Allowed roots come from
+    configuration (2.2). Diagnostics go to stderr only; stdout carries JSON-RPC only;
+    `notifications/message` is never emitted. OpenTelemetry `_meta` fields are accepted and ignored.
+
+**Protocol compliance.**
+
+| Requirement | MCP revision | Status |
+|---|---|---|
+| `server/discover` with supportedVersions, capabilities, serverInfo, instructions (MUST) | 2026-07-28 | changed in 1.2 (rule 1) |
+| Every request carries `_meta` protocolVersion and clientCapabilities; missing is -32602 | 2026-07-28 | changed in 1.2 (rule 2) |
+| `UnsupportedProtocolVersionError` -32022 lists supported versions | 2026-07-28 | changed in 1.2 (rule 1) |
+| Every result has `resultType`; absent means complete | 2026-07-28 | changed in 1.2 (rule 2) |
+| Servers MUST NOT rely on prior requests or connection state; lists do not vary per connection | 2026-07-28 | changed in 1.2 (principle 10) |
+| Servers MUST NOT send JSON-RPC requests to clients | 2026-07-28 | changed in 1.2 (rule 10) |
+| Dual-era stdio: answer `server/discover` and legacy `initialize` | 2026-07-28 | changed in 1.2 (rule 1) |
+| `serverInfo` SHOULD be in result `_meta` | 2026-07-28 | changed in 1.2 (rule 2) |
+| tools capability declared, `listChanged` optional | 2025-06-18 | changed in 1.2 (rule 4) |
+| `ttlMs` and `cacheScope` on list, read and discover results | 2026-07-28 | changed in 1.2 (rule 5) |
+| Cursor pagination on list methods; missing `nextCursor` ends the list | 2025-06-18 | met (single page; tool cursors are tool arguments) |
+| Deterministic `tools/list` order | 2025-06-18 (recommended) | met (2.5 order) |
+| `inputSchema` is an object, JSON Schema 2020-12, no network `$ref` | 2025-06-18 | changed in 1.2 (rule 6) |
+| `outputSchema` validates `structuredContent`; text block with serialized JSON | 2025-06-18 | met (2.4; text block annotated) |
+| Execution errors as `isError` results, protocol errors as JSON-RPC | 2025-06-18 | met (F12; SDK validation converted) |
+| `resource_link` content with annotations | 2025-06-18 | changed in 1.2 (batch, batch_results) |
+| Tool annotations are untrusted hints | 2025-06-18 | met (2.5) |
+| resources with `mimeType`, `annotations`, templates via `resources/templates/list` | 2025-06-18 | changed in 1.2 (2.18) |
+| `completion/complete` for prompt and resource-template arguments | 2025-06-18 (optional) | changed in 1.2 (from phase 2) |
+| prompts with typed arguments, `PromptMessage` lists | 2025-06-18 | changed in 1.2 (2.18) |
+| Progress only with `progressToken`, monotonic | 2025-06-18 | changed in 1.2 (rule 8) |
+| Cancellation: stop promptly, send nothing further | 2025-06-18 | changed in 1.2 (rule 7) |
+| Logging via `notifications/message` deprecated | 2026-07-28 | met (never emitted; stderr) |
+| Roots deprecated; pass directories via configuration | 2026-07-28 | changed in 1.2 (rule 10, 2.2) |
+| Sampling deprecated | 2026-07-28 | out of scope (not used) |
+| MRTR / `InputRequiredResult` (elicitation) | 2026-07-28 | out of scope (not used in 1.2) |
+| Tasks extension (experimental) | io.modelcontextprotocol/tasks | optional, phase 3 (rule 9) |
+| `subscriptions/listen` | 2026-07-28 | out of scope (`subscribe: false`) |
+| stdio: newline-delimited JSON-RPC on stdout, logs on stderr | 2025-06-18 | changed in 1.2 (rule 10) |
+| stdio credentials from the environment | 2025-06-18 (authorization) | met (`OPENJEV_API_KEY`) |
+| Streamable HTTP headers, Origin 403, -32020, no sessions | 2026-07-28 | out of scope (future clause in 2.0) |
+| Icons; OpenTelemetry trace context in `_meta` | 2026-07-28 (optional) | out of scope |
+
 ### 2.1 Design principles
 
-1. **Few, composable tools.** 13 tools. Domain logic for the 24 usage types lives in a recipe
+1. **Few, composable tools.** 14 tools (13 in 1.1 plus `batch_results`, 2.21). Domain logic for the 24 usage types lives in a recipe
    library (data), run by one tool (`recipe`), not in 24 tools. Every tool description
    costs context in every agent session; a tool must earn its place (section 2.19 lists what was
    dropped).
@@ -257,32 +388,49 @@ Tool names (F14) carry no `openjev_` prefix, because the client already namespac
    agent never gets stuck and never gets a silent allow on the dangerous side.
 5. **Never execute.** No tool runs commands, clicks, merges or sends anything found in a state or
    suggested by an answer. Reads are advice.
-6. **One read at a time per MCP process.** `OPENJEV_MCP_MAX_INFLIGHT=1` limits *this process*
+6. **One read at a time per MCP process, except batch workers.** `OPENJEV_MCP_MAX_INFLIGHT=1` limits *this process*
    only. Every Claude Code session and every `openjev-hook` call is a separate process with its own
    limit, so the cap does not serialise traffic across clients. The global limit is the server's
    admission control (`OPENJEV_MAX_INFLIGHT` / `OPENJEV_MAX_QUEUE`, defaults 64 / 512 in
    `openjev/config.py`; MLX also serialises reads on one thread). When it is full, the server answers
    529 `overloaded_error` with `retry-after`. The MCP layer treats that 529 as the back-pressure
-   signal (2.4 retry policy) and does not coordinate across processes. Batch tools loop
-   sequentially and checkpoint.
+   signal (2.4 retry policy) and does not coordinate across processes. `batch` and `calibrate` run up
+   to `concurrency` (1-4, default 1) reads at once under a separate per-process cap
+   `OPENJEV_MCP_MAX_INFLIGHT_BATCH` (default 4), so a batch never starves a gate in the same process.
+   A 429, 503 or 529 pauses every worker for `retry-after` and drops effective concurrency to 1
+   (2.11). MLX serialises reads on one thread, so concurrency above 1 adds no speed there (W405);
+   vLLM admits 64 reads. This is not `ReadOptions.sequential`, which chains the answer chunks of
+   one request.
 7. **Auditable.** Every call can be logged as `{ts, tool, question_hash, state_hash, model_resolved,
    request_id, answers, decision, latency_ms, degraded}` (JSONL, `OPENJEV_MCP_LOG`). States are
    hashed, not logged, unless `OPENJEV_MCP_LOG_STATES=1`. This covers the MCP side only (F10). The
    OpenJev server logs full request and response bodies, states included (image bytes redacted),
-   when started with `OPENJEV_LOG_LEVEL=debug` (`openjev/api.py`, `mise run startOpenJevDebug`). At
+   when started with `OPENJEV_LOG_LEVEL=debug` (`openjev/api.py`, `OPENJEV_LOG_LEVEL=debug mise run restart`). At
    debug level it also logs bodies it rejects, although the comment above `log_invalid` in `api.py`
    ("a rejected body is never logged") says otherwise; that comment is only true at `info`. The MCP
    layer cannot see the server's log level, except through the proposed `/v1/limits` field
    `logs_bodies`, on which `status` warns. Skills and docs MUST say: do not send real data to a
-   server running at debug level, and assume a hosted base URL logs states.
+   server running at debug level, and assume a hosted base URL logs states. Diagnostics go to stderr, never stdout, and the server never
+   emits MCP `notifications/message` (deprecated in 2026-07-28). Batch output rows carry state text
+   unless `include_state: false`; the same privacy rule applies to them.
 8. **Deterministic transport.** The MCP layer MUST NOT add random fields to the body (the server
    seeds on the body; a random field would not change the seed, since unknown fields are ignored,
    but it breaks client-side caching). The MCP layer MAY cache identical bodies for
-   `OPENJEV_MCP_CACHE_TTL_S` (default 0, off).
+   `OPENJEV_MCP_CACHE_TTL_S` (default 0, off). The server seeds on sha256 of `(state, questions,
+   images)` only (`openjev/api.py`); `steps`, `samples`, `think` and `sequential` are not in the seed.
+   A byte-identical body gives byte-identical answers except with `think`, whose thought pass is not
+   reproducible (2.6). `body_hash` (Meta, batch rows) is the sha256 of the exact UTF-8 bytes sent:
+   compact JSON, insertion order, non-ASCII unescaped, which equals the Playground `bodyHash` for
+   the same body object.
 
 9. **Schema portability.** Every tool `inputSchema` has `type: object` at its root and no root
    `oneOf`/`anyOf`/`allOf` (2.2). Every result carries a `text` block as well as
    `structuredContent` (2.4).
+10. **Stateless results (MCP 2026-07-28).** No tool result depends on an earlier call or on the
+    connection. Process state is limited to caches that never change a result (limits cache, body
+    cache) and the in-flight semaphores. Multi-call jobs carry their state in arguments: `cursor`,
+    `output_path` and the files they name. A skill that calls `status` first does it as a hint, not a
+    prerequisite.
 
 Configuration (environment variables of the MCP process). MCP-only variables use the
 `OPENJEV_MCP_` prefix (F7), because the server reads plain `OPENJEV_*` names from the same shell,
@@ -297,8 +445,9 @@ and the MCP layer sends, so one value works for both.
 | `OPENJEV_API_KEY` | unset | sent as `Authorization: Bearer <key>` when set |
 | `OPENJEV_MCP_MODEL` | `openjev-latest` | default decide model (not `OPENJEV_MODEL`, see above) |
 | `OPENJEV_MCP_CHAT_MODEL` | `diffusiongemma-26b` | default generate model (phase 3) |
-| `OPENJEV_MCP_TIMEOUT_MS` | `30000` | per HTTP request (hooks override lower) |
+| `OPENJEV_MCP_TIMEOUT_MS` | `30000` | default per HTTP request; scaled up from the lint estimate and think (2.6), capped at 600000; hooks override lower |
 | `OPENJEV_MCP_MAX_INFLIGHT` | `1` | concurrent HTTP requests from this MCP process |
+| `OPENJEV_MCP_MAX_INFLIGHT_BATCH` | `4` | cap on `batch`/`calibrate` `concurrency` in this process |
 | `OPENJEV_MCP_RETRIES` | `2` | retries for 429/503/529/timeout only |
 | `OPENJEV_MCP_LOG` | unset | JSONL audit log path |
 | `OPENJEV_MCP_LOG_STATES` | `0` | include raw states in the log |
@@ -308,6 +457,8 @@ and the MCP layer sends, so one value works for both.
 | `OPENJEV_MCP_BAND` | `0.2,0.8` | default noul no/yes band |
 | `OPENJEV_MCP_ROOTS` | unset | extra directories file inputs/outputs may use, `:`-separated (2.2 "File and URL access") |
 | `OPENJEV_MCP_FETCH` | `off` | `on` lets `ask_image` fetch `https://` image URLs under the SSRF rules of 2.2 (phase 3) |
+| `OPENJEV_MCP_TASKS` | `off` | `on` offers the optional MCP Tasks extension for batch and calibrate (phase 3, 2.0.1) |
+| `OPENJEV_MCP_AUDIT_DIR` | `./openjev-audits` | directory (inside the allowed roots) that `openjev://audits/{question_hash}` reads (phase 3) |
 
 Claude Code registration (`.mcp.json` at the repo root, or `claude mcp add`):
 
@@ -384,7 +535,7 @@ Nested `oneOf` (for example `State` or an image source) is allowed.
     "samples": {"type": "integer", "minimum": 1, "maximum": 32, "description": "N billed reads averaged. 1 = fastest. Omit = 1 read + 3 free re-reads when uncertain."},
     "steps": {"type": "integer", "minimum": 1, "maximum": 8},
     "think": {"type": "integer", "minimum": 0, "maximum": 4096, "description": "Thought budget in tokens; text-only states. 256-512 for lookahead, rules, arithmetic."},
-    "sequential": {"type": "boolean", "description": "Chunks see earlier chunks' answers. Only matters above ~10 questions; text-only."},
+    "sequential": {"type": "boolean", "description": "Chunks see earlier chunks' answers. Only matters when the questions span 2+ canvas chunks (above 10 questions, or fewer when score-heavy); text-only."},
     "timeout_ms": {"type": "integer", "minimum": 100, "maximum": 600000}
    }
   },
@@ -423,7 +574,67 @@ Nested `oneOf` (for example `State` or an image source) is allowed.
     "request_ids": {"type": "array", "items": {"type": "string"}}, "requests": {"type": "integer"},
     "latency_ms": {"type": "number"}, "server_ms": {"type": "number"},
     "input_tokens": {"type": "integer"}, "output_tokens": {"type": "integer"},
-    "chunks_estimate": {"type": "integer"}, "warnings": {"type": "array", "items": {"type": "string"}}}
+    "chunks_estimate": {"type": "integer", "description": "estimate (+-25%), 2.3"},
+    "body_hashes": {"type": "array", "items": {"type": "string"}, "description": "sha256:<hex> of the exact bytes of each request body, same order as request_ids"},
+    "server_timing": {"type": "object", "properties": {"model_ms": {"type": "number"}, "server_ms": {"type": "number"}, "total_ms": {"type": "number"}}, "description": "server-timing header, summed over requests"},
+    "timeout_ms_used": {"type": "integer"},
+    "warnings": {"type": "array", "items": {"type": "string"}}}
+  },
+  "LintFinding": {
+   "type": "object", "required": ["code", "path", "message"],
+   "properties": {"code": {"type": "string"}, "path": {"type": "string"}, "message": {"type": "string"}, "fix": {"type": "string"},
+    "rule": {"type": "string", "description": "guide rule id, section 3"}, "autofixed": {"type": "boolean"},
+    "limit_source": {"enum": ["server", "default"], "description": "limit-dependent codes only (2.2)"}}
+  },
+  "QuestionStats": {
+   "description": "per-question statistics over ok rows, by question type",
+   "oneOf": [
+    {"type": "object", "required": ["type", "n"],
+     "properties": {"type": {"const": "noul"}, "n": {"type": "integer"}, "mean_p": {"type": "number", "description": "mean P(yes)"},
+      "yes": {"type": "integer"}, "no": {"type": "integer"}, "grey": {"type": "integer"},
+      "mean_margin": {"type": "number", "description": "mean |2p-1| (noul has no server confidence)"}}},
+    {"type": "object", "required": ["type", "n"],
+     "properties": {"type": {"const": "choice"}, "n": {"type": "integer"},
+      "counts": {"type": "object", "additionalProperties": {"type": "integer"}},
+      "top2": {"type": "array", "items": {"type": "string"}, "maxItems": 2},
+      "mean_confidence": {"type": "number", "description": "mean server confidence"}, "abstained": {"type": "integer"}}},
+    {"type": "object", "required": ["type", "n"],
+     "properties": {"type": {"const": "score"}, "n": {"type": "integer"},
+      "mean": {"type": "number", "description": "mean expected level (0-indexed)"},
+      "std": {"type": "number", "description": "population std of the expected level"},
+      "histogram": {"type": "object", "additionalProperties": {"type": "integer"}, "description": "level -> count of argmax levels"},
+      "mean_confidence": {"type": "number", "description": "mean server confidence"}}}
+   ]
+  },
+  "BatchHeader": {
+   "description": "first line of a batch output .jsonl (2.11)",
+   "type": "object", "required": ["openjev_mcp", "v", "spec", "run_id", "question_hash", "created_at"],
+   "properties": {"openjev_mcp": {"const": "batch"}, "v": {"const": 2}, "spec": {"type": "string"},
+    "run_id": {"type": "string", "description": "sha256:<question_hash + source + options + sampling + regrey_samples>"},
+    "question_hash": {"type": "string", "description": "sha256:<canonical questions>"},
+    "options": {"type": "object"}, "sampling": {"enum": ["fast", "server_default"]},
+    "thresholds": {"type": "object"}, "review_rule": {"type": "object"}, "audit": {"type": "object"},
+    "source": {"type": "object", "properties": {"kind": {"enum": ["items", "items_file", "template"]}, "path": {"type": "string", "description": "relative"},
+      "format": {"type": "string"}, "delimiter": {"type": ["string", "null"]}, "state_field": {"type": ["string", "null"]},
+      "id_field": {"type": ["string", "null"]}, "row_count": {"type": "integer"}}},
+    "created_at": {"type": "string", "description": "ISO 8601"}}
+  },
+  "BatchRow": {
+   "description": "one line of a batch output .jsonl; always full; the last row per id wins (2.11)",
+   "type": "object", "required": ["index", "id", "status", "state_hash"],
+   "properties": {"index": {"type": "integer"}, "id": {"type": "string"}, "status": {"enum": ["ok", "error"]},
+    "state": {"type": "string", "description": "state text; absent when include_state is false"},
+    "state_hash": {"type": "string", "description": "sha256:<state>"},
+    "answers": {"type": "object", "additionalProperties": {"$ref": "#/$defs/Answer"}, "description": "question id -> full Answer, incl. probabilities, confidence, entropy, derived fields"},
+    "needs_review": {"type": "boolean"}, "review_reasons": {"type": "array", "items": {"type": "string"}}, "audit": {"type": "boolean"},
+    "model": {"type": "string"},
+    "usage": {"type": "object", "properties": {"input_tokens": {"type": "integer"}, "output_tokens": {"type": "integer"}}},
+    "latency_ms": {"type": "number"},
+    "server_timing": {"type": "object", "properties": {"model_ms": {"type": "number"}, "server_ms": {"type": "number"}, "total_ms": {"type": "number"}}},
+    "request_id": {"type": ["string", "null"]}, "body_hash": {"type": "string", "description": "sha256:<exact bytes sent>"},
+    "retried": {"oneOf": [{"type": "null"}, {"type": "object", "properties": {"status": {"type": "integer"}, "kind": {"type": "string"}, "attempts": {"type": "integer"}}}]},
+    "error": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/ToolError"}]},
+    "ts": {"type": "string", "description": "ISO 8601"}}
   },
   "ToolError": {
    "type": "object", "required": ["code", "message"],
@@ -436,6 +647,9 @@ Nested `oneOf` (for example `State` or an image source) is allowed.
 }
 ```
 
+Every tool `inputSchema` and `outputSchema` states `$schema` 2020-12 and contains no `$ref` after
+inlining (2.0.1 rule 6).
+
 Stricter than the server, on purpose:
 
 | Rule | Server | MCP | Why |
@@ -446,6 +660,7 @@ Stricter than the server, on purpose:
 | criteria values | string, object, array or null | non-empty string | null descriptions show only the key to the model |
 | question ids | any string | `^[A-Za-z0-9_.:-]{1,64}$` | ids come back as keys; keep them code-safe |
 | `think`/`sequential` with images | 400 when truthy | refused locally | fail fast with a fix |
+| noul `criteria` keys | other keys are silently dropped (200, criteria lost) | only `true`/`false`; others are E027 with autofix yes->true, no->false | the server would answer without the author definitions |
 
 Limits (F5). The maxima in these schemas (256 questions, 255 options, 10 levels, 8 images, 5 MiB
 per image, 32,768 prompt tokens, 64 MiB body) are the server's *defaults*. They are schema ceilings
@@ -457,8 +672,25 @@ only, not the limits a request is checked against:
   1,024 tokens (`ENCODER_MODELS` in `config.py`, `openjev/encoders.py`).
 - They differ per routed model (`OPENJEV_MODEL_ROUTES`), and on other servers (7 #17).
 
+Per-model capabilities (source: `openjev/encoders.py`, where an unsupported field is a 400
+`<model> does not support <field>`, and `ENCODER_MODELS` in `openjev/config.py`):
+
+| Model (backend) | images | steps > 1 | samples > 1 | think | sequential | max prompt tokens | max choice options |
+|---|---|---|---|---|---|---|---|
+| openjev-0.1 (vLLM) | yes | yes | yes | yes | yes | 65,536 | 255 |
+| openjev-0.1 (MLX) | yes | yes | yes | yes | yes | 32,768 | 255 |
+| laya-1.0 | no | no | no | no | no | 1,024 | server-checked |
+| verdict-1.4 | no | no | no | no | no | 512 | 24 |
+| clm-v0.1 | no | no | no | no | no | 2,048 | server-checked |
+| jevk5-0.2 | no | no | no | no | no | 16,384 | server-checked |
+
+Until `/v1/limits` exists, capabilities are derived from the model name; for an unknown routed model
+every option is assumed supported and the server 400 is mapped (2.4). While the backend is unknown,
+`prompt_tokens` is null (unknown), not 32,768, and E025 stays a warning whose message names both
+defaults (32,768 MLX, 65,536 vLLM).
+
 The MCP server reads the effective limits from the proposed `GET /v1/limits`
-(`00-api-surface.md` section 15), once at startup and again on `status`, cached per base URL. The
+(`00-api-surface.md` section 15), once at startup and again on `status`, cached per base URL as a cache that is re-read when older than its ttl; no result depends on when it was read (principle 10). The
 endpoint is missing today (404). While it is, limits are these defaults, marked
 `limit_source: "default"`, and every lint finding that depends on them (E003, E015, E023 count and
 size, E025) is reported as a warning with the same code, `limit_source: "default"`; the server's own
@@ -466,21 +698,31 @@ size, E025) is reported as a warning with the same code, `limit_source: "default
 `openjev/engine.py`) and the field ranges of `ReadOptions`.
 
 File and URL access (F2). These rules are checked in code before any I/O. They apply to every input
-or output that names a local file: `batch` `items.path` / `output_path`, `calibrate` `case_file` /
-`store` / `compare_to`, and `ask_image` `images[].path`.
+or output that names a local file: `batch` `items_file.path` / `items_file.also` / `output_path` /
+`export[].path`, `batch_results` `path` / `compare_to.path` / `export.path`, `calibrate` `case_file` /
+`store` / `compare_to` / `from_batch` paths, `ask_image` and `batch` `images[].path`, prompt
+`start_batch` `items_path` and `review_batch` `output_path`.
 
-1. The path is resolved (`realpath`: symlinks and `..`) and MUST lie inside an allowed root. Allowed
-   roots are the client's roots (`roots/list`) when the client supports roots, else the MCP
-   process's working directory, plus the directories in `OPENJEV_MCP_ROOTS`. Anything else is
-   `OJ_INVALID_INPUT` "path outside the allowed roots".
-2. Extensions. Reads: `.jsonl`, `.json`, `.csv` (`batch`, `calibrate`); `.png`, `.jpg`, `.jpeg`,
-   `.webp`, `.gif` (`ask_image`). Writes: `.jsonl` (`batch` output) and `.json` (`calibrate` store)
-   only.
+1. The path is resolved (`realpath`: symlinks and `..`) and MUST lie inside an allowed root. The
+   allowed roots are the MCP process's working directory plus the directories in
+   `OPENJEV_MCP_ROOTS` (normative). Under a legacy-era (2025-06-18 or 2025-11-25) session whose
+   client advertises roots, the server MAY add the `roots/list` result; it never requires it, and
+   never asks a 2026-07-28 client (roots are deprecated there). Anything else is `OJ_INVALID_INPUT`
+   "path outside the allowed roots".
+2. Extensions. Reads: `.jsonl` `.ndjson` `.jsonlines` `.json` `.csv` `.tsv` `.tab` `.txt` `.text`
+   `.log` `.md` (`batch`, `batch_results`, `calibrate`); `.png` `.jpg` `.jpeg` `.webp` `.gif`
+   (images). Spreadsheet (`.xlsx` `.xls` `.ods` `.numbers`) and binary (`.pdf` `.docx` `.zip` `.gz`
+   `.parquet` `.sqlite` `.db`) files are refused with E030 and the hint "export the sheet as CSV
+   first". Writes: `.jsonl` (batch output, `batch_results` jsonl export with the header record),
+   `.json` (`calibrate` store, ojui-batch export), `.csv` and `.md` (exports).
 3. Writes never go through a symlink, never under a dot-directory (`.git`, `.ssh`, `.claude`, ...),
    and never to a dotfile. `output_path` is created new, or appended to only when its first line is
    this tool's header record (`{"openjev_mcp": "batch", ...}`). `store` overwrites only a file that
-   parses as a `calibrate` audit record.
-4. Size caps: 64 MiB per file read; 20 MiB per image file before re-encoding.
+   parses as a `calibrate` audit record. Export files are created new only; an existing path is
+   `OJ_INVALID_INPUT`. `batch` holds an exclusive advisory lock on `output_path` for the duration of
+   a call.
+4. Size caps: 64 MiB per file read; 20 MiB per image file before re-encoding. Text files are decoded
+   as UTF-16 when they start with a BOM, else strict UTF-8, else Windows-1252 (warning W603).
 
 Image URL fetch (`ask_image` `images[].url`, phase 3) is off unless `OPENJEV_MCP_FETCH=on`. When it
 is on:
@@ -508,7 +750,8 @@ is on:
 | score `level` | argmax of `probabilities` | logging with a label |
 | score `spread` | `sqrt(sum p_k (k - score)^2)` | borderline detection |
 | score `bimodal` | two non-adjacent levels each >= 0.2 | do not trust the mean |
-| `meta.chunks_estimate` | `ceil(n/10)` if n <= 10 else `1 + ceil((n-10)/14)` (approximation of 10 / 17 / 14 / 11) | latency estimate |
+| `meta.chunks_estimate` | estimate (+-25%): pack per-question answer rows (ceil(chars of id and labels / 3.6) + 2 tokens) into the 64-token canvas, lines format up to 10 questions, indexed above; reference points measured live: 10 noul = 1 chunk, 10 questions with 5-level scores = 2 chunks (9+1), 256 noul = 22 chunks (17, then 14 down to 11 per chunk) | latency estimate (~270-300 ms per chunk on MLX, idle) |
+| `meta.body_hashes` | sha256 of the exact request bytes | correlation with the Playground Repro tab and the audit log |
 
 ### 2.4 Error mapping
 
@@ -518,10 +761,14 @@ HTTP and transport failures, local lint errors, and arguments that fail the tool
 `{"error": <ToolError>}`, so the model can read the hint and retry. Argument failures use
 `OJ_INVALID_INPUT`, with the failing path, and the schema fragment in `hint`. Error results carry
 no `structuredContent`, so they never conflict with the tool's `outputSchema`. JSON-RPC errors are
-kept for protocol faults only (unknown tool, malformed request).
+kept for protocol faults only (unknown tool, malformed request). Protocol faults are also: a missing
+`_meta` protocol version or client capabilities (-32602) and an unsupported revision (-32022)
+(2.0.1). The server validates tool arguments itself; SDK-side validation is disabled or converted so
+that F12 holds. The ToolError shape is published in `openjev://schema`.
 
 A successful result carries `structuredContent` that matches `outputSchema`, plus a `text` block
-with the same JSON serialised, for clients without structured output. Gate recipes with a
+with the same JSON serialised (annotations `{audience: ["assistant"]}`), for clients without
+structured output. Gate recipes with a
 `fail_mode` never return `isError` for server failures: they return their degraded decision as a
 successful result (2.16).
 
@@ -544,14 +791,20 @@ message, not assumed.
 | 400 `at most 8 images per request` / image type / not base64 / > 5 MB | `OJ_REJECTED` | no | "send <= 8 JPEG/PNG/WebP/GIF images <= 5 MB; ask_image re-encodes files for you" |
 | 400 `think needs a text state; send images without it` (same for `sequential`) | `OJ_REJECTED` | no | "drop think/sequential for image reads, or convert the UI to text (accessibility tree) and think on that" |
 | 400 `the request is N tokens; the limit is 32768` | `OJ_TOO_LONG` | no | "state is N tokens (limit L, parsed from the message; 32,768 is only the MLX default). Chunk the state or pre-filter; one question per chunk" |
+| 400 `<model> does not support <field>` (encoder models: images, steps > 1, samples > 1, think, sequential) | `OJ_REJECTED` | no | "<model> does not support <field>; drop it or use openjev-latest" (normally E028) |
+| 400 `Too many choices for <model>: options must fit in N tokens` | `OJ_REJECTED` | no | "pre-filter the options to fit N label tokens on <model>" |
+| 400 `the questions of one read need N label tokens; a read allows 512` | `OJ_REJECTED` | no | "shorten option keys or split the questions across requests" |
+| 400 `answer template is N tokens` (canvas overflow) | `OJ_REJECTED` | no | "shorten question ids and option keys" |
+| 400 `api_usage_error` `the model rejected this request: <msg>` (vLLM upstream) | `OJ_REJECTED` | no | "rejected upstream: <msg>; report with request_id" |
 | 400 `{"error_type":"api_usage_error","message":"Unknown model: X"}` | `OJ_UNKNOWN_MODEL` | no | "unknown model X. Available: <from /v1/models>. Pinned Jev versions (jev-1.13.0) are not valid on OpenJev; use openjev-latest or openjev-0.1" |
 | 400 `api_usage_error` `Invalid request.` (unknown question type) | `OJ_BAD_TYPE` | no | "question type must be noul, choice or score" (normally caught locally) |
 | 401 `authentication_error` (wrong key; not verified live, covered by `tests/test_api.py` and 6.6) | `OJ_AUTH` | no | "API key rejected. Set OPENJEV_API_KEY for <base_url>" |
 | 403 `authentication_error` (no `Authorization` header, server requires a key; not verified live) | `OJ_AUTH` | no | "<base_url> requires an API key. Set OPENJEV_API_KEY" |
 | 403 `permission_error` (missing or wrong `X-Origin-Secret`; not verified live) | `OJ_FORBIDDEN` | no | "<base_url> only accepts requests through its front proxy (origin secret). Point OPENJEV_BASE_URL at the proxy" |
+| 405 `{"detail":"Method Not Allowed"}` | `OJ_NOT_FOUND` | no | "wrong verb or URL; check OPENJEV_BASE_URL" |
 | 404 `{"detail":"Not Found"}` | `OJ_NOT_FOUND` | no | "OPENJEV_BASE_URL points at something that is not OpenJev (<url>)" |
 | 404 chat `model_not_found` | `OJ_UNKNOWN_MODEL` | no | "chat model must be diffusiongemma-26b" |
-| 413 `api_usage_error` `request body is larger than <N> bytes` (default 67108864, `OPENJEV_MAX_BODY_BYTES`) | `OJ_TOO_LARGE` | no | "body over the server's <N>-byte limit; send fewer/smaller images" |
+| 413 `api_usage_error` `request body is larger than <N> bytes` (default 67108864, `OPENJEV_MAX_BODY_BYTES`; carries x-request-id, no server-timing) | `OJ_TOO_LARGE` | no | "body over the server's <N>-byte limit; send fewer/smaller images" |
 | 429 (gateway only; the OpenJev code never emits it) | `OJ_RATE_LIMITED` | yes | "rate limited; retry after <retry-after> s" |
 | 503 `inference backend unavailable` (not verified live) | `OJ_UNAVAILABLE` | yes | "backend down; retry after <retry-after> s (default 2)" |
 | 529 `overloaded_error` (not verified live) | `OJ_OVERLOADED` | yes | "OpenJev at capacity; retry after <retry-after> s (1 systemone, 2 chat)" |
@@ -559,12 +812,19 @@ message, not assumed.
 | 500 text/plain otherwise | `OJ_SERVER` | once | "server error without request id; retry once, then report" |
 | connect refused / DNS | `OJ_UNREACHABLE` | yes | "no OpenJev at <base_url>. Start it (not from an agent) or fix OPENJEV_BASE_URL" |
 | client timeout | `OJ_TIMEOUT` | once | "no answer in <timeout_ms> ms; the server is shared and serial on MLX. Raise timeout_ms or use samples:1" |
+| any other 400 with a plain-string `detail` | `OJ_REJECTED` | no | `server_detail` verbatim |
+| batch cursor invalid, arguments changed, output shrank, or `output_path` of another job | `OJ_INVALID_INPUT` | no | "invalid cursor" / "arguments changed since this cursor; drop cursor, keep resume:true" / "output file shrank since the cursor; call again without cursor" / "output_path belongs to another job (questions, source or options differ); use a new output_path" |
 | 200 but an expected answer key missing | `OJ_PROTOCOL` | no | "response lacks answers.<id>" |
 | chat 200 with `content:""` and `completion_tokens:0` | `OJ_EMPTY_GENERATION` | once | "empty generation (bug 12.4); retried once" |
 
 Retry policy: only codes marked retryable; at most `OPENJEV_MCP_RETRIES` (2) attempts with
 `retry-after` (default 1 s) plus jitter up to 250 ms; never retry a 4xx other than 429. `OJ_SERVER`
-and `OJ_TIMEOUT` retry once.
+and `OJ_TIMEOUT` retry once. `OJ_TIMEOUT` is not retried when `think` > 0 (the retry would bill the
+thought again). In `batch` and `calibrate`, retryable overload codes close a shared cooldown for
+every worker and drop effective concurrency to 1; a row still overloaded after its retries stops
+the call with `stopped_reason: backpressure` and is not recorded as an error (2.11). Timeouts: the
+default per request is max(`OPENJEV_MCP_TIMEOUT_MS`, 3 x the lint idle latency estimate + 15 ms x
+`think`), capped at 600,000 ms; an explicit `timeout_ms` wins.
 
 ### 2.5 Tool catalogue
 
@@ -575,7 +835,7 @@ and `OJ_TIMEOUT` retry once.
 | 3 | `classify` | 1 | one-of-N label with automatic escape option and abstain gate | `POST /v1/systemone` | 1 | RO, idem |
 | 4 | `score` | 1 | one ordered-scale rating with level label and spread | `POST /v1/systemone` | 1 | RO, idem |
 | 5 | `filter` | 2 | keep/drop many items (lines, files, hunks, passages) by one criterion, packed | `POST /v1/systemone` | ceil(n / pack_size) | RO, idem |
-| 6 | `batch` | 3 | same question set over many states (rows, tickets), review queue, JSONL out | `POST /v1/systemone` | <= `max_items_per_call` per call | writes files (not RO, not destructive) |
+| 6 | `batch` | 2 | same question set over many states: formats, concurrency 1-4, review queue, audit, stats, cursor, resume, exports | `POST /v1/systemone` | one per row, <= `max_items_per_call` per call | writes files (not RO, not destructive, idem with resume) |
 | 7 | `ask_image` | 3 | questions about 1-8 images (files, URLs, data URLs), re-encoded | `POST /v1/systemone` + `images` | 1 | RO, idem; open-world when `OPENJEV_MCP_FETCH=on` |
 | 8 | `lint` | 1 | validate and lint a request; autofix; estimate cost | none (local) | 0 | RO, idem, no network |
 | 9 | `compile` | 3 | turn a vague human intent into a draft question schema, probe it | `POST /v1/systemone` | 1 + k + probes | RO |
@@ -583,16 +843,18 @@ and `OJ_TIMEOUT` retry once.
 | 11 | `recipe` | 2 | run one of the 29 recipes (24 usage types + 5 variants) and return its decision | `POST /v1/systemone` | 1-n (recipe) | RO |
 | 12 | `status` | 1 | health, models, aliases, backend, latency probe, limits | `GET /health`, `GET /v1/models`, `GET /v1/limits` (+1 read) | 3-4 | RO, idem |
 | 13 | `generate` | 3 | text generation passthrough with MLX-bug guards | `POST /v1/chat/completions` | 1 | RO |
+| 14 | `batch_results` | 2 | query, export and compare finished batch outputs (review queue, sort/filter, CSV/Markdown/ojui-batch, JSD) | none (local) | 0 | writes only export files (not RO, not destructive), no network |
 
 Annotations (MCP `ToolAnnotations`; they are hints for the client and never a security control).
 RO = `readOnlyHint: true`. Idem = `idempotentHint: true` (identical bodies give identical answers,
-which `think` breaks). `batch` and `calibrate` set `readOnlyHint: false` and `destructiveHint: false`:
-they only create or append files inside the allowed roots (2.2). Every tool sets
+which `think` breaks). `batch`, `batch_results` and `calibrate` set `readOnlyHint: false` and `destructiveHint: false`:
+they only create or append files inside the allowed roots (2.2). `batch` sets `idempotentHint: true`
+(resume dedupes ids; `resume:false` never appends); `batch_results` sets `idempotentHint: false`. Every tool sets
 `openWorldHint: false`, because it talks only to the one configured OpenJev server, except
 `ask_image` when URL fetching is on. Every tool also sets a human-readable `title`. A tool whose
 phase has not shipped is simply absent from `tools/list`.
 
-`think`, `samples`, `steps` and `sequential` are options (`ReadOptions`) on tools 1-6 and 9-11,
+`think`, `samples`, `steps` and `sequential` are options (`ReadOptions`) on tools 1-6 and 9-11 (`batch` adds `sampling` and `regrey_samples`),
 not a separate tool: they change how a read is done, not what is decided (justification in 2.19).
 
 ### 2.6 `ask` (general read)
@@ -638,12 +900,13 @@ Output schema:
 HTTP mapping: `POST /v1/systemone` with `{"model": options.model || OPENJEV_MCP_MODEL, "state",
 "questions", ...options without timeout_ms}`. Answer order follows the request order (the server
 preserves it). Defaults: no `samples` (1 read + free re-reads), band 0.2/0.8, `choice_min_p` 0.6,
-timeout 30 s (`think` > 0: 120 s). Errors: section 2.4.
+timeout scaled as in 2.4 (default 30 s, at least 120 s with `think`, at most 600 s). Errors: section 2.4.
 
 Think and sequential are options here. Rules the tool enforces: `think` > 0 or `sequential: true`
 with images is refused locally (`OJ_INVALID_INPUT`); `think` > 1024 emits warning `W402`
-(observed thoughts stop at 180-230 tokens; larger caps add nothing measurable); `sequential` with
-<= 10 questions emits `W403` (no-op: one chunk).
+(observed thoughts stop at 180-230 tokens; larger caps add nothing measurable); `sequential` emits
+`W403` only when every question is noul or choice and there are <= 10 of them (one chunk, a no-op);
+score-heavy sets of 10 can span 2 chunks and get no warning.
 
 Verified example: the README reference request.
 
@@ -738,7 +1001,7 @@ non-`think` bodies are byte-identical across runs. Treat a `think` result that d
 one noisy vote: repeat it (or add `samples: 3`) and act only if the reads agree.
 
 Sequential example (`ex-sequential`, from use case 10 nl-12). With 3 questions it is one chunk, so
-`sequential` changes nothing here (warning `W403`); it is shown because the flag is legal and
+`sequential` changes nothing here (W403: 3 noul/choice questions); it is shown because the flag is legal and
 verified:
 
 ```json
@@ -1049,6 +1312,9 @@ results, review findings, passages, regex matches) by one criterion, with the it
 one state and one noul per item id. Optionally pick the single best item (`choice` over ids plus
 `none`) together with an `exists` noul.
 
+`filter` is the packing axis of the batching model (2.11): many small items in one state, one
+request per pack. Use `batch` when each item is its own state.
+
 When to call: the agent is about to `Read` 5+ files, page through a log, grep with a brittle
 regex, post N generated review comments, or compact stale tool output (use cases 13, 14, 07, 11).
 
@@ -1179,64 +1445,309 @@ names that class; a regex on `ERROR` would have paged on it.
 ### 2.11 `batch` (many states, same questions)
 
 Purpose: run one question set over many independent states (CSV rows, tickets, issues, resumes,
-candidate pairs), sequentially, with a review queue (least confident first), a seeded audit
-sample, per-question statistics and optional JSONL output.
+candidate pairs) with bounded concurrency, a review queue (least confident first), a seeded audit
+sample, per-question statistics, a resumable JSONL output and CSV, Markdown or `ojui-batch` exports.
+Phase 2 (promoted from phase 3 in 1.2, G12): it is client orchestration over the ask pipeline and
+needs no server change. It brings the Playground batch feature set (formats with sniffing,
+id/state/template mapping, concurrency, review queue, seeded audit, per-question statistics,
+progress, cancel, resume, single-row retry, exports) to MCP clients; pause, cell tints, keyboard
+navigation, clipboard and browser storage stay UI-only.
 
 When to call: "label this CSV", "triage these 200 issues", "score these 30 resumes", backfills.
-Use `filter` instead when the items are small parts of one task context.
+Use `filter` instead when the items are small parts of one task context. To sort, filter, export or
+compare a finished output, use `batch_results` (2.21), never `batch` again.
 
-Input schema:
+#### Batching model
+
+OpenJev batches on two server-native axes only: questions per request (1-256, split by the server
+into canvas chunks; this is *server canvas chunking* and concerns questions, never states) and
+images per request (0-8). It takes exactly one state per `POST /v1/systemone` and has no batch
+endpoint. States per call is client orchestration: `batch` sends one request per state; `filter`
+packs small items into one state. *Client pagination* (cursor) splits a job across MCP calls.
+Neither is server batching.
+
+| Axis | Who batches | Where |
+|---|---|---|
+| questions per request (1-256) | server (canvas chunking) | every request |
+| images per request (0-8) | server | `ask_image`, phase 3 `batch.images` |
+| items packed into one state | client | `filter` (2.10) |
+| states per job | client (one request per state) | `batch` |
+| calls per job | client (cursor) | `batch`, `calibrate` |
+
+Cost: requests = rows read; billed input = sum of per-row prompts (x samples, x2 with `think`); no
+cross-row saving except the MLX prefill cache for identical (system, state, images).
+
+#### Input schema
+
+Source rules (checked in code, `OJ_INVALID_INPUT`, not with a root `oneOf`, 2.2): exactly one state
+source. `template` alone supplies its sample states; with `items` or `items_file` it supplies only
+the questions. `questions` come from `questions`, else from an `ojui-batch` `items_file`, else from
+`template`. `export` needs `output_path`. `resume: false` with an existing `output_path` is refused
+("output exists; pass resume:true or a new path"). `only_ids` ids must exist in the source (unknown
+ids are listed in a warning and skipped). Phase 3 adds `images` (the same item schema as `ask_image`
+images, 1-8, loaded and re-encoded once, sent with every row; `think` and `sequential` are then
+refused locally, E022).
 
 ```json
 {
- "type": "object", "additionalProperties": false,
- "required": ["items", "questions"],
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "additionalProperties": false,
+ "description": "Give exactly one source of states: items, items_file, or template alone (its sample states); with items or items_file, template supplies only questions. questions come from questions, else from an ojui-batch items_file, else from template. Checked in code (OJ_INVALID_INPUT), not with a root oneOf (2.2).",
  "properties": {
-  "items": {"oneOf": [
-   {"type": "array", "minItems": 1, "maxItems": 500, "items": {"type": "object", "required": ["id", "state"], "properties": {"id": {"type": "string"}, "state": {"$ref": "#/$defs/State"}}}},
-   {"type": "object", "required": ["path"], "properties": {"path": {"type": "string", "description": "JSONL or CSV file inside the allowed roots (2.2); any number of rows, processed by cursor"}, "id_field": {"type": "string"}, "state_field": {"type": "string"}, "state_template": {"type": "string", "description": "e.g. 'Row {id}: {text}'"}}}]},
+  "items": {"type": "array", "minItems": 1, "maxItems": 500, "items": {"type": "object", "additionalProperties": false, "required": ["state"], "properties": {"id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,64}$", "description": "default: 1-based position as a string"}, "state": {"$ref": "#/$defs/State"}}}},
+  "items_file": {"type": "object", "additionalProperties": false, "required": ["path"], "properties": {"path": {"type": "string", "description": "file inside the allowed roots (2.2)"}, "also": {"type": "array", "maxItems": 7, "items": {"type": "string"}, "description": "more files merged after path with the UI merge rules"}, "format": {"enum": ["auto", "jsonl", "json", "csv", "tsv", "lines", "blocks", "ojui-batch"], "default": "auto"}, "delimiter": {"enum": ["auto", ",", "\t", ";"], "default": "auto"}, "state_field": {"type": "string", "description": "CSV column or JSON key; '*' = the whole object; omitted = guessed (W602)"}, "id_field": {"type": "string", "description": "omitted = 1-based row index"}, "state_template": {"type": "string", "description": "e.g. 'Subject: {subject}\\n\\n{body}'; placeholders are column/key names and {id}; wins over state_field"}, "array_key": {"type": "string", "description": "key of the array in a wrapped JSON file; default: first of states, batchStates, items, data, rows, records, examples"}, "encoding": {"enum": ["auto", "utf-8", "utf-16", "cp1252"], "default": "auto"}}},
+  "template": {"type": "string", "pattern": "^[a-z0-9_]{1,64}$", "description": "id of openjev://templates/{id}"},
   "questions": {"$ref": "#/$defs/QuestionSet"},
   "options": {"$ref": "#/$defs/ReadOptions"},
+  "sampling": {"enum": ["fast", "server_default"], "default": "fast", "description": "fast: samples 1 plus a regrey re-read; server_default: no samples field (1 read + free re-reads), as the Playground sends. An explicit options.samples wins."},
+  "regrey_samples": {"type": "integer", "minimum": 0, "maximum": 32, "default": 4, "description": "fast mode only: grey/below-review rows are re-read once with this many samples; 0 disables"},
   "thresholds": {"$ref": "#/$defs/Band"},
-  "review_rule": {"type": "object", "properties": {"choice_p_below": {"type": "number", "default": 0.8}, "noul_grey": {"type": "array", "default": [0.15, 0.85]}, "score_spread_above": {"type": "number", "default": 0.6}}},
-  "audit": {"type": "object", "properties": {"rate": {"type": "number", "default": 0.03}, "seed": {"type": "integer", "default": 0}}},
-  "output_path": {"type": "string", "description": "JSONL (.jsonl, inside the allowed roots, 2.2): one line per item with answers, derived fields, needs_review, audit"},
-  "max_items_per_call": {"type": "integer", "minimum": 1, "maximum": 100, "default": 25, "description": "items read in this call; the rest is reached through next_cursor"},
-  "time_budget_s": {"type": "integer", "minimum": 5, "maximum": 600, "default": 120, "description": "stop early (after the current item) once this much time has passed"},
-  "cursor": {"type": "string", "description": "next_cursor of the previous call; all other arguments must be unchanged"},
+  "review_rule": {"type": "object", "additionalProperties": false, "properties": {"choice_p_below": {"type": "number", "minimum": 0, "maximum": 1, "default": 0.8}, "noul_grey": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number", "minimum": 0, "maximum": 1}, "default": [0.15, 0.85]}, "score_spread_above": {"type": "number", "minimum": 0, "default": 0.6}}},
+  "audit": {"type": "object", "additionalProperties": false, "properties": {"rate": {"type": "number", "minimum": 0, "maximum": 1, "default": 0.03}, "seed": {"type": "integer", "default": 0}}},
+  "concurrency": {"type": "integer", "minimum": 1, "maximum": 4, "default": 1, "description": "parallel reads for this call, capped by OPENJEV_MCP_MAX_INFLIGHT_BATCH; no speedup on MLX (W405)"},
+  "output_path": {"type": "string", "description": ".jsonl inside the allowed roots: header record + one full row per item; the resumable source of truth"},
+  "include_state": {"type": "boolean", "default": true, "description": "write the state text into each JSONL row (exports need it); false keeps only state_hash"},
+  "export": {"type": "array", "maxItems": 3, "items": {"type": "object", "additionalProperties": false, "required": ["format", "path"], "properties": {"format": {"enum": ["csv", "markdown", "ojui-batch"]}, "path": {"type": "string", "description": ".csv, .md or .json, created new inside the allowed roots"}}}, "description": "written once, by the call that finishes the job (next_cursor null); needs output_path"},
+  "detail": {"enum": ["compact", "full"], "default": "compact", "description": "inline results only; JSONL rows are always full"},
+  "max_items": {"type": "integer", "minimum": 1, "maximum": 100000, "default": 5000, "description": "rows taken from the source; the rest is dropped with W601 (UI cap 5000)"},
+  "max_items_per_call": {"type": "integer", "minimum": 1, "maximum": 100, "default": 25},
+  "time_budget_s": {"type": "integer", "minimum": 5, "maximum": 600, "default": 120, "description": "no new row is started after this; in-flight rows finish"},
+  "cursor": {"type": "string", "description": "next_cursor of the previous call (opaque)"},
+  "resume": {"type": "boolean", "default": true, "description": "skip ids whose last row in output_path is ok (and error unless retry_errors); false requires a new output_path"},
+  "retry_errors": {"type": "boolean", "default": false, "description": "re-run ids whose last row in output_path has status error"},
+  "only_ids": {"type": "array", "minItems": 1, "maxItems": 500, "items": {"type": "string"}, "description": "run only these ids (single-row retry)"},
   "on_error": {"enum": ["record", "abort"], "default": "record"},
-  "resume": {"type": "boolean", "default": true, "description": "skip ids already present in output_path"},
-  "max_inline_results": {"type": "integer", "default": 50}
+  "dry_run": {"type": "boolean", "default": false, "description": "no network: import report, 3 preview states, the first HTTP body, an estimate"},
+  "max_inline_results": {"type": "integer", "minimum": 0, "maximum": 100, "default": 50}
  }
 }
 ```
 
-Output schema:
+Changes against 1.1: `items` no longer requires `id` (default is the 1-based position); the nested
+`items` `oneOf` is split into `items` and `items_file`; new `template`, `sampling`,
+`regrey_samples`, `concurrency`, `include_state`, `export`, `detail`, `max_items`, `retry_errors`,
+`only_ids`, `dry_run`; `review_rule` and `audit` gain `additionalProperties: false` and ranges.
+
+#### Import rules
+
+- **Sniffing order** (Playground `batchImport.js`): explicit `format`, else extension (`.jsonl`
+  `.ndjson` `.jsonlines` -> jsonl; `.json` -> json; `.csv` -> csv; `.tsv` `.tab` -> tsv; `.txt`
+  `.text` `.log` `.md` -> lines or blocks by content), else content (JSON parse, JSONL when at least
+  0.9 of the non-empty lines parse, CSV header row, blank-line blocks, else lines).
+- **Formats.** `lines`: one state per non-empty line. `blocks`: states separated by one or more
+  blank lines. `jsonl`: one JSON value per line; objects use `state_field` (guessed from the keys
+  found in the first 500 objects; `*` = the whole object); strings are the state. `json`: a
+  top-level array, or an object holding one under `array_key` (default: the first present of
+  `states`, `batchStates`, `items`, `data`, `rows`, `records`, `examples`), or a single object (one
+  state). `csv`/`tsv`: RFC 4180 with a header row. `ojui-batch`: a Playground export `{format:
+  "ojui-batch", version, questions, options, imageCount, rows[].state}`.
+- **Delimiter** (`auto`): sniffed from the first line outside quotes by counting `,`, tab and `;`;
+  ties go to `,`, then tab.
+- **State column** (when `state_field` is omitted): the first header matching `^(text|state|content|
+  input|prompt|message|body|review|comment|question|sentence|description)$` (case-insensitive), else
+  the column with the longest mean cell length over the first 200 rows. W602 names the guess.
+  `state_template` wins over `state_field`.
+- **Encoding** (`auto`): UTF-16 when the file starts with a BOM, else strict UTF-8, else Windows-1252
+  with W603.
+- **Rejected before reading:** `.xlsx` `.xls` `.ods` `.numbers` (E030 "spreadsheets are not read;
+  export the sheet as CSV first"); `.pdf` `.docx` `.zip` `.gz` `.parquet` `.sqlite` `.db` (E030
+  "binary file; export it as CSV or JSONL"). An ojui-export file is E032 "import it in the
+  Playground sidebar; it is not a batch". Empty input is E031 "no states found".
+- **`ojui-batch` restore:** `questions` and `options` are restored when those arguments are absent;
+  `version` > 1 gives W604; `imageCount` > 0 gives W604 "images are not restored; pass them in
+  phase 3".
+- **Ids:** `id_field`, else `id`/`key` of inline items, else the 1-based row index as a string.
+  Duplicate ids are E031 with the first duplicate named.
+- **Merge** (`also`, up to 7 more files): JSONL files with the same `state_field` concatenate; CSV
+  files with the same delimiter and header concatenate their data rows; anything else is resolved to
+  states per file and concatenated.
+- **Template source:** `template` alone supplies its questions and states; with `items` or
+  `items_file` it supplies only its questions (when `questions` is absent).
+- **Cap:** `max_items` (default 5000, the Playground cap); rows beyond it are dropped with W601
+  (CSV keeps the header and the first N rows; blocks the first N; lines the first N non-empty).
+  W605 reports skipped empty rows. Codes: 2.13.
+
+#### Output schema
 
 ```json
-{"type": "object", "required": ["summary", "results", "meta"],
- "properties": {"summary": {"type": "object", "properties": {"n": {}, "ok": {}, "errors": {}, "needs_review": {}, "per_question": {}}},
-  "results": {"type": "array", "description": "first max_inline_results items: {id, answers (compact), needs_review, error}"},
-  "review_queue": {"type": "array", "description": "ids ordered by ascending confidence/margin"},
-  "audit_ids": {"type": "array"}, "output_path": {"type": ["string", "null"]},
-  "next_cursor": {"type": ["string", "null"], "description": "null when every item is done"}, "meta": {"$ref": "#/$defs/Meta"}}}
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "required": ["status", "summary", "results", "next_cursor", "meta"],
+ "properties": {
+  "status": {"type": "object", "required": ["done", "total", "stopped_reason"], "properties": {"done": {"type": "integer", "description": "rows finished in this call"}, "total": {"type": "integer", "description": "rows in the source after max_items"}, "remaining": {"type": "integer"}, "ok": {"type": "integer"}, "errors": {"type": "integer"}, "skipped": {"type": "integer", "description": "resumed rows not re-read"}, "stopped_reason": {"enum": ["complete", "max_items_per_call", "time_budget", "backpressure", "error_abort", "dry_run"]}, "elapsed_ms": {"type": "number"}, "eta_ms": {"type": ["number", "null"]}, "req_per_s": {"type": "number"}, "effective_concurrency": {"type": "integer"}, "backoffs": {"type": "integer"}, "input_tokens": {"type": "integer"}, "output_tokens": {"type": "integer"}}},
+  "summary": {"type": "object", "properties": {"scope": {"enum": ["output_path", "call"], "description": "output_path: all rows in the file; call: this call only (no output_path)"}, "n": {"type": "integer"}, "ok": {"type": "integer"}, "errors": {"type": "integer"}, "needs_review": {"type": "integer"}, "audit": {"type": "integer"}, "per_question": {"type": "object", "additionalProperties": {"$ref": "#/$defs/QuestionStats"}}}},
+  "results": {"type": "array", "items": {"type": "object", "required": ["id", "status"], "properties": {"index": {"type": "integer"}, "id": {"type": "string"}, "status": {"enum": ["ok", "error", "skipped"]}, "answers": {"type": "object", "description": "compact {choice, p_top} / {p, band} / {score, level}; full Answer objects with detail full"}, "needs_review": {"type": "boolean"}, "audit": {"type": "boolean"}, "error": {"oneOf": [{"$ref": "#/$defs/ToolError"}, {"type": "null"}]}}}},
+  "review_queue": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "question": {"type": "string"}, "reason": {"enum": ["choice_p_below", "noul_grey", "score_spread_above", "abstained", "error"]}, "confidence": {"type": "number"}}}, "description": "this call's rows, ascending confidence/margin; the whole file through batch_results"},
+  "audit_ids": {"type": "array", "items": {"type": "string"}},
+  "output_path": {"type": ["string", "null"]},
+  "exports": {"type": "array", "items": {"type": "object", "properties": {"format": {"type": "string"}, "path": {"type": "string"}, "bytes": {"type": "integer"}}}},
+  "import": {"type": "object", "description": "first call, dry_run, and any call without cursor", "properties": {"format": {"type": "string"}, "delimiter": {"type": ["string", "null"]}, "encoding": {"type": "string"}, "state_field": {"type": ["string", "null"]}, "id_field": {"type": ["string", "null"]}, "columns": {"type": "array", "items": {"type": "string"}}, "row_count": {"type": "integer"}, "truncated": {"type": "boolean"}, "warnings": {"type": "array", "items": {"$ref": "#/$defs/LintFinding"}}}},
+  "preview": {"type": "array", "maxItems": 3, "items": {"type": "object", "properties": {"id": {"type": "string"}, "state": {"$ref": "#/$defs/State"}}}},
+  "first_body": {"type": "object", "description": "dry_run: the exact first POST /v1/systemone body"},
+  "estimate": {"type": "object", "properties": {"requests": {"type": "integer"}, "billed_reads": {"type": "integer"}, "input_tokens_approx": {"type": "integer"}, "time_s_idle_approx": {"type": "number"}, "time_s_shared_approx": {"type": "number"}}},
+  "next_cursor": {"type": ["string", "null"], "description": "null when every row is done"},
+  "meta": {"$ref": "#/$defs/Meta"}
+ }
+}
 ```
 
-HTTP mapping: one `POST /v1/systemone` per item, sequential, same `questions` object (the
-linter runs once before item 0, so a 10k-row job with a typo'd type fails at row 0, use case 21).
-Default `samples: 1` when unset (bulk jobs trade the free re-reads for speed; grey rows are then
-re-read with `samples: 4` before being queued). Errors per item are recorded (`on_error: record`);
-429/503/529 back off and continue. Chunking (F13): one call reads at most `max_items_per_call`
-items (default 25, at most 100), and stops early after `time_budget_s`. It then returns
-`next_cursor`, and the agent calls again with that `cursor` until `next_cursor` is null. At
-1-10 s per read under shared load, 100 items is already up to ~17 minutes, which is why the cap is
-low. The cursor is the job state; this is start/poll without a separate job tool (a stdio server
-dies with its session, so it cannot own background jobs). With `output_path`, a resumed call skips
-ids already written, so an interrupted job loses nothing. Progress notifications are sent only when
-the client supplied a `progressToken`, and nothing depends on them. `summary` and `review_queue`
-cover the items done so far.
+Content blocks of the result: the text block (JSON of `structuredContent`, audience assistant), then
+one `resource_link` per written file (`output_path`: `application/x-ndjson`; csv: `text/csv`;
+markdown: `text/markdown`; ojui-batch: `application/json`).
 
-Verified example (3 tickets; the three HTTP bodies are `ex-batch-1..3`, first shown):
+`output_path` is a JSONL file: a header record, then one full row per item. Rows are always full in
+the file; inline results are compact unless `detail: "full"`. The records are `$defs` `BatchHeader`
+and `BatchRow` (2.2). There is no v1 header to stay compatible with, because the 1.1 `batch` never
+shipped.
+
+```json
+{"openjev_mcp": "batch", "v": 2, "spec": "1.2", "run_id": "sha256:<question_hash + source + options + sampling + regrey_samples>",
+ "question_hash": "sha256:<canonical questions>", "options": {}, "sampling": "fast", "thresholds": {}, "review_rule": {}, "audit": {},
+ "source": {"kind": "items_file", "path": "<relative>", "format": "csv", "delimiter": ",", "state_field": "body", "id_field": "ticket_id", "row_count": 1240},
+ "created_at": "<ISO 8601>"}
+```
+
+```json
+{"index": 1, "id": "T-1001", "status": "ok", "state": "<text unless include_state:false>", "state_hash": "sha256:<state>",
+ "answers": {"<qid>": "<full Answer of 2.2 incl. probabilities, confidence, entropy, derived fields>"},
+ "needs_review": false, "review_reasons": [], "audit": false, "model": "openjev-0.1",
+ "usage": {"input_tokens": 201, "output_tokens": 0}, "latency_ms": 312,
+ "server_timing": {"model_ms": 0.0, "server_ms": 309.4, "total_ms": 310.0},
+ "request_id": "req_<32 hex>", "body_hash": "sha256:<exact bytes sent>", "retried": null, "error": null, "ts": "<ISO 8601>"}
+```
+
+The two blocks above are shape illustrations with placeholders, not executed examples.
+
+#### HTTP mapping and sampling
+
+One `POST /v1/systemone` per row: `{model, state, questions, ...options}`; the same `questions`
+object for every row. The linter runs once before row 0, so a typo'd type fails before any read (use
+case 21). No server batch endpoint exists and none is assumed. `sampling: "fast"` (default) sends
+`samples: 1` and re-reads grey or below-review rows once with `regrey_samples` (default 4, 0
+disables); `sampling: "server_default"` omits `samples` (1 read + free re-reads), as the Playground
+does. An explicit `options.samples` wins. Each row records `request_id` (`x-request-id`),
+`server_timing` (`server-timing` header) and `body_hash`.
+
+Estimate (`dry_run`, the Playground formula): `input_tokens_approx` = sum over rows of
+ceil((chars of JSON(state) + chars of JSON(questions)) / 3.6) + 256 per image, x samples (or x2 when
+`think` > 0); `time_s_idle_approx` from the lint per-row latency estimate; `time_s_shared_approx` =
+5 x idle. Estimates are approximate (+-25%, 7 #26). `think` in a batch gives W406.
+
+#### Concurrency and back-pressure
+
+Workers: min(`concurrency`, `OPENJEV_MCP_MAX_INFLIGHT_BATCH` (default 4)) asyncio workers pull the
+next row index from a shared queue; every other tool keeps `OPENJEV_MCP_MAX_INFLIGHT` (default 1).
+The batch semaphore is separate, so a batch call does not starve a gate in the same process, and is
+per process like F9.
+
+- **Order.** Rows are written in input-index order through a reorder buffer, so the file and the
+  inline results are deterministic for any concurrency.
+- **Back-pressure.** A 429, 503 or 529 closes a shared gate for `retry-after` (default 1 s) plus
+  jitter up to 250 ms for every worker, sets effective concurrency to 1, and counts against that
+  row's `OPENJEV_MCP_RETRIES`. After 10 consecutive successes effective concurrency rises by 1, up
+  to the requested value.
+- **Backpressure stop.** When a row is still overloaded after its retries, the call stops
+  dispatching, finishes in-flight rows and returns `stopped_reason: "backpressure"` with
+  `next_cursor` at that row. The row is not written as an error, so an overloaded server never turns
+  rows into errors.
+- **Other errors** follow `on_error`: `record` writes a `status: "error"` row; `abort` stops with
+  `stopped_reason: "error_abort"`.
+- **Throughput.** MLX serialises reads on one thread, so `concurrency` > 1 adds no speed there (lint
+  W405 when the backend is mlx or unknown). vLLM admits up to `OPENJEV_MAX_INFLIGHT` (64) reads; the
+  server queue (`OPENJEV_MAX_QUEUE` 512) is the global guard.
+- This is not `ReadOptions.sequential`, which chains the answer chunks of one request. Timeouts per
+  row follow the scaling of 2.4.
+
+#### Client pagination, resume, cancellation, progress
+
+One call reads at most `max_items_per_call` rows and stops after `time_budget_s`; it returns
+`next_cursor` until the job is done. At 1-10 s per read under shared load, 100 rows is already up to
+~17 minutes, which is why the cap is low. The cursor is the job state; this is start/poll without a
+separate job tool (a stdio server dies with its session, so it cannot own background jobs).
+
+- **Cursor.** An MCP-level opaque token (a tool argument, not protocol pagination):
+  `base64url(compact JSON {v: 1, run: run_id, offset: next input index, args: args_hash, out:
+  {bytes, lines} of output_path after this call})`. No secret and no path inside, so tampering can
+  only skip the caller's own rows. `args_hash` is the sha256 of the canonical JSON of the arguments
+  except `cursor`, `max_items_per_call`, `time_budget_s`, `concurrency`, `detail`,
+  `max_inline_results` and `export`; those may change between calls.
+- **Checks per call** (all `OJ_INVALID_INPUT`, fix in `hint`): undecodable cursor or unknown `v` ->
+  "invalid cursor"; arguments differ -> "arguments changed since this cursor; drop cursor, keep
+  resume:true"; `output_path` smaller than `out.bytes` -> "output file shrank since the cursor; call
+  again without cursor".
+- **Resume without a cursor** (after a crash, a closed session or a cancel, when no result came
+  back): with `output_path` and `resume: true` the server reads the header (its `run_id`, computed
+  from `question_hash`, source, options, `sampling` and `regrey_samples`, MUST equal this call's
+  `run_id`, else "output_path belongs to another job (questions, source or options differ); use a
+  new output_path"), collects the last status per id, skips `ok` ids (and `error` ids unless
+  `retry_errors`) at no cost, and continues. Skipped rows count in `status.skipped`. Without
+  `output_path` nothing persists; a lost call is re-read (identical bodies give identical answers,
+  except with `think`).
+- **`retry_errors` and `only_ids`** re-run rows and append; the last row per id wins.
+- **Concurrency safety.** An exclusive advisory lock (`flock`) on `output_path` for the call; a held
+  lock is `OJ_INVALID_INPUT` "output_path is in use by another batch call". Each row is one write of
+  the full line plus newline, then flush.
+- **Cancel** (`notifications/cancelled`, 2.0.1 rule 7): stop dispatch, cancel in-flight httpx
+  requests, write the completed rows that are next in index order, discard the rest, release locks,
+  send nothing. Pause is not a feature: stop calling, then continue with the cursor or `resume`.
+- **Progress** (2.0.1 rule 8): `notifications/progress` when a `progressToken` is present. The
+  `status` block carries the same numbers in every result.
+- **Annotations:** `readOnlyHint: false`, `destructiveHint: false`, `idempotentHint: true` (a
+  repeated call with `resume: true` writes no duplicate rows; `resume: false` never appends),
+  `openWorldHint: false`.
+
+#### Review queue, audit sample, per-question statistics
+
+- **Review queue.** Rows with `needs_review`, ordered by ascending confidence (choice `p_top`, noul
+  margin, score `1 - spread/levels`) then index. Reasons: `choice_p_below` (default 0.8),
+  `noul_grey` ([0.15, 0.85]), `score_spread_above` (0.6), `abstained`, `error`.
+- **Audit sample.** A seeded sample of `rate` (default 0.03) of the auto-accepted rows, chosen by
+  `sha256(seed, id) < rate`, so it is reproducible and independent of order and concurrency.
+  `audit_ids` and `row.audit` mark it.
+- **`per_question`** (`$defs` `QuestionStats`): noul `{n, mean_p, yes, no, grey, mean_margin}`; choice
+  `{n, counts, top2, mean_confidence, abstained}`; score `{n, mean, std, histogram,
+  mean_confidence}`.
+- **Scope.** With `output_path` the summary covers every row in the file (recomputed from the file
+  each call, so it stays stateless); without it, only this call. The Playground sort by value or
+  confidence, low-confidence filter and min-confidence column are `batch_results` views (2.21). Cost
+  in currency is out of scope (the server has no price table); tokens are reported.
+
+#### Exports
+
+- `jsonl` (always, `output_path`): header plus full rows; the last row per id wins.
+- `csv` (RFC 4180, UTF-8, Playground column order): `index`, `id`, `state`, `status`, then per
+  question in request order `<qid>.noul` | `<qid>.choice` | `<qid>.score`, `<qid>.confidence` (noul:
+  margin), `<qid>.p_<option>` for every choice option and `<qid>.p_<level>` for every score level,
+  then `latency_ms`, `input_tokens`, `output_tokens`, `request_id`, `error`.
+- `markdown`: a pipe table (pipes and newlines escaped): `index`, `id`, state truncated to 60
+  characters, one column per question (choice key, noul p and band, score level label),
+  `latency_ms`, `input_tokens`; inline up to 64 KiB through `batch_results`.
+- `ojui-batch` (version 1, re-importable in the Playground): `{format, version: 1, exportedAt,
+  title, questions, options, imageCount, rows: [{index, state, status, model, answers, usage,
+  clientMs, serverTiming, requestId, bodyHash, error}]}`; written whole, so never appended.
+- Exports are created new (an existing path is `OJ_INVALID_INPUT`), inside the allowed roots,
+  extensions `.csv`, `.md`, `.json`. `batch` writes them only on the call that finishes the job;
+  `batch_results` writes them any time from a JSONL file (and can also write a filtered `.jsonl`
+  that keeps the header record).
+
+#### Limits
+
+Inline `items` <= 500. `max_items` default 5000 (Playground `MAX_STATES`), maximum 100000. File read
+cap 64 MiB per file (2.2), 8 files with `also`. The Playground caps a file at 5 MB because it
+protects a browser tab; an MCP backfill reads from disk, so the cap is deliberately higher.
+`max_items_per_call` 1-100 (default 25); `time_budget_s` 5-600 (default 120); `concurrency` 1-4
+capped by `OPENJEV_MCP_MAX_INFLIGHT_BATCH` (default 4). Per request: 1-256 questions (server,
+auto-chunked by canvas), `samples` 1-32, `steps` 1-8, `think` 0-4096 (text states only),
+`sequential` (text only), 0-8 images (phase 3, 5,242,880 bytes each), prompt tokens per backend
+(32,768 MLX default, 65,536 vLLM, null when unknown), body 64 MiB. Encoder models reject images,
+`steps` > 1, `samples` > 1, `think` and `sequential` (E028). All batch limits are published in
+`openjev://limits`.
+
+#### Verified example
+
+The tool call below is the 1.1 example; `items` with `id` and `state` stay valid in 1.2. The three HTTP bodies are `ex-batch-1..3` (first shown, unchanged); the answers are the captured live responses.
 
 ```json
 {"tool": "batch", "arguments": {
@@ -1273,24 +1784,35 @@ Live: HTTP 200, 45 ms (idle server; repeated bodies hit the prefill cache, cold 
 }
 ```
 
-MCP output (all three responses):
+MCP output (design: computed from the three captured live responses of `ex-batch-1..3` by the
+6.6 replay; `batch` itself was not executed live, so this block is not marked "Live"). `urgent` is
+`mean_p` 0.6658 and `mean_margin` 0.9982 over p = 0.9974, 1.0 and 5.9e-05; t1 and t2 are `yes`, so
+`yes` is 2 (the 1.1 example said 1, which was wrong). `top2` of the three-way tie is in input order.
 
 ```json
 {
+ "status": {"done": 3, "total": 3, "remaining": 0, "ok": 3, "errors": 0, "skipped": 0, "stopped_reason": "complete", "effective_concurrency": 1, "backoffs": 0, "input_tokens": 614, "output_tokens": 0},
  "summary": {
+  "scope": "call",
   "n": 3,
   "ok": 3,
   "errors": 0,
   "needs_review": 0,
-  "per_question": {"dept": {"counts": {"billing": 1, "technical": 1, "sales": 1}}, "urgent": {"yes": 1, "no": 2, "grey": 0}}
+  "audit": 0,
+  "per_question": {
+   "dept": {"type": "choice", "n": 3, "counts": {"billing": 1, "technical": 1, "sales": 1}, "top2": ["billing", "technical"], "mean_confidence": 0.9991, "abstained": 0},
+   "urgent": {"type": "noul", "n": 3, "mean_p": 0.6658, "yes": 2, "no": 1, "grey": 0, "mean_margin": 0.9982}
+  }
  },
  "results": [
-  {"id": "t1", "answers": {"dept": {"choice": "billing", "p_top": 1.0}, "urgent": {"p": 0.9974, "band": "yes"}}, "needs_review": false, "error": null},
-  {"id": "t2", "answers": {"dept": {"choice": "technical", "p_top": 1.0}, "urgent": {"p": 1.0, "band": "yes"}}, "needs_review": false, "error": null},
-  {"id": "t3", "answers": {"dept": {"choice": "sales", "p_top": 0.9997}, "urgent": {"p": 5.9e-05, "band": "no"}}, "needs_review": false, "error": null}
+  {"index": 1, "id": "t1", "status": "ok", "answers": {"dept": {"choice": "billing", "p_top": 1.0}, "urgent": {"p": 0.9974, "band": "yes"}}, "needs_review": false, "error": null},
+  {"index": 2, "id": "t2", "status": "ok", "answers": {"dept": {"choice": "technical", "p_top": 1.0}, "urgent": {"p": 1.0, "band": "yes"}}, "needs_review": false, "error": null},
+  {"index": 3, "id": "t3", "status": "ok", "answers": {"dept": {"choice": "sales", "p_top": 0.9997}, "urgent": {"p": 5.9e-05, "band": "no"}}, "needs_review": false, "error": null}
  ],
- "output_path": null,
+ "review_queue": [],
  "audit_ids": [],
+ "output_path": null,
+ "next_cursor": null,
  "meta": {"model": "openjev-0.1", "requests": 3, "latency_ms": 134}
 }
 ```
@@ -1326,6 +1848,9 @@ Input schema:
 ```
 
 Output: same as `ask` plus `images: [{source, sent_as, bytes, reencoded}]`.
+
+The loader and re-encoder are shared with `batch.images` (phase 3): the images are loaded, checked
+and re-encoded once per batch call and the same data URLs go into every row request.
 
 HTTP mapping: `POST /v1/systemone` with `images: ["data:<type>;base64,..."]`. Processing, in order,
 all local: (1) load path (allowed roots and image extensions, 2.2) / fetch URL (only with
@@ -1417,7 +1942,8 @@ Input schema:
   "options": {"type": "object"},
   "images": {"type": "array"},
   "profile": {"enum": ["default", "strict", "gate"], "default": "default", "description": "gate: warnings about blocking questions become errors"},
-  "autofix": {"type": "boolean", "default": true}
+  "autofix": {"type": "boolean", "default": true},
+  "emit": {"type": "array", "uniqueItems": true, "items": {"enum": ["body", "curl", "python"]}, "description": "return the exact HTTP body and request snippets (the key is never inlined: curl uses $OPENJEV_API_KEY, Python os.environ)"}
  },
  "description": "Give either request, or questions (with optional state, options, images). Checked in code (OJ_INVALID_INPUT), not with a root anyOf (2.2)."
 }
@@ -1426,14 +1952,18 @@ Input schema:
 Output schema:
 
 ```json
-{"type": "object", "required": ["valid", "errors", "warnings"],
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["valid", "errors", "warnings"],
  "properties": {"valid": {"type": "boolean", "description": "true when the server would accept the (fixed) request"},
   "errors": {"type": "array", "items": {"$ref": "#/$defs/LintFinding"}},
   "warnings": {"type": "array", "items": {"$ref": "#/$defs/LintFinding"}},
   "fixed_request": {"type": "object"},
-  "estimate": {"type": "object", "properties": {"questions": {}, "chunks": {}, "input_tokens_approx": {}, "latency_ms_idle_approx": {}, "billed_reads": {}}},
-  "$defs": {"LintFinding": {"type": "object", "required": ["code", "path", "message"], "properties": {"code": {"type": "string"}, "path": {"type": "string"}, "message": {"type": "string"}, "fix": {"type": "string"}, "rule": {"type": "string", "description": "guide rule id, section 3"}, "autofixed": {"type": "boolean"}, "limit_source": {"enum": ["server", "default"], "description": "limit-dependent codes only (2.2)"}}}}}}
+  "estimate": {"type": "object", "properties": {"questions": {}, "chunks": {}, "input_tokens_approx": {}, "latency_ms_idle_approx": {}, "billed_reads": {}}, "description": "chunks is the +-25% estimate of 2.3"},
+  "snippets": {"type": "object", "properties": {"body": {"type": "object"}, "curl": {"type": "string"}, "python": {"type": "string"}}},
+  "body_hash": {"type": "string"}}}
 ```
+
+`LintFinding` is defined once in `$defs` (2.2). `snippets` and `body_hash` are returned only when `emit` is
+given; `snippets.body` is the exact request body and `body_hash` its sha256 (equal to `Meta.body_hashes`).
 
 Error codes (the server would reject; each verified live in `00-api-surface.md` or the case files):
 
@@ -1452,7 +1982,7 @@ Error codes (the server would reject; each verified live in `00-api-surface.md` 
 | `E014` | score `criteria` empty | 422 `too_short` | no |
 | `E015` | choice > 255 options | 400 `Too many choices` | no: pre-filter / tree |
 | `E016` | score > 10 levels | 400 | no |
-| `E017` | noul `criteria` a list, or keys other than `true`/`false` | 422 `model_attributes_type` | map `yes`/`no` keys |
+| `E017` | noul `criteria` not an object (a list, a string) | 422 `model_attributes_type` | no |
 | `E020` | `samples` outside 1-32, `steps` 1-8, `think` 0-4096 | 422 | clamp |
 | `E021` | `sequential` not boolean | 422 `bool_parsing` | coerce |
 | `E022` | truthy `think`/`sequential` with images | 400 | drop the option |
@@ -1460,6 +1990,21 @@ Error codes (the server would reject; each verified live in `00-api-surface.md` 
 | `E024` | unknown model (checked against `/v1/models` + aliases when cached) | 400 `Unknown model` | `openjev-latest` |
 | `E025` | estimated prompt > 32,768 tokens (MLX) | 400 | no |
 | `E026` | top-level `weights` / per-question `weight` | 200 but **silently ignored** (use case 18) | strip; compute in code |
+| `E027` | noul `criteria` with keys other than `true`/`false` (`yes`/`no`, `pos`/`neg`) | 200 but the criteria are **silently dropped** (`NoulCriteria(true=None, false=None)`) | map yes->true, no->false; other keys removed with the finding |
+| `E028` | an option the model does not support (images, steps > 1, samples > 1, think, sequential on an encoder model; choice over the model cap) | 400 `<model> does not support <field>` | drop the option; error when the model is known from /v1/models or /v1/limits, warning otherwise |
+
+Batch import findings (2.11):
+
+| Code | Detects |
+|---|---|
+| `E030` | spreadsheet or binary file (fix: export as CSV or JSONL) |
+| `E031` | no states found, or duplicate ids |
+| `E032` | an ojui-export file given to `batch` |
+| `W601` | rows dropped above `max_items` |
+| `W602` | state column or field guessed |
+| `W603` | decoded as Windows-1252 |
+| `W604` | `ojui-batch` version > 1, or images not restored |
+| `W605` | empty rows skipped |
 
 E003, E015, E023 (count and size) and E025 check server limits. They are errors only when the
 limits came from `GET /v1/limits` (`limit_source: "server"`), for the target model. With default
@@ -1488,8 +2033,10 @@ Warning codes (phrasing; section 3 gives the evidence for each):
 | `W305` | score dimension with no evidence gate in a rubric set | R11 |
 | `W401` | > 10 questions with heterogeneous topics; blocking claim co-asked with an overlapping sibling | R13 |
 | `W402` | `think` > 1024 | R15 |
-| `W403` | `sequential` with <= 10 questions | R15 |
+| `W403` | `sequential` with <= 10 questions that are all noul or choice (one chunk, no-op) | R15 |
 | `W404` | `think` or `samples` > 4 on a hot path (profile `gate`) | R15 |
+| `W405` | batch `concurrency` > 1 while the backend is mlx or unknown (no speedup; reads serialise) | R15 |
+| `W406` | `think` in a batch or calibrate run (non-reproducible per row; resumed rows may differ) | R15 |
 | `W501` | state without section labels when it contains 2+ texts (diff + message, query + passage) | R14 |
 | `W502` | untrusted text placed in `instructions`/`criteria` instead of `state` | R14 |
 | `W503` | state > 4,000 tokens (latency ~1.3k tokens/s prefill) | R16 |
@@ -1797,10 +2344,16 @@ Input schema:
   "holdout": {"type": "number", "default": 0, "description": "fraction held out as drift canary, never used for fitting"},
   "store": {"type": "string", "description": "path of the audit record (.json, inside the allowed roots, 2.2) to write/compare"},
   "compare_to": {"type": "string", "description": "previous audit record (allowed roots, 2.2): report flips and gap change"},
+  "from_batch": {"type": "object", "additionalProperties": false, "required": ["output_path", "labels_path", "label_fields"], "properties": {
+   "output_path": {"type": "string"},
+   "labels_path": {"type": "string", "description": ".csv or .jsonl with an id column and one label column per question"},
+   "id_field": {"type": "string", "default": "id"},
+   "label_fields": {"type": "object", "additionalProperties": {"type": "string"}, "description": "question id -> label column"}}},
+  "concurrency": {"type": "integer", "minimum": 1, "maximum": 4, "default": 1},
   "max_items_per_call": {"type": "integer", "minimum": 1, "maximum": 100, "default": 25},
   "cursor": {"type": "string", "description": "as in batch (2.11)"}
  },
- "description": "Give exactly one of: questions + examples, recipe + examples, or case_file. Checked in code (OJ_INVALID_INPUT), not with a root oneOf (2.2)."
+ "description": "Give exactly one of: questions + examples, recipe + examples, case_file, or from_batch (questions come from the batch header; no HTTP request is made). Checked in code (OJ_INVALID_INPUT), not with a root oneOf (2.2). Labels: noul true/false (or yes/no, 1/0), choice option key, score level index."
 }
 ```
 
@@ -1813,13 +2366,16 @@ Output schema:
    "type": {}, "accuracy_at_0.5": {}, "separable": {"type": "boolean"}, "max_negative": {}, "min_positive": {}, "gap": {},
    "t_fit": {}, "suggested_band": {}, "precision_coverage": {"type": "array"}, "overlap_ids": {"type": "array"},
    "confusion": {"type": "object", "description": "choice"}, "ladder_monotonic": {"type": "boolean", "description": "score"},
-   "most_borderline": {}, "zero_error_upper_bound_95": {"description": "3/n (rule of three) when 0 errors"}}}},
+   "most_borderline": {}, "zero_error_upper_bound_95": {"description": "3/n (rule of three) when 0 errors"},
+   "calibration": {"type": "object", "properties": {"bins": {"type": "array", "minItems": 10, "maxItems": 10, "items": {"type": "object", "properties": {"lo": {"type": "number"}, "hi": {"type": "number"}, "count": {"type": "integer"}, "acc": {"type": ["number", "null"]}, "conf": {"type": ["number", "null"]}}}}, "brier": {"type": "number"}, "ece": {"type": "number"}}},
+   "distributions": {"type": "object", "properties": {"confidence_hist": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"type": "integer"}}, "entropy_hist": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"type": "integer"}}, "max_entropy": {"type": "number"}}}}}},
   "items": {"type": "array"}, "drift": {"type": "object", "properties": {"model_changed": {}, "flipped_ids": {}, "gap_delta": {}}},
   "warnings": {"type": "array"}}}
 ```
 
-HTTP mapping: one request per example, sequential, chunked by `cursor` exactly like `batch`
-(2.11); stores `{id, label, p, model}` using the
+HTTP mapping: as `batch`, with the same runner and concurrency rules (2.11): one request per
+example, `concurrency` 1-4 (default 1), chunked by `cursor` exactly like `batch`; `from_batch`
+makes no request. Stores `{id, label, p, model}` using the
 response `model` (resolved), never the alias. Fitting rules (use case 24): separable iff
 `max(p | false) < min(p | true)`; `t_fit` = midpoint; report the gap; if not separable report
 precision/coverage at t in {0.05, 0.1, ..., 0.95} and the overlap ids. Suggested band = the widest
@@ -1827,6 +2383,16 @@ precision/coverage at t in {0.05, 0.1, ..., 0.95} and the overlap ids. Suggested
 n >= 100. `question_hash` = sha256 of the canonical JSON of the questions (sorted keys); a changed
 hash invalidates stored thresholds. `think` examples are read twice and flagged if they disagree
 (non-reproducible, 2.6).
+
+Calibration metrics, exactly as the Playground stats page. Per answer, `conf` = max(p, 1 - p) for
+noul, `p_top` for choice, the probability of the argmax level for score; `correct` = (p >= 0.5) ==
+label for noul, choice == label, argmax level == label for score. Reliability: 10 equal bins over
+[0.5, 1.0] (a `conf` below 0.5 counts in the first bin); `acc` = correct/count and `conf` = mean
+`conf` per bin. Brier = mean over labelled answers of (conf - correct)^2. ECE = sum over bins of
+count/total x |acc - conf|. `confidence_hist`: 20 equal bins over [0, 1] of `conf`; `entropy_hist`:
+20 equal bins over [0, `max_entropy`] of -sum p ln p, `max_entropy` = ln K (choice), ln levels (score)
+or ln 2 (noul). `from_batch` scores a finished batch output against a labels file with no reads and
+the same report.
 
 Verified example: the use case 24 escalation question on 7 labelled tickets (`ex-cal-1..7`; the
 first body shown, the others differ only in `state`):
@@ -2014,15 +2580,18 @@ risk 0.0006, verdict `allow` -> decision `allow`.
 
 ### 2.17 `status` and `generate`
 
-`status`: health and capability probe. Call it once per session before relying on OpenJev
-(the core skill does), or after any `OJ_UNREACHABLE`.
+`status`: health and capability probe. Call it before relying on OpenJev when unsure (a hint; no
+other tool depends on it, principle 10), or after any `OJ_UNREACHABLE`.
 
 ```json
 {"input": {"type": "object", "additionalProperties": false, "properties": {"probe": {"type": "boolean", "default": false, "description": "also run one samples:1 noul read to measure latency"}}},
  "output": {"type": "object", "required": ["healthy", "decide_models"], "properties": {
   "healthy": {"type": "boolean"}, "base_url": {"type": "string"}, "decide_models": {"type": "array"}, "chat_models": {"type": "array"},
   "aliases_accepted": {"type": "array"}, "resolved": {"type": "object"}, "auth": {"enum": ["none", "bearer", "unknown"]},
-  "backend": {"type": "string", "description": "from GET /v1/limits (vllm, mlx, laya, verdict, clm, jevk5), else unknown"}, "latency_probe_ms": {"type": ["number", "null"]}, "limits": {"type": "object"}, "limit_source": {"enum": ["server", "default"]}, "warnings": {"type": "array"}}}}
+  "backend": {"type": "string", "description": "from GET /v1/limits (vllm, mlx, laya, verdict, clm, jevk5), else unknown"}, "latency_probe_ms": {"type": ["number", "null"]}, "limits": {"type": "object", "description": "prompt_tokens may be null (backend unknown); includes the batch caps"}, "limit_source": {"enum": ["server", "default"]},
+  "capabilities": {"type": "object", "additionalProperties": {"type": "object", "properties": {"images": {"type": "boolean"}, "steps": {"type": "boolean"}, "samples": {"type": "boolean"}, "think": {"type": "boolean"}, "sequential": {"type": "boolean"}, "max_prompt_tokens": {"type": ["integer", "null"]}, "max_choices": {"type": ["integer", "null"]}}}, "description": "per decide model, from /v1/limits or the 2.2 matrix"},
+  "mcp": {"type": "object", "properties": {"server_version": {"type": "string"}, "protocol_versions": {"type": "array", "items": {"type": "string"}}, "batch_max_inflight": {"type": "integer"}}},
+  "warnings": {"type": "array"}}}}
 ```
 
 HTTP: `GET /health` (200 `{"status":"ok"}` means the model is loaded; the server warms up before
@@ -2295,25 +2864,45 @@ Why the rules look like this (F1). Version 1.0 anchored the allow rule only at t
 
 The deny rules are a backstop, not a complete list: section 5.3's reads carry the rest. Tests: 6.6.
 
-MCP resources:
+MCP resources (the list order is this table order; templates are listed by `resources/templates/list`):
 
-| URI | Content | Why |
-|---|---|---|
-| `openjev://schema` | the `$defs` of 2.2 | one source of truth for clients and tests |
-| `openjev://recipes` | index: id, title, description, decisions, input summary | lets an agent pick a recipe without loading all |
-| `openjev://recipes/{id}` | the full recipe document | inputs, questions, policy, limitations |
-| `openjev://patterns` | the question-pattern library: every verified question of section 5, keyed `<usage>.<question_id>`, with its measured values | copy-paste building blocks for authors and `compile` |
-| `openjev://guide/authoring` | section 3 of this document | the rules the linter enforces, readable |
-| `openjev://limits` | limits of 1.5/2.2 plus `status` results | avoids re-probing |
-| `openjev://audits/{question_hash}` | stored `calibrate` records | thresholds with provenance |
+| URI | Phase | mimeType | Content | Cache (ttlMs, scope) | Annotations |
+|---|---|---|---|---|---|
+| `openjev://schema` | 1 | `application/schema+json` | the `$defs` of 2.2 incl. ToolError, LintFinding, QuestionStats, BatchHeader, BatchRow | 3600000 public | audience [assistant], priority 0.6 |
+| `openjev://limits` | 1 | `application/json` | effective limits, per-model capabilities, batch caps, `limit_source` | 60000 private | audience [assistant], priority 0.8 |
+| `openjev://recipes` | 2 | `application/json` | index: id, title, description, decisions, input summary | 3600000 public | [assistant] 0.5 |
+| `openjev://recipes/{id}` (template) | 2 | `application/json` | the full recipe document: inputs, questions, policy, limitations | 3600000 public | [assistant] 0.5 |
+| `openjev://templates` | 2 | `application/json` | batch template index: id, title, description, question and state counts | 3600000 public | [user, assistant] 0.5 |
+| `openjev://templates/{id}` (template) | 2 | `application/json` | `{id, title, questions, options, states [{id, state}], source_case}`; usable directly as `batch` `template` or as `items` | 3600000 public | [user, assistant] 0.5 |
+| `openjev://patterns` | 2 | `application/json` | the question-pattern library: every verified question of section 5, keyed `<usage>.<question_id>`, with its measured values | 3600000 public | [assistant] 0.4 |
+| `openjev://guide/authoring` | 2 | `text/markdown` | section 3 of this document | 3600000 public | [user, assistant] 0.4 |
+| `openjev://audits/{question_hash}` (template) | 3 | `application/json` | stored `calibrate` records under `OPENJEV_MCP_AUDIT_DIR` | 0 private | [user, assistant] 0.7 |
+
+Every resource has `name`, `title`, `mimeType` and `annotations {audience, priority, lastModified}`.
+`lastModified` is the package build time for static resources and the read time for `openjev://limits`.
+Templates go through `resources/templates/list` (RFC 6570); `completion/complete` serves their `id`
+arguments and the prompt arguments `template` and `recipe` (prefix match, at most 100 values).
+
+Tools that write files return a `resource_link` content block per file (`uri` `file://<realpath>`,
+`mimeType`, `name`) after the text block. `resources/read` serves a `file://` URI only for a `.jsonl`
+inside the allowed roots whose first line is this server's batch header record (ttlMs 0, private);
+such files are not listed in `resources/list`, because they are not a fixed set. Templates are
+generated at package build time from verified section 5 cases (5-10 states each). The user templates
+of the Playground live in browser storage and are out of scope: pass a saved JSONL or `ojui-batch`
+file as `items_file` instead.
 
 MCP prompts (user-invoked, appear as slash commands in Claude Code as `/mcp__openjev__<name>`):
 
-| Prompt | Arguments | Expands to |
-|---|---|---|
-| `author_question` | `intent`, `examples?` | the statement-authoring interview (skill 4.2) seeded with `compile` output |
-| `audit_question` | `question_hash` or `schema_path`, `labels_path` | a calibrate run plus the threshold table to paste |
-| `explain_answer` | `request_id` or a pasted response | what each number means (0-indexed score, no noul confidence, K-dependent confidence) and whether to act |
+| Prompt | Phase | Arguments (required flag) | Messages returned |
+|---|---|---|---|
+| `start_batch` | 2 | `template` (required, completion), `items_path` (optional), `output_path` (optional) | user text: the plan (`batch` `dry_run` first, confirm the import mapping and the estimate, then run with `output_path` and follow `next_cursor` until null; after an interruption call again without cursor and `resume: true`; then `batch_results` `view: review`); then an embedded resource `openjev://templates/{template}` |
+| `review_batch` | 2 | `output_path` (required), `limit` (optional, default 20) | user text: how to work the queue; then an embedded `application/json` resource with the review queue and `per_question` statistics (computed by the `batch_results` code) |
+| `author_question` | 3 | `intent` (required), `examples` (optional) | the statement-authoring interview (skill 4.2) seeded with `compile` output |
+| `audit_question` | 3 | `schema_path` (required), `labels_path` (required) | a `calibrate` plan plus the threshold table to paste; the either/or of 1.1 is gone, `question_hash` is computed from the schema |
+| `explain_answer` | 3 | `answer` (required: a request id found in `OPENJEV_MCP_LOG`, or pasted response JSON) | what each number means (0-indexed score, no noul confidence, K-dependent confidence) and whether to act |
+
+Prompts return user-role messages only; the `prompts/list` order is this table order; a missing
+required argument or an unknown one is -32602. The `prompts` capability is declared from phase 2.
 
 ### 2.19 Tools considered and dropped
 
@@ -2327,6 +2916,12 @@ MCP prompts (user-invoked, appear as slash commands in Claude Code as `/mcp__ope
 | server-side weights in `score` | dropped; weights in `rubric_score` recipe inputs, applied in code | the server ignores `weights` silently (use case 18) |
 | `embed` | dropped | no embeddings endpoint |
 | a separate `validate` | merged into `lint` | same checks |
+| server-side batch endpoint assumed by `batch` | rejected | the server takes one state per request (`openjev/api.py`); `batch` is client orchestration (2.11) |
+| separate `batch_export` and `compare` tools | folded into `batch_results` | all three are no-network operations over finished output files; one description instead of three |
+| `pause` / `job_status` tools | dropped | a stateless stdio server holds no job; stop calling is the pause, cursor and resume continue, status is in every result |
+| MCP Tasks for batch in phase 2 | deferred to phase 3, optional | experimental extension; the cursor path works on every client; tasks die with a stdio process |
+| elicitation (MRTR) for review-queue triage | dropped in 1.2 | `input_required` is not needed; the `review_batch` prompt and `batch_results` cover review; destructive confirmations are the client's job |
+| per-row images in `batch` | dropped | shared images cover the Playground feature; per-row images belong in separate `ask_image` calls |
 
 ### 2.20 Hook companion CLI (`openjev-hook`)
 
@@ -2355,6 +2950,99 @@ documentation of the version you target):
  "Stop": [{"hooks": [{"type": "command", "command": "openjev-hook stop --max-blocks 2", "timeout": 15}]}],
  "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "openjev-hook userprompt --roster .claude/skill-roster.json", "timeout": 10}]}]}}
 ```
+
+Timing: the 300 ms budget (6.7) is the CLI process's own overhead, excluding the read. The end-to-end
+budget is the hook `timeout` in `settings.json` (10-15 s in the example); `--timeout-ms` MUST be at
+least 1,000 ms below it so the CLI, not the harness, decides. On expiry: PreToolUse returns `ask`
+(interactive) or `deny` (`--unattended`); Stop allows the stop; UserPromptSubmit adds no hint;
+PostToolUse marks the content uncertain. Deterministic rules decide without a read whenever they
+match. The CLI is not an MCP component, so 2.0.1 does not apply to it.
+
+### 2.21 `batch_results` (query, export, compare; no network)
+
+Phase 2. Purpose: work with a finished or partial batch output without spending reads: the review
+queue, sorted and filtered rows, statistics, exports, and comparison with another output by
+Jensen-Shannon divergence. It is a separate tool because these operations must never spend reads:
+putting them on `batch` would mix a network-and-write tool with read-only post-processing, and an
+agent that re-sorts or exports would risk re-running rows. One tool covers three Playground features
+(results table sort and filter, exports, Compare) that would otherwise need three.
+
+When to call: after `batch`, to triage, to export for a human, or to compare two question variants
+or two models.
+
+Input schema:
+
+```json
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["path"],
+ "properties": {
+  "path": {"type": "string", "description": "a batch output .jsonl inside the allowed roots (first line is the batch header)"},
+  "view": {"enum": ["rows", "review", "stats"], "default": "rows"},
+  "filter": {"type": "object", "additionalProperties": false, "properties": {"status": {"enum": ["ok", "error", "any"], "default": "any"}, "min_confidence_below": {"type": "number", "minimum": 0, "maximum": 1, "description": "Playground low-confidence filter: keep rows where any question (or question, when given) is below"}, "question": {"type": "string"}, "choice": {"type": "string", "description": "with question: rows whose choice is this key"}, "band": {"enum": ["yes", "no", "grey"], "description": "with question: noul band"}, "needs_review": {"type": "boolean"}, "audit": {"type": "boolean"}, "ids": {"type": "array", "maxItems": 500, "items": {"type": "string"}}}},
+  "sort_by": {"enum": ["index", "value", "confidence"], "default": "index", "description": "value: choice key, score expected level, noul p of sort_question; confidence: min confidence over questions, or of sort_question"},
+  "sort_question": {"type": "string"},
+  "order": {"enum": ["asc", "desc"], "default": "asc"},
+  "limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 50},
+  "cursor": {"type": "string", "description": "next_cursor of the previous batch_results call"},
+  "detail": {"enum": ["compact", "full"], "default": "compact"},
+  "export": {"type": "object", "additionalProperties": false, "required": ["format"], "properties": {"format": {"enum": ["csv", "markdown", "ojui-batch", "jsonl"]}, "path": {"type": "string", "description": "created new (.csv, .md, .json, .jsonl); omitted = inline, up to 64 KiB, truncated with a warning"}, "filtered": {"type": "boolean", "default": false, "description": "export only the rows that pass filter"}}},
+  "compare_to": {"type": "object", "additionalProperties": false, "required": ["path"], "properties": {"path": {"type": "string", "description": "a second batch output .jsonl over the same ids"}, "question_map": {"type": "object", "additionalProperties": {"type": "string"}, "description": "question id in path -> question id in compare_to.path; default same ids"}, "key_map": {"type": "object", "additionalProperties": {"type": "object", "additionalProperties": {"type": "string"}}, "description": "per question: option key in compare_to.path -> option key in path; keys not listed map to themselves"}}}
+ }
+}
+```
+
+Output schema:
+
+```json
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "required": ["view", "meta"],
+ "properties": {
+  "view": {"type": "string"},
+  "rows": {"type": "array", "items": {"type": "object"}, "description": "BatchRow (full) or compact rows; last row per id"},
+  "review_queue": {"type": "array", "items": {"type": "object"}},
+  "stats": {"type": "object", "properties": {"n": {"type": "integer"}, "ok": {"type": "integer"}, "errors": {"type": "integer"}, "needs_review": {"type": "integer"}, "per_question": {"type": "object", "additionalProperties": {"$ref": "#/$defs/QuestionStats"}}, "input_tokens": {"type": "integer"}, "output_tokens": {"type": "integer"}, "latency_ms_p50": {"type": "number"}, "latency_ms_p95": {"type": "number"}}},
+  "matched": {"type": "integer"},
+  "export": {"type": "object", "properties": {"format": {"type": "string"}, "path": {"type": ["string", "null"]}, "inline": {"type": ["string", "null"]}, "bytes": {"type": "integer"}, "truncated": {"type": "boolean"}}},
+  "compare": {"type": "object", "properties": {"matched": {"type": "integer"}, "only_in_a": {"type": "array", "items": {"type": "string"}}, "only_in_b": {"type": "array", "items": {"type": "string"}}, "max_jsd": {"type": "number"}, "per_question": {"type": "object", "additionalProperties": {"type": "object", "properties": {"jsd_mean": {"type": ["number", "null"]}, "jsd_max": {"type": ["number", "null"]}, "jsd_max_id": {"type": ["string", "null"]}, "agreement": {"type": "number", "description": "share of ids with the same top answer (choice key, noul band, score level)"}, "flipped_ids": {"type": "array", "items": {"type": "string"}}, "mean_abs_delta_p": {"type": ["number", "null"]}, "jsd_reason": {"type": ["string", "null"], "description": "why jsd is null, e.g. option sets differ and no key_map"}}}}}},
+  "next_cursor": {"type": ["string", "null"]},
+  "warnings": {"type": "array", "items": {"type": "string"}},
+  "meta": {"$ref": "#/$defs/Meta"}
+ }
+}
+```
+
+Rules:
+
+- The tool reads the header and keeps the last row per id. An exported `.jsonl` keeps the header
+  record, so `batch_results` and `batch` can read it.
+- Confidence is choice `p_top`, noul margin |2p-1|, and for score the probability of the argmax
+  level; a row's `min_confidence` is the minimum over its questions.
+- `view: review` lists `needs_review` rows by ascending confidence.
+- `cursor` is `base64url {v: 1, offset, args}` of this tool, independent of the `batch` cursors.
+- Export formats and column layout are exactly those of 2.11 (Exports). Inline exports are capped at
+  64 KiB with `export.truncated: true`.
+- Compare joins the two files by id, maps questions with `question_map` and option keys with
+  `key_map`, and computes per id the Jensen-Shannon divergence with log base 2 (0 <= JSD <= 1)
+  between the two answer distributions: noul Bernoulli(p); choice the probabilities over the shared
+  keys; score the level probabilities (the same level count is required). `jsd` is null with
+  `jsd_reason` when the supports differ and no `key_map` aligns them. `agreement` uses the top answer
+  (choice key, noul band, score level); `flipped_ids` lists the ids whose top answer differs;
+  `mean_abs_delta_p` uses noul `p` or choice `p_top` of the a-side choice.
+- Annotations: `readOnlyHint: false` (only `export.path` writes), `destructiveHint: false`,
+  `idempotentHint: false` (a second export to the same path is refused), `openWorldHint: false`. No
+  HTTP request is made. Result content: the text block, then a `resource_link` for an export file.
+
+Example (design, not executed live): the review queue of the job in 2.11, 20 rows at a time.
+
+```json
+{"tool": "batch_results", "arguments": {"path": "out/tickets.jsonl", "view": "review", "limit": 20}}
+```
+
 
 ---
 
@@ -2652,6 +3340,11 @@ Defaults; fit per project with `calibrate` before money, data or security depend
   keyword trap) mark genuinely marginal items: route them, do not force them.
 - Round up on routing uncertainty (a wrongly cheap route fails the task; a wrongly expensive one
   only costs tokens, use case 08). Fail toward ask/deny on gates, toward allow on done-gates.
+- The `batch` defaults (2.11) copy the routing row: `review_rule` `choice_p_below` 0.8, `noul_grey`
+  [0.15, 0.85], `score_spread_above` 0.6. They decide only which rows enter the review queue. They
+  are provisional, not calibrated: a batch that auto-accepts rows which then drive money, data or
+  security still needs `calibrate` on project data (use case 24). Tighten `review_rule` for that
+  class of decision and read the audit agreement (2.11) before trusting the auto-accepted rows.
 
 ### 3.6 When to add `think`, `samples`, `steps`, `sequential`
 
@@ -2661,7 +3354,16 @@ Default read first. Then, in this order:
 2. The decision needs lookahead, rule combination or arithmetic across facts in the state, or the
    payload is obfuscated -> `think: 512` (text only), and repeat once if the result decides a gate.
 3. More than 10 questions where later ones depend on earlier answers -> `sequential: true`.
-4. Hot paths (hooks, bulk) -> `samples: 1`, no `think`.
+4. Hot paths (hooks, bulk) -> `samples: 1`, no `think`. `batch` already does this: its default
+   `sampling: "fast"` sends `samples: 1` and re-reads grey or below-review rows once with
+   `regrey_samples` (default 4); `sampling: "server_default"` omits `samples`, as the Playground
+   does. An explicit `options.samples` wins over both. `think` in a batch gives W406: each row is
+   non-reproducible, so a resumed or retried row can differ from its first attempt. Prefer a
+   second `batch` pass over the review queue (`only_ids`) to `think` on every row.
+5. Rewording a question that a batch output already holds: run the new wording into a new
+   `output_path` and compare the two files with `batch_results` `compare_to` (2.21). Keep the
+   option keys stable, or pass `key_map`; with different keys and no `key_map` the divergence is
+   null and only agreement and flipped ids are reported.
 Never add `think` to image reads (400); convert the UI to a text tree and think on that.
 
 ### 3.7 Images
@@ -2703,6 +3405,11 @@ Never add `think` to image reads (400); convert the UI to a text tree and think 
 | AP20 | ranking hundreds of items by reads | slow; weak evidence | retrieve, filter top 5-30, tiebreak |
 | AP21 | trusting a choice pick when multiple labels apply | single dominant label | one noul per label |
 | AP22 | calibrating on the canary set | thresholds overfit | hold out canaries (use case 24) |
+| AP23 | re-running `batch` to re-sort, filter or export a finished output | spends reads for no new information | `batch_results` (2.21), no network |
+| AP24 | `concurrency` 2-4 on an MLX or unknown backend | no speedup (reads serialise), more 529s | `concurrency: 1`; raise it only where `status` shows vLLM (W405) |
+| AP25 | reusing one `output_path` for a changed question set or source | refused: the header `run_id` differs | a new `output_path` per question set (the old file stays comparable) |
+| AP26 | comparing two question variants with renamed option keys and no `key_map` | divergence is null, the comparison says nothing | keep keys stable, or map them (`key_map`) |
+| AP27 | packing several rows into one state for a bulk job on a hunch | rows share one context; per-row stats, resume and retry are lost | one row per request with `batch`; pack only small items of one task context with `filter` |
 
 ---
 
@@ -2719,7 +3426,7 @@ openjev-skills/
   openjev-code-checks/SKILL.md          usage types 06, 07 (review filter), 12, 16
   openjev-dispatch/SKILL.md             usage types 08, 09, 10
   openjev-retrieval-relevance/SKILL.md  usage types 14, 15
-  openjev-data-records/SKILL.md         usage types 11, 18, 19, 21
+  openjev-data-records/SKILL.md         usage types 11, 18, 19, 21 (batch, batch_results from phase 2)
   openjev-ui-vision/SKILL.md            usage type 22
   openjev-multistep/SKILL.md            usage type 23
   openjev-calibration/SKILL.md          usage type 24 + eval of any question set
@@ -2771,8 +3478,9 @@ preference:
 An uncalibrated read that contradicts evidence you can cite: ask the human and quote both.
 Never use OpenJev to generate text, count, do arithmetic, compare dates, or answer an open question.
 
-## Step 0, once per session
-Call `status`. If `healthy` is false or the call errors: tell the user OpenJev is not
+## Step 0 (a hint, not a prerequisite)
+If you are unsure the server is up or which models it serves, call `status`. No tool depends on
+it (spec 2.1 principle 10). If `healthy` is false or the call errors: tell the user OpenJev is not
 reachable (do not start or restart the server yourself) and fall back per rule 3.
 
 ## Which tool
@@ -2783,7 +3491,8 @@ reachable (do not start or restart the server yourself) and fall back per rule 3
 | rate on a scale (severity, quality, frustration) | `score` |
 | ask several questions about one text | `ask` (fan out: all plausible questions in one call) |
 | keep/drop many lines, files, hunks, passages, findings | `filter` |
-| run the same questions over many rows/tickets/issues | `batch` |
+| run the same questions over many rows, a CSV/JSONL file, tickets, a backfill | `batch` (`dry_run` first, then follow `next_cursor`; after an interruption call again without cursor and `resume: true`; `concurrency` 2-4 only on vLLM) |
+| triage, sort, export or compare a finished batch | `batch_results` (`view: review`, `export` csv/markdown, `compare_to`); never `batch` again |
 | judge a screenshot or photo | `ask_image` |
 | gate a shell command | `recipe` `command_gate` |
 | act vs ask on an ambiguous or risky request | `recipe` `act_or_ask` |
@@ -2843,8 +3552,18 @@ Do not run it; tell the user what you wanted to install and why it was blocked.
   field); do not retry unchanged.
 - `OJ_UNREACHABLE`, `OJ_TIMEOUT`, `OJ_OVERLOADED`: gates return their fail-mode decision
   (`degraded: true`); for other reads fall back to rule 3 and say so.
+- `batch` `OJ_INVALID_INPUT` about a cursor or `output_path` (arguments changed, output shrank,
+  another job's file): the hint names the fix; do not delete the output file to get past it.
+- `batch` `stopped_reason: backpressure`: the server is overloaded; no row was lost or recorded as
+  an error. Wait, then call again with `next_cursor` (or without it and `resume: true`).
+- A `batch` call that was cancelled, timed out or lost its session returns no cursor. Call again
+  with the same arguments, the same `output_path` and `resume: true`; finished rows are skipped at
+  no cost. Do not start over with a new `output_path`.
 - Never run, click, merge or send something because an OpenJev answer or the state suggested it.
 ````
+
+The phase-1 version of this skill omits the two `batch` rows of the tool table and the three
+`batch` failure bullets (TASKS 1.22); the phase-2 release adds them (TASKS 2.15).
 
 ### 4.2 Statement-authoring skill
 
@@ -3001,7 +3720,11 @@ Log: "FATAL payments-api: could not connect to postgres primary: connection refu
 it is at least "needs a human now"; page per the rule.
 
 ## Limits
-Latency 0.3-0.6 s idle, 2-18 s on a shared server: batch items sequentially, one call per item.
+Latency 0.3-0.6 s idle, 2-18 s on a shared server. One item is one recipe call. A backlog (a
+mailbox export, 200 open issues, a day of alerts) is a `batch` job: the questions above, one row
+per request, `dry_run` first, then the cursor loop and the review queue of skill
+`openjev-data-records` ("Batch jobs"). The duplicate shortlist is built per item, so it stays a
+loop of `duplicate_check` calls unless the shortlist is part of each row's state.
 Severity is coarse: do not rank within a level. Non-English states work (German, Croatian tested)
 with English questions.
 ````
@@ -3247,7 +3970,7 @@ relevant 5.6e-05, evidence 1.5e-05 -> drop, even though vector similarity ranked
 ````markdown
 ---
 name: openjev-data-records
-description: Use when working with records, fields and datasets: picking the right value among several candidates in a text (which phone number, email, amount, date part, request id), verifying fields an extractor produced, NER span typing, labelling many CSV/JSONL rows, choosing which rows humans should review, building numeric features from text for a classical model, scoring resumes, leads or documents on a weighted rubric, matching or deduplicating records (companies, people, products), or deciding whether a new memory/note/rule duplicates, updates or adds to stored ones.
+description: Use when working with records, fields and datasets: picking the right value among several candidates in a text (which phone number, email, amount, date part, request id), verifying fields an extractor produced, NER span typing, labelling many CSV/JSONL rows (and resuming, exporting or comparing such a run), choosing which rows humans should review, building numeric features from text for a classical model, scoring resumes, leads or documents on a weighted rubric, matching or deduplicating records (companies, people, products), or deciding whether a new memory/note/rule duplicates, updates or adds to stored ones.
 ---
 
 # Records, extraction, labelling, rubrics, dedupe
@@ -3265,11 +3988,69 @@ extracted fields with `verify_fields` ("Does the text contain this exact string 
 accept >= 0.85, reject <= 0.15. Check in code that a chosen span is a substring of the text.
 
 ## Bulk labelling (use case 21, 19/19)
-`batch` over rows with a topic choice (+ `other` and `empty`) and feature nouls/scores.
-Auto-accept `p_top` >= 0.9; human queue < 0.8 or margin < 0.4, ascending; audit a seeded random
-2-5% of auto-accepted rows; rewrite the question if audit agreement < 95%. Validate the config
-before row 0 (a typo'd type is a 400; a list taxonomy is a 422). Features: score expectation,
-noul p, entropy, margin, spread (client-side).
+`batch` over rows with a topic choice (+ `other` and `empty`) and feature nouls/scores. Policy:
+auto-accept `p_top` >= 0.9; human queue < 0.8 or margin < 0.4, ascending (`batch_results`
+`view: review`); audit a seeded random 2-5% of auto-accepted rows (`audit.rate`); rewrite the
+question if audit agreement < 95%. Validate the config before row 0 (a mistyped type is a 400; a
+list taxonomy is a 422; `batch` lints once before the first read). Features: score expectation,
+noul p, entropy, margin, spread (client-side, from the full JSONL rows). The mechanics are in the
+next section.
+
+## Batch jobs: the cursor loop, the review queue, formats (phase 2)
+`batch` sends one request per row (the server takes one state per request) and keeps the job in a
+JSONL file you name. Every number you need is in the result; nothing else is remembered.
+
+1. **Dry run first.** No network, no cost:
+```json
+{"items_file": {"path": "data/tickets.csv", "id_field": "ticket_id", "state_template": "Subject: {subject}\n\n{body}"},
+ "questions": {"dept": {"type": "choice", "instructions": "Which team should own this ticket?", "criteria": {"billing": "charges, invoices, refunds, payment methods, plan pricing", "technical": "bugs, errors, outages, integrations, performance, login problems", "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing", "other": "anything else, or too vague to tell"}}},
+ "dry_run": true}
+```
+   Read `import` (format, delimiter, `state_field` guess and warning W602, `row_count`, W601 when
+   rows were dropped), `preview` (3 states) and `estimate` (requests, tokens, idle and shared time).
+   Fix the mapping (`state_field`, `state_template`, `id_field`, `format`, `encoding`) until the
+   preview is what you would send by hand. Show the user the estimate before a large run.
+2. **Run with an `output_path`.** Same arguments minus `dry_run`, plus `output_path` (a new
+   `.jsonl` inside the allowed roots), `max_items_per_call` and, on vLLM only, `concurrency` 2-4.
+   Without `output_path` nothing persists and a lost call is re-read in full.
+3. **Follow `next_cursor`.** Call again with identical arguments and `cursor` set to the previous
+   `next_cursor` until it is `null`. `concurrency`, `max_items_per_call`, `time_budget_s`,
+   `detail`, `max_inline_results` and `export` may change between calls; anything else is refused
+   as "arguments changed since this cursor". Read `status.stopped_reason`: `max_items_per_call`
+   and `time_budget` mean call again; `backpressure` means wait, then call again (no row is lost);
+   `error_abort` appears only with `on_error: "abort"`; `complete` ends the job.
+4. **After an interruption** (cancel, closed session, crash, no result): call again with the same
+   arguments, the same `output_path` and `resume: true`, and no cursor. Finished rows are skipped
+   (`status.skipped`). A different question set, source or options is refused: use a new path.
+5. **Retry only what failed.** `retry_errors: true` re-runs rows whose last status is `error`;
+   `only_ids: [...]` re-runs named rows (with different `options`, use a new `output_path`).
+   The last row per id wins in every later read.
+6. **Triage without reading again.** `batch_results` with `view: "review"` lists the queue,
+   least confident first, with the reason per row; `view: "stats"` gives `per_question`
+   statistics; `filter` and `sort_by: "confidence"` reproduce the Playground table. Use the
+   `review_batch` prompt when the human should walk the queue.
+7. **Export for people** with `batch_results` `export` (`csv`, `markdown`, `ojui-batch` to reopen
+   in the Playground, or a filtered `jsonl`), or pass `export: [{"format": "csv", "path": ...}]`
+   to the call that finishes the job. Exports are created new; an existing path is refused.
+8. **Compare two runs** (a reworded question, another model) with `batch_results`
+   `compare_to: {"path": ..., "key_map": {...}}`; read `agreement` and `flipped_ids` first, then
+   the divergence (`jsd_*`). Null divergence with a `jsd_reason` is an answer, not an error.
+9. **Privacy.** Rows store the state text so exports work; pass `include_state: false` to keep
+   only hashes when the data is sensitive.
+
+Input formats `batch` reads (auto-detected from the extension, then the content): CSV and TSV
+(header row, delimiter sniffed), JSONL (objects use `state_field`, `*` = the whole object), JSON
+(an array, or an object holding one under `array_key`), plain lines (one state per line), blank-line
+blocks (one state per block), and a Playground `ojui-batch` export (restores its questions and
+options). Spreadsheets (`.xlsx`) and binaries are refused: export the sheet as CSV first.
+Several files merge with `items_file.also`. `template` names a built-in question set
+(`openjev://templates/{id}`) and supplies its sample states when no source is given.
+
+Do not use `batch` for: items that belong to one task context (use `filter`, one request per
+pack); a decision on one state (use `ask`); a threshold choice (use `calibrate`, phase 3, which
+can score a finished batch output against a labels file with `from_batch` and no new reads).
+A row packing several rows into one state (the `rows_per_request` input of use case 21) trades
+per-row resume, retry and statistics for fewer requests; the default is one row per request.
 
 ## Weighted rubric (use case 18, 18/18)
 One score per dimension, levels naming observable evidence, plus a noul evidence gate; weights in
@@ -3394,6 +4175,9 @@ Precedence: measured thresholds over defaults; defaults over intuition.
    that is never used for fitting.
 2. Use the production question **byte-identical** (the threshold belongs to its `question_hash`).
 3. `calibrate` with `questions` + `examples` (or a `run_cases.py` `case_file`).
+   If the items were already read by `batch`, use `from_batch` with a labels file instead: no
+   reads, same report. To compare two wordings before fitting anything, `batch_results`
+   `compare_to` (phase 2) is enough.
 4. Read: `separable`, `gap`, `t_fit`, `suggested_band`, `overlap_ids`, `most_borderline`,
    `zero_error_upper_bound_95` (0 errors in n bounds the error rate at ~3/n).
 5. Not separable: report precision/coverage at several thresholds; send the overlap to a human;
@@ -3403,6 +4187,9 @@ Precedence: measured thresholds over defaults; defaults over intuition.
    sides or a gap below 0.3 (`compare_to`).
 7. Scores: check the ladder is monotonic; use ladder confidence to find borderline items that a
    saturated noul hides.
+8. Read `calibration` (reliability bins, Brier, ECE) and `distributions`. An ECE above 0.1, or a
+   reliability bin whose `acc` is far below its `conf`, means the raw probability is not a usable
+   confidence for this question: gate on fitted thresholds only.
 
 ## Facts to respect
 - Identical requests return identical numbers; 15 replays prove nothing. Use paraphrased states or
@@ -3476,6 +4263,8 @@ Policy: `route` when `dept.p_top` >= 0.7 and not `other`, else `human_review`; f
 <= 0.2 no, between human review; `escalate` when frustration >= 1.5 (0-2 scale) or churn >= 0.8;
 standard SLA at frustration <= 0.5. Route on `dept` only; priority from the flags (a furious
 refund/chargeback ticket rooted in logouts correctly went `technical` at 0.95).
+
+Batch (phase 2): a mailbox or ticket export is a `batch` job over the questions above (one row per request, review queue from the policy bars, `batch_results` export for the support lead), see 4.8 "Batch jobs" and the 2.11 verified example, which uses the `dept` and `urgent` questions of this case. A single ticket stays one `recipe` call.
 
 Limitations: single-label (ask one noul per department for multi-label); English plus one German
 case; polite-but-furious scored 2.0 and sarcasm 1.67, but tone reads are a sample of 3 cases.
@@ -3779,6 +4568,8 @@ escalate, 0.3-0.85 human; duplicate pair noul >= 0.85 or shortlist p_top >= 0.6 
 mark and comment, 0.4-0.85 human; review finding `real` >= 0.8 post, 0.5-0.8 collapse, < 0.5 drop;
 `actionable` <= 0.2 ask for info.
 
+Batch (phase 2): triaging a backlog of issues is a `batch` job (one row per issue; the duplicate shortlist, when used, must be part of each row's state because the candidates differ per row). Review findings of one diff are small items of one task context: use `filter`, one request per pack, not `batch`.
+
 Limitations: sees only the state (a claimed regression needs the diff in state); severity is coarse;
 dedupe is only as good as the shortlist; long diffs are slow.
 
@@ -4077,6 +4868,8 @@ if real >= 0.7 and 2.0 <= sev < 3.0; page if real >= 0.85 and sev >= 3.0; anythi
 choice p_top < 0.6 -> review, never suppress. Deterministic rules stay ahead for hard escalations
 (known-critical alerts, verified secrets). Alert dedupe: "Is the new alert a symptom of the already
 open incident, rather than a separate new problem?" with the incident and root cause in state.
+
+Batch (phase 2): a day of alerts exported as JSONL is a `batch` job over `real` and `sev`; the page-or-suppress rule is applied to the output rows by the caller. Log lines of one incident are items of one context: use `filter`.
 
 Limitations: severity reflects the text, not business context; collapse long logs into clusters; a
 SOC study found a linear SVM beat LLM prioritisation, so rules guarantee and the read refines;
@@ -4390,6 +5183,8 @@ Policy: accept a leaf at p >= 0.6 (not `other*`); 0.35-0.6 stop at the parent or
 subtree pruning descend at >= 0.3, prune at <= 0.1; never act on a counterfactual branch answer
 ("Assuming the owner is frontend...") alone.
 
+Batch (phase 2): classifying a corpus is a `batch` job; the root and child questions go in the one `questions` object, so each row is still one request. Use `batch_results` `view: stats` (`counts`, `top2`, `abstained`) to see which parent absorbs `other_<parent>`, and `compare_to` with `key_map` to compare two trees.
+
 Limitations: keyword hijack (tax-18) -> send P < 0.7 to the parent; 120 options cost 6-14 s under
 load; option caps differ by server (255 here, 128 on Codiv, 52 on the unrelated HF "OpenJev").
 
@@ -4436,6 +5231,8 @@ Policy: auto-accept p_top >= 0.9; human queue p_top < 0.8 or margin < 0.4 (ascen
 `other` is its own bucket (audited by rule, not uncertainty); nouls accept >= 0.85 / <= 0.15; audit
 2-5% seeded; rewrite when audit agreement < 95%. Derived columns: entropy, margin, spread, noul
 uncertainty `1 - |2p-1|`.
+
+Batch (phase 2): the `bulk_label` recipe is the tool `batch` (2.11) with this policy. The verified request above packs four rows into one state (`rows_per_request`), which is the packing axis; the tool default is one row per request, so every row has its own stats, resume and retry. Mapping from this policy to the options: `review_rule.choice_p_below` 0.8, `audit.rate` 0.03 and `audit.seed`, `output_path` for the resumable file, `batch_results` for the queue and the exports. Skill usage: 4.8 "Batch jobs". Scoring a finished labelled batch with `calibrate` `from_batch` is phase 3.
 
 Limitations: saturated probabilities (use the low tail); spread is computed client-side; batch
 invariance tested with 4 rows; model confidence is not labeller agreement.
@@ -4714,23 +5511,94 @@ or nightly. The MCP package additionally has contract tests that run in CI with 
   `limit_source: "default"`. With a stub `/v1/limits` reporting `max_choices: 24`, 30 options is
   an error.
 - **Env.** `OPENJEV_MCP_MODEL` is honoured; the MCP package never reads `OPENJEV_MODEL`.
+- **Protocol conformance (both eras).** `server/discover` returns the supported versions
+  (`2026-07-28`, `2025-11-25`, `2025-06-18`), the capabilities (`tools` `listChanged: false`;
+  `resources` `listChanged: false`, `subscribe: false`; `prompts` and `completions` from phase 2)
+  and `serverInfo`. A legacy `initialize` session works for the same tools. A 2026-07-28 request
+  without `_meta` `protocolVersion` or `clientCapabilities` gets -32602; an unknown version gets
+  -32022 with the supported list. Every result has `resultType: "complete"` and `_meta`
+  `serverInfo`. List, discover and `resources/read` results carry the `ttlMs` and `cacheScope` of
+  2.0.1; lists are one page in the documented order. Every `inputSchema` and `outputSchema` has
+  `$schema` 2020-12 and no `$ref`. An argument the SDK would reject still yields `isError`
+  `OJ_INVALID_INPUT`. The server writes only JSON-RPC to stdout, sends no request to the client and
+  never sends `notifications/message`. No result differs between two connections, or between a
+  fresh process and one that served other calls first (statelessness, principle 10).
+- **Cancellation.** `notifications/cancelled` during a `batch` with `concurrency` 3 against a slow
+  mock: no further message for that request id, the JSONL file holds only whole lines, the lock is
+  released, and a following call without cursor and with `resume: true` yields no duplicate and no
+  missing id. The same test on `ask` (phase 1) asserts no result is sent.
+- **Progress.** With a `progressToken`, `progress` values strictly increase, `total` is constant,
+  and at most one notification per second is sent; without a token, none are sent.
+- **Batch import (2.11).** Fixtures for every format and the sniffing order: CSV with `,`, `;` and
+  tab, quoted delimiters, TSV, JSONL with key discovery over 500 objects, wrapped JSON for each
+  `array_key` default, a single object, lines, blocks, UTF-16 BOM, the Windows-1252 fallback
+  (W603), `.xlsx` refused (E030), a binary file refused (E030), `ojui-batch` restore and version 2
+  (W604), `ojui-export` refused (E032), duplicate ids and empty input (E031), a merge of two CSVs
+  with equal and with different headers, truncation at `max_items` (W601), empty rows (W605), the
+  text-column guess (W602) and `state_template` placeholders. A `template` source supplies
+  questions and sample states alone, and only questions beside `items` or `items_file`; two state
+  sources, no questions, and `export` without `output_path` are `OJ_INVALID_INPUT`.
+- **Batch runner (2.11).** Output order equals input order for `concurrency` 1-4. A 529 with
+  `retry-after: 1` pauses all workers and drops `effective_concurrency` to 1, which recovers after
+  10 successes. A row overloaded past its retries returns `stopped_reason: "backpressure"`, is not
+  written, and the next call continues from it. `on_error: "abort"` returns `error_abort`; `record`
+  writes an `error` row. A cursor with changed arguments, a tampered cursor and a shrunk output
+  each give the documented `OJ_INVALID_INPUT`. Changing `concurrency` or `max_items_per_call`
+  between calls is accepted. A resume onto an `output_path` whose header `run_id` differs (other
+  questions, source, options, `sampling` or `regrey_samples`) is refused; `resume: false` onto an
+  existing output is refused; a second concurrent call on the same `output_path` is refused.
+  `retry_errors` and `only_ids` append rows and last-row-wins holds; an unknown `only_ids` id is a
+  warning. The audit sample is identical for `concurrency` 1 and 4 and the same `seed`. `sampling`
+  `fast` sends `samples: 1` and re-reads a grey row once with `regrey_samples`; `server_default`
+  sends no `samples`; an explicit `options.samples` wins. `dry_run` makes no HTTP request (the test
+  transport fails on any request), its `first_body` equals the body sent by the real run, and its
+  estimate equals the Playground formula on a fixture. The CSV export columns equal the Playground
+  order on a fixture with noul, choice and score; an `ojui-batch` export re-imports to the same
+  states, questions and options. `include_state: false` writes no state text.
+- **`batch_results` (2.21).** Sort by value and by confidence, `min_confidence_below`, the review
+  view order, last-row-wins, a `cursor` that pages rows without repeats, inline export truncation
+  at 64 KiB, a filtered `jsonl` export that keeps the header record, an export onto an existing
+  path refused, compare Jensen-Shannon divergence on hand-computed fixtures (identical files give
+  0; disjoint keys without `key_map` give null with `jsd_reason`; `key_map` aligns them;
+  `only_in_a` and `only_in_b` are listed), and no network I/O.
+- **Resources, prompts, completion (phase 2).** `resources/templates/list` returns the three URI
+  templates; `completion/complete` returns prefix matches for template and recipe ids (at most 100
+  values); each `openjev://templates/{id}` replays its source case from section 5; `prompts/get`
+  for `start_batch` and `review_batch` returns the documented messages, and a missing required
+  argument is -32602; `resources/read` serves a `file://` batch output only inside the allowed
+  roots and only when its first line is a batch header.
+- **Errors added in 1.2.** One test per new 2.4 row: "does not support", "Too many choices for",
+  label tokens, answer template, upstream rejection, 405 and the generic plain-string 400; the
+  timeout scaling and no retry of `OJ_TIMEOUT` with `think` > 0.
+- **Lint 1.2.** E027 autofix `yes` to `true`, E028 on an encoder model, E017 only for a non-object
+  `criteria`, W403 only for all-noul/choice sets of <= 10, W405, W406, `emit` `body` equal to the
+  bytes sent, and `body_hash` equal to a Playground `bodyHash` fixture.
+- **Mapping 1.2.** `Meta.body_hashes` and `Meta.server_timing` are filled on `ask`, and
+  `status.capabilities` follows the 2.2 matrix when `/v1/limits` is absent, with `prompt_tokens`
+  null while the backend is unknown.
+- **`calibrate` from_batch (phase 3).** Reliability bins, Brier, ECE and the 20-bin histograms
+  equal hand-computed fixtures and the Playground stats page on the same data; no HTTP request.
 
 ### 6.7 Per-tool acceptance criteria
 
 | Item (phase) | Accepted when |
 |---|---|
-| `status` (1) | /health 200, connect refused and 404 each map to `healthy`/`OJ_UNREACHABLE`/`OJ_NOT_FOUND`; limits and backend come from `/v1/limits` when present, else defaults + `limit_source: "default"` + the warning; never sends a request without the configured key; warns on `logs_bodies` |
-| `lint` (1) | every E and W code has a positive and a negative fixture; the 2.13 example gives exactly the output shown; no network I/O (the test transport fails on any request); limit-dependent codes follow `limit_source` |
-| `ask` (1) | `ex-ask`, `ex-think`, `ex-sequential` replays give the MCP outputs shown; `think`/`sequential` with images refused locally; W402/W403 emitted; answer order equals request order |
+| `status` (1) | /health 200, connect refused and 404 each map to `healthy`/`OJ_UNREACHABLE`/`OJ_NOT_FOUND`; limits and backend come from `/v1/limits` when present, else defaults + `limit_source: "default"` + the warning; never sends a request without the configured key; warns on `logs_bodies`; `capabilities` per model follow the 2.2 matrix when `/v1/limits` is absent; `prompt_tokens` is null when the backend is unknown |
+| `lint` (1) | every E and W code has a positive and a negative fixture; the 2.13 example gives exactly the output shown; no network I/O (the test transport fails on any request); limit-dependent codes follow `limit_source`; `emit` `body` equals the sent bytes and the `curl` and `python` snippets never contain the key; E027 and E028 fixtures |
+| `ask` (1) | `ex-ask`, `ex-think`, `ex-sequential` replays give the MCP outputs shown; `think`/`sequential` with images refused locally; W402/W403 emitted; answer order equals request order; `Meta.body_hashes` equals the sha256 of the bytes sent and `server_timing` is filled when the header is present |
 | `yes_no` (1) | `ex-yes-no` replay; a grey first read triggers exactly one `samples: 4` re-read; an explicit `options.samples` disables it |
 | `classify` (1) | escape added unless an escape key exists; `escape: false` gives W201; abstains when the escape option wins and when `p_top < min_p`; `multi_label` sends one noul per label; a returned key outside the label set is `OJ_PROTOCOL` |
 | `score` (1) | `ex-score` replay; `one_based` shifts `score` and `level`; object levels rejected with the E013 hint |
 | `openjev-hook pretooluse` (1) | `03-agent-tool-call-gate.json` 14/14 live through the hook; the rule tests of 6.6; fails closed (`ask`, or `deny` with `--unattended`) on every retryable error and on timeout; output validated against the hook schema of each supported Claude Code version; the CLI's own overhead (excluding the read) p95 < 300 ms |
 | `filter` (2) | `ex-filter` replay; the packing test; packs split at `pack_size`; empty `items` makes no request; `grey` policy honoured |
 | `recipe` (2) | every shipped recipe loads, and its `test_file` passes live; `dry_run` does no I/O; each `fail_mode` gives its degraded decision with `degraded: true`; an input error carries the recipe's `input_schema` |
-| `batch` (3) | cursor resume gives no duplicates or gaps across interrupted calls; `max_items_per_call` and `time_budget_s` honoured; path and `output_path` rules; audit sample reproducible by `seed` |
-| `calibrate` (3) | `ex-cal-1..7` replay reproduces the report shown; `question_hash` independent of key order; drift reports a changed resolved model |
+| `batch` (2) | `ex-batch-1..3` replay gives the 1.2 output of 2.11; the import, batch-runner, cancellation and progress tests of 6.6 pass; cursor resume and resume without a cursor give no duplicates or gaps across interrupted calls; `max_items_per_call`, `time_budget_s` and the `concurrency` cap are honoured; path, output and export rules of 2.2; audit sample reproducible by `seed`; `dry_run` sends nothing; live: a 200-row CSV with `concurrency` 2 and one interrupted-then-resumed run, both recorded |
+| `batch_results` (2) | the `batch_results` tests of 6.6 pass; no network I/O; every export is byte-identical to the `batch` export of the same file (the `exportedAt` field of `ojui-batch` aside); a filtered `jsonl` export is readable by `batch` and `batch_results` |
+| resources, prompts, completion (2) | the resources/prompts/completion tests of 6.6 pass; every template validates against `QuestionSet` and lints clean; each template state count is 5-10; `openjev://limits` publishes the batch caps |
+| protocol conformance (1) | the protocol-conformance, cancellation and progress tests of 6.6 pass through the SDK in-memory client for 2026-07-28 and for a legacy `initialize` session |
+| `calibrate` (3) | `ex-cal-1..7` replay reproduces the report shown; `question_hash` independent of key order; drift reports a changed resolved model; `from_batch` reproduces the report of an equivalent `examples` run with no HTTP request; bins, Brier and ECE equal hand-computed fixtures and the Playground stats page on the same data |
 | `ask_image` (3) | path and URL rules of 2.2; an undecodable image is `OJ_INVALID_INPUT` before any request; re-encoding respects `max_side_px` and the exact type spelling |
+| `batch.images` (3) | the images are loaded and re-encoded once per call and the same data URLs are in every row body; 1-8 images; `think` and `sequential` are refused locally (E022); an `ojui-batch` file with `imageCount` > 0 warns W604 and restores no image |
 | `compile`, `generate` (3) | `ex-compile-*` and `ex-generate` replays; `generate` retries an empty reply once and refuses a message without `role` locally |
 
 ---
@@ -4741,7 +5609,7 @@ or nightly. The MCP package additionally has contract tests that run in CI with 
 |---|---|---|---|
 | 1 | Auth | 401/403 and the `X-Origin-Secret` path were never exercised live (auth off locally); Codiv uses bearer keys | send `Authorization: Bearer` when `OPENJEV_API_KEY` is set; test 401/403 mapping against `tests/test_api.py` and a Codiv key before release; never log keys |
 | 2 | Rate limits | the OpenJev code never emits 429; a gateway (Codiv) may. 529/503 were not triggered live | implement 429/503/529 with `retry-after`; contract tests with a mock server; expose `retry_after_s` |
-| 3 | Concurrency | MLX serves one read at a time and other agents share the server; per-usage runs saw 2-18 s for 0.3 s reads | `OPENJEV_MCP_MAX_INFLIGHT=1` per MCP process, with the server's 529 as the global back-pressure (principle 6); timeouts per tool (hooks 10-15 s, reads 30 s, think 120 s); fail modes on gates; progress notifications in batch; do not fan out requests in parallel on MLX |
+| 3 | Concurrency | MLX serves one read at a time and other agents share the server; per-usage runs saw 2-18 s for 0.3 s reads | `OPENJEV_MCP_MAX_INFLIGHT=1` per MCP process for single reads; `batch` and `calibrate` run up to 4 under `OPENJEV_MCP_MAX_INFLIGHT_BATCH` with the shared cooldown and `stopped_reason: backpressure` (2.11); the server 529 is the global back-pressure; timeouts scale per request (2.4); fail modes on gates; `W405` warns that concurrency gives no speedup on MLX or an unknown backend |
 | 4 | Latency budget of hooks | a PreToolUse gate that waits 15 s on a busy server stalls the agent | deterministic rules first; `samples: 1`; small question sets; fail closed to `ask` interactively |
 | 5 | MLX vs vLLM | same prompts and seeds, but probabilities are not guaranteed identical; vLLM runs 64 reads in flight, returns `model;dur`, supports chat tools/logprobs; the prompt cap differs (32,768 vs 65,536) | thresholds are per backend: store `backend` (from `/v1/limits`) and `model_resolved` in audit records; rerun `calibrate` fixtures when switching |
 | 6 | `think` non-determinism | the same body flipped from 0.12 to 0.9999 across runs (2.6) | never cache `think` results; gates repeat `think` reads; calibration reads them twice |
@@ -4759,4 +5627,17 @@ or nightly. The MCP package additionally has contract tests that run in CI with 
 | 18 | Implementation language | decided in 1.1: Python, official MCP SDK, separate `openjev-mcp` distribution (2.0) | the schemas stay language-neutral; the reference tests are the live case files plus the contract tests of 6.6 |
 | 19 | Chat passthrough value | on MLX, chat is lossy (newlines) and unsuitable for code or JSON | keep `generate` behind `OPENJEV_MCP_TOOLSETS` (off in `core`); revisit when the MLX fix lands |
 | 20 | Determinism assumptions | the seed is a hash of the body; unknown fields are ignored, so adding a random field would not change answers, but any change to state bytes (one trailing space) does | canonicalise states (strip trailing whitespace) only if the audit used the same canonicalisation; otherwise send bytes verbatim |
+| 21 | MCP revision churn | 2026-07-28 removed `initialize` and sessions; SDK support may lag or differ by release | dual-era server (2.0.1); protocol tests for both eras in CI (6.6); the SDK floor is pinned when a conforming release is chosen (TASKS 1.1) |
+| 22 | Many agents running `batch` | four processes x `concurrency` 4 = 16 reads in flight against one MLX server that serves one at a time | default `concurrency` 1; shared cooldown; `stopped_reason: backpressure` never turns overload into error rows; W405; document a concurrency budget per team |
+| 23 | Output files edited by other tools | a user or another process may edit or truncate the JSONL between calls | header `run_id` check, cursor `out.bytes` check, `flock` per call, last-row-wins; exports are created new only; a hand-edited or corrupt row is not repaired by the server (a line that is not valid JSON is a documented open item, TASKS "Open items") |
+| 24 | Privacy of batch outputs | rows store the state text by default so exports work | `include_state: false` keeps only `state_hash`; outputs live inside the allowed roots; the debug-server warning of principle 7 applies to every row sent |
+| 25 | Tasks extension maturity | experimental; semantics may change; tasks die with a stdio process | phase 3, opt-in (`OPENJEV_MCP_TASKS`), the cursor path stays normative and is the only one tested on every client |
+| 26 | Estimate accuracy | chunk and token estimates are +-25%; latency under shared load is 5-20x idle | estimates are labelled approximate; `dry_run` gives idle and shared figures; the `batch` status block reports the measured `req_per_s` and `eta_ms` |
+| 27 | Compare semantics | Jensen-Shannon divergence is undefined across different option sets, and a careless reader may ignore a null | `key_map` aligns keys; otherwise `jsd` is null with `jsd_reason`; `agreement` and `flipped_ids` are always reported next to it |
+| 28 | Cancellation returns no result | by protocol a cancelled call sends nothing, so a client that relies on `next_cursor` alone loses its place; without `output_path` the work is re-read | skills and the `start_batch` prompt teach "call again without cursor, `resume: true`, same `output_path`" (4.1, 4.8); always pass `output_path` for jobs over ~25 rows |
+| 29 | `think` in batch | non-reproducible per row, so a resumed or retried row can differ from its first attempt, and the run costs about twice the tokens | W406; prefer a second pass over the review queue with `only_ids`; calibration reads `think` rows twice |
+| 30 | Playground parity drift | `batchImport.js`, `batch.js` and the export layouts can change after 1.2 | importer and exporter tests pin the 1.2 behaviour (sniffing, text-column guess, CSV column order, `ojui-batch` v1); the `ojui-batch` round trip into the Playground is an acceptance criterion, run by a human when the UI changes |
+| 31 | Tool count and routing | 13 tools grew to 14 (`batch_results`); if the description is long or the core skill does not route post-processing, agents re-run `batch` to re-sort or export | short description that says "no network"; the core skill table has a `batch_results` row; AP23 |
+| 32 | `/v1/limits` still absent | backend, prompt cap and per-model capabilities are derived from defaults and model names; `prompt_tokens` is null while the backend is unknown; W405 cannot be precise | the server 400 stays the authority and is mapped (2.4); TASKS 0.1 is recommended before phase 2 ships, not required |
+| 33 | Deferred batch features | `batch.images`, the Tasks extension, `calibrate` `from_batch` and the prompts `author_question`, `audit_question`, `explain_answer` are not in phase 2; the Playground has images in batch today | listed as phase 3 in 2.0 and TASKS; a phase-2 `ojui-batch` import with images warns W604 instead of silently dropping them |
 

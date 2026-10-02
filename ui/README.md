@@ -11,10 +11,8 @@ No build step, no npm. A small Python server (`ui/server.py`) serves `ui/static/
 ## Quick start
 
 ```sh
-mise run startOpenJev      # start OpenJev on :8080 (the first start loads the model and takes a while)
-mise run ui                # UI on http://127.0.0.1:8090
-mise run uiTest            # proxy tests (mocked upstream, no model needed)
-mise run uiTestJs          # batch file import unit tests (node --test, no browser)
+mise run start    # OpenJev on :8080 + UI on http://127.0.0.1:8090, opens your browser
+mise run test     # all tests, incl. the UI proxy (mocked upstream) and batch import (node --test)
 ```
 
 The server starts even when OpenJev is down. The startup banner tells you whether the upstream
@@ -44,9 +42,9 @@ upstream request id).
 | `UI_PORT` | `8090` | Bind port |
 
 CLI flags override the env vars: `.venv/bin/python ui/server.py --host 0.0.0.0 --port 9000 --open`
-(`--open` opens a browser tab once the server is listening; `mise run ui` passes it).
+(`--open` opens a browser tab once the server is listening; `mise run start` runs the UI in the background without it and opens the browser itself).
 
-Against a server that needs a key: `OPENJEV_API_KEY=sk-... mise run ui`.
+Against a server that needs a key: `OPENJEV_API_KEY=sk-... mise run restart`.
 
 Because the proxy adds the key, `/v1/*` and `/ui/api/health` refuse cross-site callers with a 403
 (a foreign `Origin`, `Origin: null`, or `Sec-Fetch-Site: cross-site`), so other web pages can't
@@ -69,7 +67,7 @@ Proxy details:
   arrived), and `x-ojui-upstream-ms` carries the same number. Compare it with the upstream's own
   `total;dur` to see the proxy hop; the browser's own time minus `upstream` is the browser-to-proxy
   hop.
-- Upstream down: `502 {"detail": {"error_type": "upstream_unreachable", "message": ..., "hint": "mise run startOpenJev"}}`.
+- Upstream down: `502 {"detail": {"error_type": "upstream_unreachable", "message": ..., "hint": "mise run start"}}`.
   Read timeout: `504 upstream_timeout`. Other transport errors: `502 upstream_error`.
 - Timeouts: connect 3 s, read 900 s (a `think` run on MLX can take minutes), write 120 s.
 - If the browser disconnects mid-stream (Stop in chat), the upstream response is closed at once.
@@ -107,7 +105,7 @@ recorded token counts, so changing a price rewrites every figure.
 ui/
   server.py            proxy + static server (FastAPI/uvicorn/httpx from the project .venv)
   tests/test_server.py pytest against a fake upstream (httpx.MockTransport)
-  tests/batch_import.test.mjs  node --test for js/jev/batchImport.js (mise run uiTestJs)
+  tests/batch_import.test.mjs  node --test for js/jev/batchImport.js (mise run test)
   static/              the SPA: index.html, css/, js/core (shell), js/app (chat UI), js/jev (visualizers)
   CONTRACT.md          the build contract the pieces were written against
 ```

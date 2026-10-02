@@ -1,7 +1,7 @@
 # OpenJev UI: build contract
 
 A single-page, ChatGPT-like web app for exploring a locally running OpenJev server.
-Start it with `mise run ui`. It serves on http://127.0.0.1:8090 and proxies to OpenJev on
+Start it with `mise run start`. It serves on http://127.0.0.1:8090 and proxies to OpenJev on
 http://127.0.0.1:8080.
 
 Three builders implement this in parallel and do not see each other's work. **This file is
@@ -12,7 +12,7 @@ not give you, implement it privately in your own files.
 Hard rules for everyone:
 
 - Do not touch `openjev/`, `tests/`, `docs/`, `openspec/`, `README.md` or `pyproject.toml`.
-  All new code lives under `ui/`. The one exception is builder A's addition to `mise.toml`.
+  All new code lives under `ui/`. The one exception is the task wiring in `mise-tasks/`.
 - No JS build step. Use native ES modules. Every import path is absolute from the site root
   (for example `/js/core/bus.js`).
 - CDN imports come only from these pinned URLs. Each one must degrade gracefully when it fails
@@ -93,18 +93,7 @@ through `/js/jev/index.js`, and only with a dynamic `import()` (see §3.10). Nei
 
 ### 2.1 Run
 
-- `mise run ui` runs `.venv/bin/python ui/server.py`. A adds this to `mise.toml`, keeping
-  everything that is already there:
-
-  ```toml
-  [tasks.ui]
-  description = "OpenJev UI on http://127.0.0.1:8090 (serves ui/static, proxies /v1/* to OpenJev)"
-  run = ".venv/bin/python ui/server.py"
-
-  [tasks.uiTest]
-  description = "Tests for the OpenJev UI proxy"
-  run = ".venv/bin/python -m pytest ui/tests -q"
-  ```
+- `mise run start` starts `.venv/bin/python ui/server.py` in the background (pidfile `.openjev-ui.pid`, log `.openjev-ui.log`) next to OpenJev and opens the browser; `mise run test` runs `ui/tests`. Tasks live in `mise-tasks/`.
 - CLI flags: `--host`, `--port` and `--open` (open a browser tab after startup). Flags override
   the env vars.
 - Env vars:
@@ -115,7 +104,7 @@ through `/js/jev/index.js`, and only with a dynamic `import()` (see §3.10). Nei
   - `UI_PORT`: default `8090`.
 - On startup, print a banner that shows the UI URL, the upstream URL, whether auth is
   configured, and the result of one upstream `GET /v1/models`: `reachable (N models, 12 ms)` or
-  `NOT reachable — start it with: mise run startOpenJev`. The server must start even when the
+  `NOT reachable — start it with: mise run start`. The server must start even when the
   upstream is down.
 - Structure: `create_app(openjev_url: str, api_key: str = "", origin_secret: str = "",
   static_dir: Path = <ui/static>, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI`.
@@ -138,8 +127,8 @@ through `/js/jev/index.js`, and only with a dynamic `import()` (see §3.10). Nei
                 "stepsMax": 8, "samplesMax": 32, "thinkMax": 4096,
                 "chatMaxTokensDefault": 1024, "chatMaxTokensCap": 8192,
                 "choiceMaxOptions": 255, "scoreMaxLevels": 10},
-     "hints": {"start": "mise run startOpenJev", "logs": "mise run logsOpenJev",
-               "status": "mise run statusOpenJev", "stop": "mise run stopOpenJev"}
+     "hints": {"start": "mise run start", "logs": "mise run logs",
+               "status": "mise run status", "stop": "mise run stop"}
    }
    ```
    `proxyBase` is always `""`, meaning the browser calls the same origin.
@@ -188,7 +177,7 @@ through `/js/jev/index.js`, and only with a dynamic `import()` (see §3.10). Nei
      - `cache-control: no-store`
      - `x-accel-buffering: no`
    - Upstream connect failure (`httpx.ConnectError`, `httpx.ConnectTimeout`) returns **502**:
-     `{"detail": {"error_type": "upstream_unreachable", "message": "OpenJev is not reachable at <url>: <exc>", "hint": "mise run startOpenJev"}}`
+     `{"detail": {"error_type": "upstream_unreachable", "message": "OpenJev is not reachable at <url>: <exc>", "hint": "mise run start"}}`
    - Read timeout returns **504** `upstream_timeout`. Any other `httpx.HTTPError` returns
      **502** `upstream_error`.
    - Timeouts: `httpx.Timeout(connect=3.0, read=900.0, write=120.0, pool=10.0)`. A `think`
@@ -1383,18 +1372,18 @@ Each error card shows:
 |---|---|---|
 | `validation` (422) | a list of `loc` rendered as `questions › urgent › criteria` with `msg` | **Fix in editor**: load the request into the composer and call `highlightErrors(details)` |
 | `bad_request` (400) | Message verbatim. Hints: "Unknown model" → pick a model from the models popover; "images" with think or sequential → turn off think or sequential; "too many options" or "levels" → limits (255 options, 10 levels) | Edit & re-ask |
-| `auth` (401) / `forbidden` (403) | "The UI proxy sends OPENJEV_API_KEY. Start it with the server's key: `OPENJEV_API_KEY=… mise run ui`." Show whether auth is configured, and whether an auth override is active | Open settings |
+| `auth` (401) / `forbidden` (403) | "The UI proxy sends OPENJEV_API_KEY. Start it with the server's key: `OPENJEV_API_KEY=… mise run restart`." Show whether auth is configured, and whether an auth override is active | Open settings |
 | `too_large` (413) | "Body is N MB; remove or downscale images" | — |
 | `rate_limited` (429) / `overloaded` (529) | A retry-after countdown. When `autoRetryOverloaded` is set, retry once automatically when the countdown ends | Retry now |
 | `unavailable` (503) | "The inference backend (or a routed model's container) is down" | Retry |
 | `upstream_down` (502) | Same content as the banner | Retry |
 | `timeout` (504) | "No answer within 900 s" | Retry |
-| `network` | "The UI server itself is unreachable. Is `mise run ui` still running?" | Retry |
+| `network` | "The UI server itself is unreachable. Start it with `mise run start`." | Retry |
 
 **Upstream-down banner** (`#banner`, driven by `oj:health`):
 
 - When `ok === false`, a red strip reads "OpenJev is not reachable at http://127.0.0.1:8080".
-  It shows copyable command chips for `mise run startOpenJev` and `mise run logsOpenJev`, the
+  It shows copyable command chips for `mise run start` and `mise run logs`, the
   note "first start loads the model (~16 GB), may take a minute", a live "next check in Ns"
   countdown, and a Retry now button.
 - If `errorType === 'auth'`, the banner is amber and shows the auth hint instead.
@@ -1407,10 +1396,10 @@ Each error card shows:
 
 ## 7. Acceptance checklist (the integrator verifies these live)
 
-Setup: `mise run startOpenJev`, wait for `/v1/models`, then `mise run ui`.
+Setup: `mise run start` (it waits for `/v1/models` and starts the UI).
 
-1. `mise run ui` starts on 127.0.0.1:8090 and prints the banner with upstream reachable.
-   `mise run uiTest` passes.
+1. `mise run start` serves the UI on 127.0.0.1:8090 with upstream reachable (banner in `.openjev-ui.log`).
+   `mise run test` passes.
 2. `curl -si localhost:8090/v1/models` returns the upstream JSON, with `server-timing`
    containing `upstream;dur=` and `x-request-id`. `curl localhost:8090/ui/api/health` returns
    `ok: true` with models.
@@ -1436,8 +1425,8 @@ Setup: `mise run startOpenJev`, wait for `/v1/models`, then `mise run ui`.
    400 with the hint.
 10. A 401/403: set Settings → Auth override to `Bearer wrong`. Against an upstream with
     `OPENJEV_API_KEY` set, the card shows the hint. Without a key on the upstream the override
-    is ignored, and that is fine. `mise run stopOpenJev`: within 5 s the red banner appears
-    with the start hint, and Send gives a 502 `upstream_down` card. `mise run startOpenJev`:
+    is ignored, and that is fine. `mise run stop`: within 5 s the red banner appears
+    with the start hint, and Send gives a 502 `upstream_down` card. `mise run start`:
     the banner clears on its own.
 11. Chat: "New chat" and ask something. Tokens stream in visibly, with ttft and tok/s and a
     working Stop. Usage appears in the meta bar. JSON mode renders a tree. "Judge with System
@@ -1458,7 +1447,7 @@ Setup: `mise run startOpenJev`, wait for `/v1/models`, then `mise run ui`.
     answers.
 16. Keyboard: Cmd+K, Cmd+J, Cmd+I, Esc and `?` all work. Layout is usable at a width of
     1280px, and the sidebar collapses to an overlay below 900px.
-17. `git status` shows changes only under `ui/` plus `mise.toml`.
+17. `git status` shows changes only under `ui/` plus `mise-tasks/`.
 
 ---
 

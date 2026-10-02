@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Benchmark a running OpenJev: 100 labelled questions, latency and accuracy"
+set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+oj_require_installed
+oj_http_up "$OJ_SERVER_URL/v1/models" || oj_die "OpenJev is not running. Start it with: mise run start"
+exec "$OJ_PY" benchmark.py --url "$OJ_SERVER_URL" "$@"

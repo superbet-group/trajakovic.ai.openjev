@@ -242,7 +242,7 @@ def main():
     try:
         urllib.request.urlopen(args.url + "/v1/models", timeout=3).read()
     except Exception as e:
-        sys.exit(f"Server not reachable at {args.url} ({e}). Run: mise run startOpenJev")
+        sys.exit(f"Server not reachable at {args.url} ({e}). Run: mise run start")
 
     cases = build_cases()
     print(f"Warming up ({args.warmup} requests)...")
