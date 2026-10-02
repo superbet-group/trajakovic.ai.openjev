@@ -269,7 +269,7 @@ Tool names (F14) carry no `openjev_` prefix, because the client already namespac
    request_id, answers, decision, latency_ms, degraded}` (JSONL, `OPENJEV_MCP_LOG`). States are
    hashed, not logged, unless `OPENJEV_MCP_LOG_STATES=1`. This covers the MCP side only (F10). The
    OpenJev server logs full request and response bodies, states included (image bytes redacted),
-   when started with `OPENJEV_LOG_LEVEL=debug` (`openjev/api.py`, `mise run startOpenJevDebug`). At
+   when started with `OPENJEV_LOG_LEVEL=debug` (`openjev/api.py`, `OPENJEV_LOG_LEVEL=debug mise run restart`). At
    debug level it also logs bodies it rejects, although the comment above `log_invalid` in `api.py`
    ("a rejected body is never logged") says otherwise; that comment is only true at `info`. The MCP
    layer cannot see the server's log level, except through the proposed `/v1/limits` field

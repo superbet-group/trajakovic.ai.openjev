@@ -16,7 +16,7 @@ spec 1.1).
 | Fact | Value | Source |
 |---|---|---|
 | Base URL | `http://127.0.0.1:8080` | live |
-| Backend | MLX, in-process, Apple silicon (`OPENJEV_BACKEND=mlx`, started by `./startOpenJev`) | `startOpenJev`, process list |
+| Backend | MLX, in-process, Apple silicon (`OPENJEV_BACKEND=mlx`, started by `mise run start`) | `mise-tasks/start`, process list |
 | OpenAPI title / version | `OpenJev` / `0.5.0` (`GET /openapi.json`) | live |
 | Model served for `/v1/systemone` | wire name `openjev-0.1`, aliases `openjev-latest`, `jev-latest`, `jev-preview` | live |
 | Model served for `/v1/chat/completions` | `diffusiongemma-26b` (and alias `diffusiongemma`) | live |
@@ -631,7 +631,7 @@ could not repair it.
 
 ### 12.6 Debug logging writes request bodies (from source, working tree of 2026-09-30)
 
-With `OPENJEV_LOG_LEVEL=debug` (`mise run startOpenJevDebug`), the request middleware in
+With `OPENJEV_LOG_LEVEL=debug` (`OPENJEV_LOG_LEVEL=debug mise run restart`), the request middleware in
 `openjev/api.py` logs every `/v1/` POST body before validation, and every JSON response body
 (`body_for_log`: image base64 is replaced by a size marker, everything else is kept, capped at
 `OPENJEV_LOG_BODY_CHARS`, default 20,000 characters). States are therefore written to
