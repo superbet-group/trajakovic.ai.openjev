@@ -110,7 +110,7 @@ def test_upstream_down_is_502(static_dir):
     assert r.status_code == 502
     d = r.json()["detail"]
     assert d["error_type"] == "upstream_unreachable"
-    assert d["hint"] == "mise run startOpenJev"
+    assert d["hint"] == "mise run start"
     assert UP in d["message"]
 
 

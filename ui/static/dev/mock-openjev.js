@@ -83,7 +83,7 @@ export function installMockOpenJev() {
     if (path === '/ui/api/config') {
       return json(200, { uiVersion: '0.1.0-dev', openjevUrl: 'http://127.0.0.1:8080', proxyBase: '', authConfigured: false, defaults: { model: 'openjev-latest', chatModel: 'diffusiongemma-26b' },
         limits: { maxImages: 8, maxImageBytes: 5242880, maxQuestions: 256, stepsMax: 8, samplesMax: 32, thinkMax: 4096, chatMaxTokensDefault: 1024, chatMaxTokensCap: 8192, choiceMaxOptions: 255, scoreMaxLevels: 10 },
-        hints: { start: 'mise run startOpenJev', logs: 'mise run logsOpenJev', status: 'mise run statusOpenJev', stop: 'mise run stopOpenJev' } });
+        hints: { start: 'mise run start', logs: 'mise run logs', status: 'mise run status', stop: 'mise run stop' } });
     }
     if (path === '/ui/api/health') return json(200, { ok: true, checkedAt: Date.now(), upstream: { url: 'http://127.0.0.1:8080', reachable: true, status: 200, latencyMs: 2.1, requestId: 'req_mock', serverTiming: 'model;dur=0.0', error: null, errorType: null }, models: MODELS, authConfigured: false, proxy: { uptimeS: 1, requests: 1 } });
     if (path === '/v1/models') return json(200, { models: MODELS }, { 'server-timing': 'model;dur=0.0, server;dur=0.1, total;dur=0.1, upstream;dur=1.2' });

@@ -1,5 +1,5 @@
 // Unit tests for the batch file import (static/js/jev/batchImport.js), no browser.
-// Run: node --test ui/tests/batch_import.test.mjs  (or mise run uiTestJs)
+// Run: node --test ui/tests/batch_import.test.mjs  (or mise run test)
 
 import { registerHooks } from 'node:module';
 import { pathToFileURL, fileURLToPath } from 'node:url';
