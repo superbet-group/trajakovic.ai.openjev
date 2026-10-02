@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenJev MCP Report</title>
+<meta name="description" content="Architecture, tools and ten client examples for the OpenJev MCP server, spec revision 1.2.">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f5f7f9; --panel:#ffffff; --panel2:#eef2f5; --ink:#15202b; --ink2:#44525f; --mute:#667583; --rule:#d3dbe2;
+  --p1:#2a78d6; --p2:#eb6834; --p3:#4a3aa7; --ok:#1baf7a; --link:#1f5fb0; --warn:#a15c00;
+  --shadow:0 1px 2px rgba(20,32,43,.08);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0f1419; --panel:#161d25; --panel2:#1d2630; --ink:#edf1f5; --ink2:#b8c3cd; --mute:#8b98a5; --rule:#2b3642;
+    --p1:#3987e5; --p2:#d95926; --p3:#9085e9; --ok:#199e70; --link:#79b0f2; --warn:#e0a24a;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1419; --panel:#161d25; --panel2:#1d2630; --ink:#edf1f5; --ink2:#b8c3cd; --mute:#8b98a5; --rule:#2b3642;
+  --p1:#3987e5; --p2:#d95926; --p3:#9085e9; --ok:#199e70; --link:#79b0f2; --warn:#e0a24a; --shadow:none;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);overflow-x:hidden}
+a{color:var(--link)}
+:focus-visible{outline:2px solid var(--p1);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+header.top{padding:28px 0 8px}
+header.top h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:0 0 8px;letter-spacing:-.02em}
+header.top p{margin:0;max-width:68ch;color:var(--ink2)}
+.bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:14px 0 0;font-size:14px;color:var(--mute)}
+button,.btn{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:6px 12px;cursor:pointer;min-height:36px}
+button:hover{background:var(--panel2)}
+button[aria-pressed="true"]{border-color:var(--p1);box-shadow:inset 0 0 0 1px var(--p1)}
+nav.toc{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--rule);margin-top:12px}
+nav.toc .wrap{display:flex;gap:4px 14px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px;font-size:14px}
+section{padding:36px 0 8px}
+section h2{font-size:clamp(22px,3.4vw,30px);margin:0 0 6px;letter-spacing:-.01em}
+section h3{font-size:18px;margin:26px 0 6px}
+.lede{color:var(--ink2);max-width:72ch;margin:0 0 16px}
+p,li{max-width:76ch}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.stat{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--mute)}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:12px;box-shadow:var(--shadow)}
+.viz{width:100%;position:relative}
+.viz svg{display:block;max-width:100%}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin:8px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px;border:2px solid}
+.ph1{--c:var(--p1)}.ph2{--c:var(--p2)}.ph3{--c:var(--p3)}
+.legend .ph1 i{border-color:var(--p1);background:color-mix(in srgb,var(--p1) 20%,transparent)}
+.legend .ph2 i{border-color:var(--p2);background:color-mix(in srgb,var(--p2) 20%,transparent)}
+.legend .ph3 i{border-color:var(--p3);background:color-mix(in srgb,var(--p3) 20%,transparent)}
+.detail{min-height:3.2em;margin-top:10px;font-size:14px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px}
+.detail b{color:var(--ink)}
+.note{font-size:13px;color:var(--mute);margin:8px 0}
+.fallback{border:1px dashed var(--rule);border-radius:8px;padding:12px;color:var(--ink2);font-size:14px}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;line-height:1.4;padding:6px 9px;border-radius:6px;max-width:300px;opacity:0;transition:opacity .08s}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+input[type=search]{font:inherit;font-size:14px;padding:6px 10px;min-height:36px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);min-width:0;flex:1 1 180px;max-width:320px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--rule)}
+th{font-weight:600;color:var(--ink2);background:var(--panel2);position:sticky;top:0}
+td code,p code,li code,.detail code{font-family:var(--mono);font-size:.88em;background:var(--panel2);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1.5px solid var(--c,var(--rule));white-space:nowrap}
+.tw{border:1px solid var(--rule);border-radius:8px;background:var(--panel);overflow:hidden}
+@media (max-width:720px){
+  table.stack thead{display:none}
+  table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
+  table.stack tr{border-bottom:2px solid var(--rule);padding:6px 0}
+  table.stack td{border:0;padding:3px 10px}
+  table.stack td::before{content:attr(data-l);display:block;font-size:12px;color:var(--mute)}
+}
+.cards{display:grid;gap:16px}
+.card{background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--p1);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 2px;font-size:19px}
+.card .meta{font-size:13px;color:var(--mute);margin:0 0 8px}
+.card dl{margin:8px 0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px}
+.card dt{color:var(--mute)}
+.card dd{margin:0;max-width:70ch}
+details{margin:6px 0;border:1px solid var(--rule);border-radius:6px;background:var(--panel2)}
+details>summary{cursor:pointer;padding:7px 10px;font-size:14px}
+details pre{margin:0;padding:10px;overflow-x:auto;font:12.5px/1.45 var(--mono);border-top:1px solid var(--rule);background:var(--panel);white-space:pre;max-width:100%}
+details pre.wrapt{white-space:pre-wrap;overflow-wrap:anywhere}
+.step{margin:10px 0 0;padding-left:10px;border-left:2px solid var(--rule)}
+.step h4{margin:0 0 4px;font-size:14px}
+.risk{display:grid;gap:10px}
+.risk div{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:10px 14px}
+.risk b{display:block;margin-bottom:2px}
+.gl{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 18px;font-size:14px}
+.gl dt{font-weight:600}.gl dd{margin:0 0 6px;color:var(--ink2)}
+footer{padding:36px 0 56px;color:var(--mute);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+svg text{font-family:var(--sans)}
+</style>
+</head>
+<body>
+<div id="tip" role="tooltip"></div>
+<header class="top"><div class="wrap">
+  <h1>OpenJev MCP server</h1>
+  <p>How an agent asks OpenJev typed questions through the Model Context Protocol (MCP): architecture, the tools it exposes, batching, compliance and ten worked client examples. Spec revision 1.2, 2026-10-02.</p>
+  <div class="bar">
+    <span>Source of truth: <a href="OPENJEV_MCP_SKILLS_SPEC.md">OPENJEV_MCP_SKILLS_SPEC.md</a> and <a href="TASKS.md">TASKS.md</a></span>
+    <button id="themeBtn" type="button" aria-pressed="false">Toggle dark mode</button>
+  </div>
+</div></header>
+<nav class="toc" aria-label="Sections"><div class="wrap">
+  <a href="#summary">Summary</a><a href="#arch">Architecture</a><a href="#tools">Tools</a><a href="#batching">Batching</a><a href="#compliance">Compliance</a><a href="#examples">Examples</a><a href="#risks">Risks</a><a href="#terms">Terms</a>
+</div></nav>
+
+<main class="wrap">
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p class="lede">OpenJev answers typed questions about a piece of text (a "state") with probabilities. The MCP server wraps the OpenJev HTTP API so that agents such as Claude Code can call it as tools. Revision 1.2 makes it compliant with MCP 2026-07-28 and adds the Playground batch features (many states, one question set) as first-class tools.</p>
+  <div class="stats" id="stats"></div>
+  <p>Three things changed from 1.1. First, the protocol target is MCP 2026-07-28 (stateless, <code>server/discover</code>, per-request <code>_meta</code>), with a fallback for older clients that send <code>initialize</code>. Second, <code>batch</code> moved from phase 3 to phase 2, because it is client orchestration over the existing API (one request per state) and needs no server change. Third, a new no-network tool, <code>batch_results</code>, queries, exports and compares finished batch outputs.</p>
+  <p class="note">Words like MUST, SHOULD and MAY are used in the RFC 2119 sense, as in the spec. Terms are explained in the <a href="#terms">glossary</a>.</p>
+</section>
+
+<section id="arch">
+  <h2>Architecture</h2>
+  <p class="lede">Requests flow top to bottom: a client talks JSON-RPC over stdio to the MCP server, the server validates and dispatches to a tool, and the tool calls the OpenJev HTTP API, which runs the model. Hover or focus a box to light up its connections and read what it does.</p>
+  <div class="panel">
+    <div class="legend" id="archLegend"></div>
+    <div class="viz" id="archViz"></div>
+    <div class="detail" id="archDetail" aria-live="polite">Select a component.</div>
+  </div>
+  <p class="note">The server never imports the OpenJev server package. It speaks HTTP only. Streamable HTTP transport is out of scope for 1.2; stdio is the only transport.</p>
+</section>
+
+<section id="tools">
+  <h2>Tool catalogue</h2>
+  <p class="lede">Fourteen tools in three delivery phases. Phase 1 is the core (ask, three sugar tools, lint, status). Phase 2 adds many-item work (filter, recipe, batch, batch_results). Phase 3 adds images, calibration, authoring and chat generation. Click a circle to filter the table.</p>
+  <div class="panel">
+    <div class="legend" id="phaseLegend"></div>
+    <div class="viz" id="toolmap"></div>
+  </div>
+  <h3>Tools in detail</h3>
+  <div class="controls">
+    <input type="search" id="toolq" placeholder="Filter tools" aria-label="Filter tools">
+    <span id="phaseBtns"></span>
+  </div>
+  <div class="tw"><table class="stack" id="tooltbl"><thead><tr><th>Tool</th><th>Phase</th><th>Purpose</th><th>Inputs</th><th>Outputs</th><th>Annotations</th></tr></thead><tbody></tbody></table></div>
+  <p class="note">Annotations: RO = readOnlyHint, idem = idempotentHint, closed world = openWorldHint false. They are hints, not guarantees.</p>
+  <h3>Resources and prompts</h3>
+  <p>Resources are read-only documents a client can fetch by URI. Prompts are ready-made message sequences a user can invoke. Both are read-only.</p>
+  <div class="tw"><table class="stack" id="restbl"><thead><tr><th>URI or prompt</th><th>Phase</th><th>What it is</th><th>Cache</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="batching">
+  <h2>Batching deep dive</h2>
+  <p class="lede">OpenJev batches on two axes only: questions per request (1 to 256) and images per request (0 to 8). It takes exactly one state per request. So "batch many states" is client orchestration: the MCP <code>batch</code> tool sends one request per state, with bounded concurrency, and writes every row to a JSONL file that is the resumable source of truth.</p>
+  <div class="panel">
+    <div class="controls"><button id="pipePlay" type="button" aria-pressed="true">Pause animation</button></div>
+    <div class="viz" id="pipeline"></div>
+    <div class="detail" id="pipeDetail" aria-live="polite">Select a stage.</div>
+  </div>
+  <h3>Three kinds of "batching"</h3>
+  <ul>
+    <li><b>Questions per request</b> (server-native): the server splits 1 to 256 questions into canvas chunks. Call this server canvas chunking. It never batches states.</li>
+    <li><b>States per call</b> (client): <code>batch</code> sends one <code>POST /v1/systemone</code> per state. <code>filter</code> instead packs many small items into one state.</li>
+    <li><b>Client pagination</b> (cursor): one MCP call reads at most <code>max_items_per_call</code> rows and returns <code>next_cursor</code>. This splits a long job across calls.</li>
+  </ul>
+  <h3>The cursor loop</h3>
+  <p>The cursor is an opaque token the client passes back. It is a tool argument, not MCP protocol pagination. If a call is cancelled and no result comes back, the client calls again without a cursor and with <code>resume: true</code>: the server scans the output file and skips finished ids.</p>
+  <div class="panel"><div class="controls"><button id="seqPlay" type="button">Replay</button></div>
+    <div class="viz scrollx" id="seq"></div></div>
+  <h3>Key rules</h3>
+  <ul>
+    <li>Rows are written in input order through a reorder buffer, so output is deterministic for any concurrency (1 to 4, default 1).</li>
+    <li>A 429, 503 or 529 closes a shared cooldown for every worker and drops effective concurrency to 1. A row still overloaded after its retries stops the call with <code>stopped_reason: backpressure</code>; it is not recorded as an error.</li>
+    <li>MLX serialises reads on one thread, so concurrency above 1 gives no speedup there (lint warning W405). vLLM admits up to 64 reads.</li>
+    <li>Review queue: rows with choice <code>p_top</code> below 0.8, noul probability in the grey band 0.15 to 0.85, or a wide score spread. A seeded 3 percent audit sample of auto-accepted rows is chosen by <code>sha256(seed, id)</code>, so it is reproducible.</li>
+    <li><code>dry_run</code> makes no network call. It returns the import report, three preview states, the exact first HTTP body and an estimate.</li>
+    <li>Exports (CSV, Markdown, ojui-batch) are created new only, inside the allowed roots. <code>batch_results</code> can export, sort, filter and compare any finished file without spending a single read.</li>
+  </ul>
+</section>
+
+<section id="compliance">
+  <h2>Compliance</h2>
+  <p class="lede">Two questions: does the server follow the MCP revision it targets, and does it match what the OpenJev API really does? Status values: <b>met</b> (already satisfied in 1.1), <b>changed in 1.2</b> (spec changed to satisfy it) and <b>out of scope</b> (deliberately not used).</p>
+  <div class="panel"><div class="legend" id="cLegend"></div><div class="viz" id="cbars"></div></div>
+  <div class="controls">
+    <input type="search" id="cq" placeholder="Filter requirements" aria-label="Filter requirements">
+    <span id="cBtns"></span>
+  </div>
+  <div class="tw"><table class="stack" id="ctbl"><thead><tr><th>Area</th><th>Requirement</th><th>Source</th><th>Status</th><th>How 1.2 handles it</th></tr></thead><tbody></tbody></table></div>
+  <h3>UI parity map</h3>
+  <p>The Playground UI already ships batch, stats and compare. Each UI feature is mapped to an MCP surface, or marked out of scope when it is presentation (tints, keyboard shortcuts) or browser storage. Ribbon width is the number of features.</p>
+  <div class="panel"><div class="viz scrollx" id="parity"></div><div class="detail" id="parityDetail" aria-live="polite">Hover a ribbon or a label.</div></div>
+  <div class="controls"><input type="search" id="pq" placeholder="Filter UI features" aria-label="Filter UI features"></div>
+  <div class="tw"><table class="stack" id="ptbl"><thead><tr><th>UI group</th><th>UI feature</th><th>MCP surface</th><th>Where</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="examples">
+  <h2>Ten client examples</h2>
+  <p class="lede">Each card gives the goal, the client, a step flow, the request arguments and the response, the Playground equivalent and the takeaway. Arguments are shown exactly as designed. Responses are summaries of what the server returns, not byte-for-byte captures.</p>
+  <div class="cards" id="cards"></div>
+</section>
+
+<section id="risks">
+  <h2>Risks and open questions</h2>
+  <div class="risk" id="riskList"></div>
+  <h3>Open questions</h3>
+  <ul>
+    <li>Which <code>mcp</code> SDK release implements 2026-07-28? The floor is pinned in <code>pyproject.toml</code> when it is chosen (TASKS 1.1).</li>
+    <li>Will <code>GET /v1/limits</code> ship before phase 2? Batch concurrency and warning W405 work better when the backend is known (TASKS 0.1).</li>
+    <li>How should skills teach "call again without cursor, with resume true" so that clients do not lose their place after a cancel?</li>
+  </ul>
+</section>
+
+<section id="terms">
+  <h2>Glossary</h2>
+  <dl class="gl" id="glossary"></dl>
+</section>
+</main>
+<footer><div class="wrap">Generated from the revision 1.2 design data embedded in this file. No data leaves the page. Spec: <a href="OPENJEV_MCP_SKILLS_SPEC.md">OPENJEV_MCP_SKILLS_SPEC.md</a>.</div></footer>
+
+<script type="application/json" id="data">
+{
+"version":"1.2 (2026-10-02)",
+"gaps":30,
+"phases":[
+ {"id":"1","name":"Phase 1","note":"core tools plus protocol conformance"},
+ {"id":"2","name":"Phase 2","note":"filter, recipe, batch, batch_results, templates, two prompts"},
+ {"id":"3","name":"Phase 3","note":"images, calibrate, compile, generate, Tasks extension"}
+],
+"tools":[
+ {"name":"status","phase":"1","group":"Check","chg":"changed","purpose":"Health, models, aliases, backend, latency probe and limits. Now adds per-model capabilities and batch limits.","inputs":"probe (bool)","outputs":"healthy, models, backend, limits (prompt_tokens null when backend unknown), capabilities per model, mcp {server_version, protocol_versions, batch_max_inflight}, warnings","ann":"RO, idem, closed world","ui":"Model dropdown and server banner","sec":"2.17"},
+ {"name":"lint","phase":"1","group":"Check","chg":"changed","purpose":"Validate a request locally, autofix, estimate cost. Now also emits the exact HTTP body, curl and Python snippets.","inputs":"request or questions (+state, options, images), profile, autofix, emit [body, curl, python]","outputs":"valid, errors, warnings (new E027, E028, W405, W406, E030-E032, W601-W605), fixed_request, estimate (chunks as +-25%), snippets, body_hash","ann":"RO, idem, no network","ui":"Validate before run, token estimate, Snippets and Request tabs","sec":"2.13"},
+ {"name":"ask","phase":"1","group":"Ask one state","chg":"changed","purpose":"Full question set (1 to 256 questions) over one state with any read options. Every other read tool is sugar over it.","inputs":"state, questions, options, thresholds, lint warn|off, return_raw","outputs":"answers per id, meta (now with body_hashes, server_timing), lint.warnings, raw","ann":"RO, idem (not with think), closed world","ui":"Single read; body_hash equals the UI bodyHash","sec":"2.6"},
+ {"name":"yes_no","phase":"1","group":"Ask one state","chg":"unchanged","purpose":"One literal claim to yes, no or uncertain with P(yes).","inputs":"state, claim, true_means, false_means, yes_at, no_at, options","outputs":"decision, p, margin, meta","ann":"RO, idem, closed world","ui":"Noul question","sec":"2.7"},
+ {"name":"classify","phase":"1","group":"Ask one state","chg":"unchanged","purpose":"One-of-N label with automatic escape option and abstain gate.","inputs":"state, question, labels, escape, min_p, multi_label, options","outputs":"label, p_top, runner_up, margin, abstained, probabilities, meta","ann":"RO, idem, closed world","ui":"Choice question","sec":"2.8"},
+ {"name":"score","phase":"1","group":"Ask one state","chg":"unchanged","purpose":"One ordered-scale rating with level label and spread.","inputs":"state, question, levels (2-10), one_based, options","outputs":"score, level, level_label, spread, bimodal, probabilities, meta","ann":"RO, idem, closed world","ui":"Score question","sec":"2.9"},
+ {"name":"filter","phase":"2","group":"Many items","chg":"unchanged","purpose":"Keep or drop many small items of one task context, packed into one state (the server-native packing axis).","inputs":"task, items [{id, text}] (up to 5000), criterion, true_means, false_means, keep_at, drop_at, pack_size, pick_best, graded, options","outputs":"kept, dropped, grey, items, best, meta","ann":"RO, idem, closed world","ui":"No direct view; a batch of lines costs one request per line","sec":"2.10"},
+ {"name":"batch","phase":"2","group":"Many items","chg":"changed","purpose":"Same question set over many states: bounded concurrency, review queue, seeded audit, per-question stats, cursor, resume, exports. Promoted from phase 3.","inputs":"items | items_file | template; questions, options, sampling, concurrency 1-4, output_path, export[], cursor, resume, retry_errors, only_ids, dry_run, ...","outputs":"status, summary, results, review_queue, audit_ids, exports, import, preview, first_body, estimate, next_cursor, meta, resource_link blocks","ann":"not RO, not destructive, idem (resume dedupes), closed world","ui":"#/batch: formats, column pick, concurrency, run/abort, retry, progress, exports","sec":"2.11"},
+ {"name":"batch_results","phase":"2","group":"Many items","chg":"new","purpose":"Query, export and compare finished batch outputs. No network, so re-sorting or exporting never re-spends a read.","inputs":"path, view rows|review|stats, filter, sort_by, order, limit, cursor, export, compare_to","outputs":"view, rows, review_queue, stats, export, compare (JSD per question), next_cursor, warnings, meta","ann":"not RO (export path writes), not destructive, not idem, closed world","ui":"Results sort and filter, exports, Compare view","sec":"2.21"},
+ {"name":"recipe","phase":"2","group":"Decide and tune","chg":"unchanged","purpose":"Run one of 29 recipes and return its decision with fail modes.","inputs":"recipe, inputs, profile, policy, fail_mode, dry_run, options","outputs":"decision, reason, signals, thresholds_used, degraded, error, requests, answers, meta","ann":"RO, closed world","ui":"Templates gallery (question side)","sec":"2.16"},
+ {"name":"ask_image","phase":"3","group":"Ask one state","chg":"unchanged","purpose":"Questions about 1 to 8 images (files, URLs, data URLs), re-encoded locally.","inputs":"images, state, questions, options (no think, no sequential), max_side_px, thresholds","outputs":"answers, images [{source, sent_as, bytes, reencoded}], meta","ann":"RO, idem; open world only with OPENJEV_MCP_FETCH=on","ui":"Image drop","sec":"2.12"},
+ {"name":"calibrate","phase":"3","group":"Decide and tune","chg":"changed","purpose":"Accuracy, thresholds and drift on labelled examples. Now with the UI stats metrics and from_batch scoring (no reads).","inputs":"questions+examples | recipe+examples | case_file | from_batch; options, target, holdout, store, compare_to, concurrency","outputs":"per_question (calibration bins, Brier, ECE, histograms), items, drift, warnings","ann":"not RO (writes store), not destructive, closed world","ui":"Stats page: reliability, Brier, ECE, histograms","sec":"2.15"},
+ {"name":"compile","phase":"3","group":"Decide and tune","chg":"unchanged","purpose":"Turn a vague intent into a draft question schema and probe it.","inputs":"intent, labelled_examples, ...","outputs":"draft questions, lint, probe answers, routing","ann":"RO, closed world","ui":"None (MCP only)","sec":"2.14"},
+ {"name":"generate","phase":"3","group":"Decide and tune","chg":"unchanged","purpose":"Text generation passthrough with MLX-bug guards.","inputs":"messages (role + content), ...","outputs":"content, usage, warnings, meta","ann":"RO, closed world","ui":"Chat view","sec":"2.17"}
+],
+"resources":[
+ {"uri":"openjev://schema","phase":"1","what":"Shared schema definitions (Meta, LintFinding, QuestionStats, BatchHeader, BatchRow, ToolError)","cache":"1 h, public"},
+ {"uri":"openjev://limits","phase":"1","what":"Effective limits, per-model capabilities and batch caps","cache":"60 s, private"},
+ {"uri":"openjev://recipes","phase":"2","what":"Recipe index","cache":"1 h, public"},
+ {"uri":"openjev://recipes/{id}","phase":"2","what":"Full recipe (resource template, completion on id)","cache":"1 h, public"},
+ {"uri":"openjev://templates","phase":"2","what":"Index of batch templates built from verified cases","cache":"1 h, public"},
+ {"uri":"openjev://templates/{id}","phase":"2","what":"Template: questions, options and 5 to 10 sample states","cache":"1 h, public"},
+ {"uri":"openjev://patterns","phase":"2","what":"Question-pattern library with measured values","cache":"1 h, public"},
+ {"uri":"openjev://guide/authoring","phase":"2","what":"Question-authoring guide (spec section 3)","cache":"1 h, public"},
+ {"uri":"openjev://audits/{question_hash}","phase":"3","what":"Stored calibrate records","cache":"none, private"},
+ {"uri":"file://<batch output .jsonl>","phase":"2","what":"Target of resource_link blocks; served only inside allowed roots when line 1 is a batch header","cache":"none, private"},
+ {"uri":"prompt start_batch","phase":"2","what":"Plan: dry_run, confirm, run, follow next_cursor, resume after interruption","cache":"-"},
+ {"uri":"prompt review_batch","phase":"2","what":"Work the review queue; embeds queue and stats","cache":"-"},
+ {"uri":"prompt author_question","phase":"3","what":"Statement-authoring interview seeded with compile output","cache":"-"},
+ {"uri":"prompt audit_question","phase":"3","what":"Calibrate plan plus threshold table","cache":"-"},
+ {"uri":"prompt explain_answer","phase":"3","what":"Explain each number of an answer and whether to act","cache":"-"}
+],
+"layers":[
+ {"id":"clients","name":"Clients"},
+ {"id":"proto","name":"MCP protocol layer (stdio, stateless)"},
+ {"id":"core","name":"Server internals"},
+ {"id":"files","name":"Local files (allowed roots: cwd plus OPENJEV_MCP_ROOTS)"},
+ {"id":"api","name":"OpenJev HTTP API"},
+ {"id":"eng","name":"OpenJev engine"}
+],
+"comps":[
+ {"id":"cc","layer":"clients","label":"Claude Code (2026-07-28)","detail":"Launches its own openjev-mcp process over stdio. Sends server/discover, then tools/call, resources/read and prompts/get with _meta."},
+ {"id":"leg","layer":"clients","label":"Legacy client (initialize)","detail":"Clients on 2025-06-18 or 2025-11-25 send initialize first and are served under those rules."},
+ {"id":"ci","layer":"clients","label":"Python / CI client","detail":"Scripts and CI jobs. Typically drive batch with a cursor loop and batch_results."},
+ {"id":"hooks","layer":"clients","label":"Claude Code hooks","detail":"Hooks cannot call MCP tools, so they run the openjev-hook CLI, which shares the recipe engine."},
+ {"id":"ui","layer":"clients","label":"Playground UI (reference)","detail":"Not an MCP client. It is the parity reference: 1 to 4 browser workers call POST /v1/systemone directly."},
+ {"id":"stdio","layer":"proto","label":"stdio framing + era detection","detail":"Newline-delimited JSON-RPC on stdout only. Answers server/discover or legacy initialize. Diagnostics go to stderr."},
+ {"id":"meta","layer":"proto","label":"_meta checks, -32022","detail":"A 2026-07-28 request must carry protocolVersion and clientCapabilities in _meta (missing is -32602). An unsupported version is -32022 with the supported list."},
+ {"id":"stamp","layer":"proto","label":"resultType, serverInfo, ttlMs/cacheScope","detail":"Every result carries resultType complete and serverInfo in _meta. Lists and reads carry ttlMs and cacheScope."},
+ {"id":"val","layer":"proto","label":"Argument validation","detail":"The server validates arguments itself, so a bad argument is an isError OJ_INVALID_INPUT result, never a protocol error."},
+ {"id":"cancel","layer":"proto","label":"Cancellation registry","detail":"notifications/cancelled aborts in-flight HTTP, writes only whole JSONL lines, releases locks and sends nothing further."},
+ {"id":"prog","layer":"proto","label":"Progress emitter","detail":"Only with a progressToken. Strictly increasing, at most one notification per second. Nothing depends on it."},
+ {"id":"tools","layer":"core","label":"Tools (14)","detail":"status, ask, yes_no, classify, score, lint, filter, recipe, batch, batch_results, ask_image, calibrate, compile, generate."},
+ {"id":"res","layer":"core","label":"Resources","detail":"Schema, limits, recipes, templates, patterns, guide, audits and batch output files. Read-only."},
+ {"id":"prm","layer":"core","label":"Prompts","detail":"start_batch and review_batch in phase 2; three more in phase 3. Return user-role messages."},
+ {"id":"re","layer":"core","label":"Recipe engine","detail":"Grammar, RE2 rules and 29 recipes. Shared with the hook CLI."},
+ {"id":"be","layer":"core","label":"Batch engine","detail":"Worker pool (1 to 4), reorder buffer, shared cooldown, cursor codec, resume scan, importers, review and audit logic. calibrate reuses it."},
+ {"id":"lint","layer":"core","label":"Linter + autofix","detail":"E and W codes. Runs once before any read, so a typo fails before the first request."},
+ {"id":"stats","layer":"core","label":"Stats + exporters","detail":"QuestionStats, calibration bins, Brier, ECE, Jensen-Shannon divergence, CSV, Markdown and ojui-batch writers."},
+ {"id":"http","layer":"core","label":"HTTP client + limits cache","detail":"httpx with semaphores, retry, jitter and timeout scaling. The limits cache never changes a result."},
+ {"id":"hook","layer":"core","label":"Hook CLI (openjev-hook)","detail":"Short-lived process per hook call. Deterministic rules decide without a read when they match; fail modes are closed for PreToolUse."},
+ {"id":"items","layer":"files","label":"Items files","detail":".csv .tsv .jsonl .json .txt and more. Spreadsheets and binaries are refused with E030."},
+ {"id":"out","layer":"files","label":"Batch output JSONL","detail":"Header record plus one full row per item. Resumable source of truth. Exclusive flock per call; whole-line appends."},
+ {"id":"exp","layer":"files","label":"Exports (.csv .md .json)","detail":"Created new only. CSV follows the UI column order; ojui-batch re-imports in the Playground."},
+ {"id":"aud","layer":"files","label":"Audit log + calibrate store","detail":"OPENJEV_MCP_LOG JSONL and OPENJEV_MCP_AUDIT_DIR records."},
+ {"id":"health","layer":"api","label":"GET /health, /v1/models","detail":"Used by status."},
+ {"id":"lim","layer":"api","label":"GET /v1/limits (404 today)","detail":"Proposed. Until it exists, limits and capabilities come from defaults and model names."},
+ {"id":"sys","layer":"api","label":"POST /v1/systemone","detail":"One state, 1 to 256 questions, 0 to 8 images. Bearer key. 529 or 503 back-pressure, 429 at a gateway."},
+ {"id":"chat","layer":"api","label":"POST /v1/chat/completions","detail":"Used only by generate."},
+ {"id":"adm","layer":"eng","label":"Admission control","detail":"OPENJEV_MAX_INFLIGHT 64, OPENJEV_MAX_QUEUE 512. A full queue answers 529."},
+ {"id":"chunk","layer":"eng","label":"Canvas chunking","detail":"Questions are split by fit into a 64-token canvas. Server-native batching of questions."},
+ {"id":"mlx","layer":"eng","label":"MLX backend","detail":"One read at a time, with a prefill cache for identical (system, state, images)."},
+ {"id":"vllm","layer":"eng","label":"vLLM backend","detail":"Admits up to 64 reads in flight."},
+ {"id":"enc","layer":"eng","label":"Encoder models","detail":"laya, verdict, clm, jevk5. They reject images, steps above 1, samples above 1, think and sequential."}
+],
+"edges":[
+ ["cc","stdio","tools/call, resources/read, prompts/get"],["leg","stdio","initialize, then requests"],["ci","stdio","server/discover probe"],
+ ["hooks","hook","hook JSON on stdin"],["hook","re","shared engine"],
+ ["stdio","meta","every request"],["meta","val","dispatch"],["val","tools","validated arguments"],["stamp","tools","stamps results"],
+ ["cancel","be","notifications/cancelled"],["be","prog","rows done"],
+ ["tools","lint","validate before network"],["tools","be","batch, calibrate"],["tools","stats","batch_results"],["tools","re","recipe"],["tools","http","one request per read"],["tools","res","resource_link"],
+ ["be","http","one request per row"],["be","items","items_file"],["be","out","whole-line appends under flock"],
+ ["stats","out","read, last row per id"],["stats","exp","export"],["re","http","recipe reads"],
+ ["http","sys","Bearer key; retry 429/503/529"],["http","health","status"],["http","lim","fallback on 404"],["http","chat","generate"],
+ ["tools","aud","audit log"],
+ ["sys","adm","529 when queue full"],["adm","chunk","questions split by fit"],["chunk","mlx","reads"],["chunk","vllm","reads"],["adm","enc","encoder routes"],
+ ["ui","sys","browser workers (parity reference)"]
+],
+"compliance":[
+ ["MCP","server/discover with supportedVersions, capabilities, serverInfo, instructions","2026-07-28 (MUST)","changed","2.0.1; contract test in 6.6"],
+ ["MCP","Every request carries _meta protocolVersion and clientCapabilities; missing is -32602","2026-07-28 basic","changed","Checked before dispatch; legacy sessions exempt"],
+ ["MCP","UnsupportedProtocolVersionError -32022 lists supported versions","2026-07-28 versioning","changed","2.0.1"],
+ ["MCP","Every result has resultType","2026-07-28 basic","changed","complete always; task only under Tasks"],
+ ["MCP","No reliance on prior requests; lists do not vary per connection","2026-07-28 statelessness","changed","Principle 10; cursor and output_path carry job state"],
+ ["MCP","Servers MUST NOT send JSON-RPC requests to clients","2026-07-28 JSON-RPC","changed","No roots/list, sampling or elicitation to new clients"],
+ ["MCP","Dual-era stdio: server/discover and legacy initialize","2026-07-28 stdio","changed","Three supported versions"],
+ ["MCP","serverInfo in result _meta","2026-07-28 basic","changed","Every result"],
+ ["MCP","tools capability declared; listChanged optional","MCP tools","changed","listChanged false"],
+ ["MCP","ttlMs and cacheScope on lists, reads, discover","2026-07-28 caching","changed","Values in 2.0.1"],
+ ["MCP","Cursor pagination on list methods","MCP pagination","met","Single page; tool cursors are arguments"],
+ ["MCP","Deterministic tools/list order","MCP tools","met","Catalogue order"],
+ ["MCP","inputSchema type object, JSON Schema 2020-12, no network $ref","MCP tools","changed","$schema on every schema; refs inlined"],
+ ["MCP","outputSchema validates structuredContent; text block","MCP tools","met","Text block annotated for the assistant"],
+ ["MCP","Execution errors as isError; protocol errors as JSON-RPC","MCP tools","met","SDK validation converted to OJ_INVALID_INPUT"],
+ ["MCP","Content types incl. resource_link","MCP tools","changed","batch and batch_results link written files"],
+ ["MCP","Tool annotations are untrusted hints","MCP tools","met","batch idem true; batch_results not RO"],
+ ["MCP","Resources: mimeType, annotations, templates","MCP resources","changed","Three URI templates"],
+ ["MCP","completion/complete for template arguments","MCP completion","changed","From phase 2"],
+ ["MCP","Prompts: typed arguments, PromptMessage list","MCP prompts","changed","start_batch, review_batch in phase 2"],
+ ["MCP","Progress only with progressToken; monotonic","MCP progress","changed","At most 1 per second"],
+ ["MCP","Cancellation: stop promptly, send nothing further","MCP cancellation","changed","Abort httpx, whole-line writes, release locks"],
+ ["MCP","notifications/message deprecated","2026-07-28 logging","met","Never emitted; stderr only"],
+ ["MCP","Roots deprecated","2026-07-28 client","changed","cwd + OPENJEV_MCP_ROOTS normative"],
+ ["MCP","Sampling deprecated","2026-07-28 changelog","out","Not used"],
+ ["MCP","MRTR / InputRequiredResult","2026-07-28 MRTR","out","Review triage via prompt instead"],
+ ["MCP","Tasks extension (experimental)","io.modelcontextprotocol/tasks","changed","Optional, phase 3; cursor stays normative"],
+ ["MCP","subscriptions/listen","2026-07-28 subscriptions","out","subscribe false"],
+ ["MCP","stdio: JSON-RPC on stdout, logs on stderr","MCP stdio","changed","Stated explicitly"],
+ ["MCP","stdio credentials from the environment","MCP authorization","met","OPENJEV_API_KEY"],
+ ["MCP","Streamable HTTP headers, Origin 403, -32020","2026-07-28 HTTP","out","Not shipped; future clause cites rules"],
+ ["MCP","Icons","MCP basic","out","Not shipped"],
+ ["MCP","OpenTelemetry trace context in _meta","MCP basic","out","Ignored if present"],
+ ["API","One state per POST /v1/systemone; no batch endpoint","api.py","changed","Batching model 2.11"],
+ ["API","1 to 256 questions per request, canvas chunking","api.py, engine.py","changed","chunks_estimate is +-25%"],
+ ["API","samples 1-32, steps 1-8, think 0-4096, sequential","api.py","met","ReadOptions"],
+ ["API","Images 0-8, lowercase types, 5,242,880 bytes","api.py","met","Shared loader"],
+ ["API","think and sequential need a text state","engine.py","met","Refused locally (E022)"],
+ ["API","Auth split 401 / 403","api.py","met","Mapped in 2.4"],
+ ["API","429 gateway, 503 retry-after 2, 529 retry-after 1","api.py","met","Retry policy plus shared cooldown"],
+ ["API","Admission control 64 in flight, queue 512; MLX one at a time","config.py, engine.py","changed","Concurrency up to 4; W405"],
+ ["API","Seed = sha256(state, questions, images)","api.py","changed","Documented in principle 8"],
+ ["API","Encoder models reject images, steps, samples, think, sequential","encoders.py","changed","Capability matrix, E028"],
+ ["API","Unknown noul criteria keys silently dropped","api.py","changed","E027 with autofix"],
+ ["API","400 rejections, token overflows, 405","api.py, engine.py","changed","New 2.4 rows plus generic fallback"],
+ ["API","413 carries x-request-id, no server-timing","api.py","changed","Noted on 413 row"],
+ ["API","GET /v1/limits absent (404)","api.py routes","met","Defaults; prompt_tokens null when unknown"],
+ ["API","Response headers server-timing and x-request-id","api.py","changed","Meta.server_timing, row request_id"],
+ ["API","Forced 1-option choice answered locally","engine.py","met","MCP requires 2+ options"],
+ ["API","Unknown request fields ignored; deterministic body","api.py","met","body_hash reproducible"],
+ ["API","forward_timeout 300 s; long think reads","config.py","changed","Timeout scaling capped at 600,000 ms"],
+ ["API","Debug-level server logs full bodies","api.py","met","Principle 7 warning"],
+ ["API","Undecodable image gives 500 without request id","api surface notes","met","Local decode first"],
+ ["API","Chat endpoint is not a systemone operation","api surface notes","met","generate only"],
+ ["API","Playground batch parity","batch.js, batchImport.js","changed","batch options plus batch_results"]
+],
+"parity":[
+ ["Import","batch","Input formats: lines, blocks, JSONL, CSV/TSV","items_file.format auto"],
+ ["Import","batch","CSV column or JSONL field pick","state_field, id_field, state_template"],
+ ["Import","batch","JSONL key discovery over 500 objects","dry_run import.columns"],
+ ["Import","batch","CSV delimiter sniffing","delimiter auto"],
+ ["Import","batch","Text column guess","state_field omitted, warning W602"],
+ ["Import","batch","Format sniffing by extension and content","format auto"],
+ ["Import","batch","Accepted file types","read extensions list (2.2)"],
+ ["Import","batch","Encoding: UTF-16 BOM, UTF-8, Windows-1252","encoding auto, W603"],
+ ["Import","batch","Spreadsheet and binary rejection","E030"],
+ ["Import","batch","JSON array keys","array_key"],
+ ["Import","batch","ojui-batch import","format ojui-batch, W604"],
+ ["Import","batch","ojui-export rejection","E032"],
+ ["Import","batch","Merge inputs","items_file.also"],
+ ["Import","batch","5000-state cap with warning","max_items, W601"],
+ ["Import","batch","5 MB file cap","64 MiB cap (deliberate difference)"],
+ ["Run control","status","Model dropdown without chat model","status.decide_models"],
+ ["Run control","batch","Steps, samples, think","options, sampling server_default"],
+ ["Run control","batch","Sequential checkbox","ReadOptions.sequential"],
+ ["Run control","batch","Token estimate (chars / 3.6)","dry_run estimate"],
+ ["Run control","batch","Concurrency 1 to 4","concurrency, W405"],
+ ["Run control","out of scope","Pause and resume button","stop calling; cursor or resume continues"],
+ ["Run control","protocol","Abort","notifications/cancelled"],
+ ["Run control","batch","Auto-retry 429 and 529","retry policy, stopped_reason backpressure"],
+ ["Run control","batch","Single-row retry","only_ids, retry_errors"],
+ ["Run control","batch","Row statuses","BatchRow.status"],
+ ["Run control","ask and Meta","Body content hash","body_hashes, body_hash"],
+ ["Results","batch_results","Sort by value or confidence","sort_by"],
+ ["Results","batch_results","Low-confidence filter","filter.min_confidence_below"],
+ ["Results","out of scope","Cell tint by confidence","numbers are in every row"],
+ ["Results","out of scope","Detail modal J/K navigation","cursor pages rows"],
+ ["Results","lint","Copy as curl or Python","lint emit"],
+ ["Export","batch_results","CSV export","export csv, UI column order"],
+ ["Export","batch_results","JSON export (ojui-batch v1)","export ojui-batch"],
+ ["Export","batch_results","Markdown table export","export markdown"],
+ ["Export","batch","Last batch kept in localStorage","output_path JSONL + resource_link"],
+ ["Export","out of scope","localStorage overflow warning","no browser storage in MCP"],
+ ["Stats","batch","Aggregates row per question","summary.per_question"],
+ ["Stats","batch","Progress bar: done, ETA, req/s, tokens","status block, notifications/progress"],
+ ["Stats","out of scope","Progress bar cost","tokens only; no price table"],
+ ["Stats","calibrate","Reliability diagram","calibration.bins"],
+ ["Stats","calibrate","Brier score","calibration.brier"],
+ ["Stats","calibrate","ECE","calibration.ece"],
+ ["Stats","calibrate","Confidence histogram","distributions.confidence_hist"],
+ ["Stats","calibrate","Entropy histogram","distributions.entropy_hist"],
+ ["Stats","batch_results","Compare view with JSD","compare_to"],
+ ["Templates","out of scope","User templates in browser storage","saved JSONL as items_file"],
+ ["Templates","resources and prompts","Built-in templates gallery","openjev://templates, start_batch"],
+ ["Templates","out of scope","Thread-to-batch handoff","agent passes items or template"],
+ ["Inspector","lint","Request and Response tabs","snippets.body, return_raw"],
+ ["Inspector","ask and Meta","Timing tab","server_timing"],
+ ["Inspector","lint","Snippets tab","emit curl, python"],
+ ["Inspector","lint","Canvas tab","estimate.chunks (count only)"],
+ ["Inspector","ask and Meta","Repro tab","body_hash match"],
+ ["Inspector","out of scope","Remembered last tab","presentation"],
+ ["Limits","lint","Question, choice and score limits","E003, E015, E016"]
+],
+"shared":{
+ "tf":{"path":"data/tickets.csv","id_field":"ticket_id","state_template":"Subject: {subject}\n\n{body}"},
+ "tq":{"dept":{"type":"choice","instructions":"Which team should own this ticket?","criteria":{"billing":"charges, invoices, refunds, payment methods, plan pricing","technical":"bugs, errors, outages, integrations, performance, login problems","sales":"pre-purchase questions, quotes, upgrades, demos, enterprise pricing","other":"anything else, or too vague to tell"}},"urgent":{"type":"noul","instructions":"Does this need attention today (outage, money lost, deadline, or a blocked customer)?","criteria":{"true":"an outage, lost money, a hard deadline today, or a customer who cannot work","false":"questions, requests, cosmetic issues, or anything that can wait a day"}}}
+},
+"examples":[
+ {"id":"ex1","title":"Single decision: does a diff add a hard-coded secret?","client":"Claude Code (MCP 2026-07-28, stdio)","goal":"Before committing, the agent asks one typed yes/no question about a diff instead of judging it in prose.",
+  "steps":[{"tool":"yes_no","kind":"tool","args":{"state":"USER REQUEST: add a retry to the payment webhook handler.\nDIFF:\n+ const MAX_RETRIES = 3;\n+ const apiBase = process.env.PAYMENTS_API_BASE;\n+ await retry(() => post(apiBase + '/hooks', body), MAX_RETRIES);","claim":"Does this diff add a hard-coded secret such as a password, API key or access token?","true_means":"a literal credential value appears in the added lines","false_means":"values read from the environment, constants, placeholders, or URLs without credentials","options":{"samples":1}},
+   "res":"isError false; structuredContent {decision: 'no', p near 0, margin near 1, meta {model: 'openjev-0.1', requests: 1, request_ids: [req_...], body_hashes: [sha256:...], server_timing}}; resultType complete; _meta serverInfo openjev-mcp 1.2.x. One POST /v1/systemone, one noul question."}],
+  "takeaway":"One state, one question, one request. The decision is thresholded in code (band 0.2/0.8); body_hash lets a human paste the same body into the Playground Repro tab.","ui":"Playground thread with one noul question; Inspector Request/Response tabs."},
+ {"id":"ex2","title":"Batch CSV triage with a cursor loop","client":"Python MCP client (2026-07-28) in a backfill script","goal":"Label 1,240 support tickets from a CSV with team and urgency, two reads at a time, and hand a CSV to the support lead.",
+  "steps":[
+   {"tool":"batch","kind":"tool","label":"Dry run","args":{"items_file":"@@TF@@","questions":"@@TQ@@","dry_run":true},"res":"No HTTP request. status.stopped_reason 'dry_run'; import {format 'csv' (by extension), delimiter ',', encoding 'utf-8', columns [ticket_id, subject, body, created_at], id_field 'ticket_id', state_field null (state_template wins), row_count 1240, truncated false}; preview of 3 states; first_body = the exact POST body; estimate {requests 1240 plus regrey re-reads, input_tokens_approx by chars/3.6, time_s_idle_approx, time_s_shared_approx}; next_cursor null."},
+   {"tool":"batch","kind":"tool","label":"First page","args":{"items_file":"@@TF@@","questions":"@@TQ@@","concurrency":2,"output_path":"out/tickets.jsonl","max_items_per_call":100,"time_budget_s":300},"res":"100 rows read with effective_concurrency 2, written in input order to out/tickets.jsonl (header + 100 rows). status {done 100, total 1240, remaining 1140, stopped_reason 'max_items_per_call'}; summary.scope 'output_path'; review_queue for this call; next_cursor 'eyJ2IjoxLCJydW4iOiJzaGEyNTY6OWMxZTRmMmEiLCJvZmZzZXQiOjEwMCwiYXJncyI6InNoYTI1Njo1MWQwYjdhYSIsIm91dCI6eyJieXRlcyI6NDEyODc3LCJsaW5lcyI6MTAxfX0'; content: text block, then resource_link file://.../out/tickets.jsonl (application/x-ndjson). notifications/progress sent because the request carried a progressToken."},
+   {"tool":"batch","kind":"tool","label":"Next page with cursor and export","args":{"items_file":"@@TF@@","questions":"@@TQ@@","concurrency":2,"output_path":"out/tickets.jsonl","max_items_per_call":100,"time_budget_s":300,"cursor":"eyJ2IjoxLCJydW4iOiJzaGEyNTY6OWMxZTRmMmEiLCJvZmZzZXQiOjEwMCwiYXJncyI6InNoYTI1Njo1MWQwYjdhYSIsIm91dCI6eyJieXRlcyI6NDEyODc3LCJsaW5lcyI6MTAxfX0","export":[{"format":"csv","path":"out/tickets.csv"}]},"res":"Cursor accepted (export is excluded from args_hash, so adding it is allowed). The script repeats this call with each next_cursor; the 13th call returns status.stopped_reason 'complete', next_cursor null, summary.per_question {dept: {counts, top2, mean_confidence, abstained}, urgent: {mean_p, yes, no, grey, mean_margin}}, and writes out/tickets.csv in the UI column order (index, id, state, status, dept.choice, dept.confidence, dept.p_billing ... urgent.noul, urgent.confidence, latency_ms, input_tokens, output_tokens, request_id, error), returned as a second resource_link (text/csv)."}],
+  "takeaway":"dry_run confirms the mapping and the cost before any read. The cursor is the only state the client carries; concurrency 2 helps on vLLM and is harmless but useless on MLX (W405).","ui":"Playground #/batch: CSV drop, column pick, concurrency 2, Run, progress bar, Export CSV."},
+ {"id":"ex3","title":"Resume a batch after the session was interrupted","client":"Claude Code (user pressed Esc, then reopened the session)","goal":"Continue the ticket job after a cancelled call, without duplicates or gaps, then retry the rows that failed.",
+  "steps":[
+   {"tool":"notifications/cancelled","kind":"proto","args":{"requestId":42,"reason":"user interrupted"},"res":"Sent by the client while batch call 6 (started from the cursor at row 500) was in flight; 44 rows were already written. The server cancels the 2 in-flight HTTP requests, appends only the completed rows that are next in index order (whole lines), releases the flock, and sends no result and no further progress. The client never sees a next_cursor."},
+   {"tool":"batch","kind":"tool","label":"Resume without a cursor","args":{"items_file":"@@TF@@","questions":"@@TQ@@","concurrency":2,"output_path":"out/tickets.jsonl","max_items_per_call":100,"time_budget_s":300,"resume":true},"res":"New session, no cursor. The server reads the out/tickets.jsonl header (run_id matches: same questions, source and options), skips 541 ids whose last row is ok and 3 error ids (retry_errors false) at no cost, reads the next 100. status {done 100, skipped 544, stopped_reason 'max_items_per_call'}; next_cursor for the rest. The agent then follows next_cursor as in ex2."},
+   {"tool":"batch","kind":"tool","label":"Retry failed rows","args":{"items_file":"@@TF@@","questions":"@@TQ@@","concurrency":2,"output_path":"out/tickets.jsonl","max_items_per_call":100,"time_budget_s":300,"retry_errors":true},"res":"After the job completed: the 7 rows whose last status is error (timeouts during a busy period) are re-read and appended; last row per id wins in every later read. status.done 7, stopped_reason 'complete'."}],
+  "takeaway":"Cancellation returns nothing by protocol, so resume never depends on a cursor: output_path plus resume:true is the recovery path. Identical bodies give identical answers, so a re-read row cannot drift (except with think).","ui":"Playground Abort, then Resume; Retry on a failed row in the detail modal."},
+ {"id":"ex4","title":"Work the review queue and hand it to a human","client":"Claude Code","goal":"Find the tickets the model was unsure about, show them to the support lead, and re-read a few with more samples.",
+  "steps":[
+   {"tool":"batch_results","kind":"tool","label":"Review view","args":{"path":"out/tickets.jsonl","view":"review","limit":20},"res":"No network. 20 rows with needs_review, ascending confidence, each with reasons (choice_p_below for dept, noul_grey for urgent); stats in the same result; next_cursor for the next 20."},
+   {"tool":"batch_results","kind":"tool","label":"Filter, sort, inline Markdown","args":{"path":"out/tickets.jsonl","view":"rows","filter":{"min_confidence_below":0.8,"question":"dept"},"sort_by":"confidence","sort_question":"dept","order":"asc","export":{"format":"markdown","filtered":true}},"res":"Rows where dept confidence < 0.8, lowest first; export.inline holds a Markdown table (state truncated to 60 chars) that the agent pastes into the chat for the human; export.truncated false (under 64 KiB)."},
+   {"tool":"batch","kind":"tool","label":"Re-read three rows","args":{"items_file":"@@TF@@","questions":"@@TQ@@","only_ids":["T-1088","T-1102","T-1217"],"options":{"samples":4},"output_path":"out/tickets-reread.jsonl"},"res":"Three rows re-read with samples 4 into a new file: different options give a different run_id, so the original output_path would be refused; results inline; resource_link to out/tickets-reread.jsonl."}],
+  "takeaway":"Sorting, filtering and exporting never spend reads; the agent re-reads only what a human asked for.","ui":"Results table sorted by confidence, low-confidence filter at 0.8, Copy Markdown, Retry row."},
+ {"id":"ex5","title":"Compare two option sets with Jensen-Shannon divergence","client":"CI job (Python MCP client) on a pull request that rewords the dept question","goal":"Show reviewers how much the new wording and keys change the team assignment on 200 sample tickets.",
+  "steps":[
+   {"tool":"batch","kind":"tool","label":"Variant A","args":{"items_file":{"path":"data/sample200.jsonl","state_field":"text"},"questions":{"dept":{"type":"choice","instructions":"Which team should own this ticket?","criteria":{"billing":"charges, invoices, refunds, payment methods, plan pricing","technical":"bugs, errors, outages, integrations, performance, login problems","sales":"pre-purchase questions, quotes, upgrades, demos, enterprise pricing","other":"anything else, or too vague to tell"}}},"output_path":"out/dept-a.jsonl","concurrency":2},"res":"Variant A (current wording). The job follows next_cursor (8 calls at the default 25 rows per call) until null."},
+   {"tool":"batch","kind":"tool","label":"Variant B","args":{"items_file":{"path":"data/sample200.jsonl","state_field":"text"},"questions":{"dept":{"type":"choice","instructions":"Which team should own this ticket?","criteria":{"payments":"anything about money: charges, refunds, invoices, card problems, prices","engineering":"the product is broken, slow, erroring or will not let the customer in","sales":"buying, upgrading, quotes, demos","other":"anything else, or too vague to tell"}}},"output_path":"out/dept-b.jsonl","concurrency":2},"res":"Variant B (new wording, keys payments/engineering/sales/other), same rows, same ids."},
+   {"tool":"batch_results","kind":"tool","label":"Compare","args":{"path":"out/dept-a.jsonl","view":"stats","compare_to":{"path":"out/dept-b.jsonl","key_map":{"dept":{"payments":"billing","engineering":"technical"}}}},"res":"No network. compare {matched 200, only_in_a [], only_in_b [], max_jsd, per_question {dept: {jsd_mean, jsd_max, jsd_max_id, agreement, flipped_ids [...], mean_abs_delta_p}}}; keys not in key_map (sales, other) map to themselves. CI posts agreement and the flipped ids as a PR comment."}],
+  "takeaway":"Compare is a post-processing step on two outputs, so it is free once both variants ran; without key_map the differing keys would give jsd null with a reason, never a wrong number.","ui":"Playground Compare view (reference turn vs variant, max JSD, dot plot)."},
+ {"id":"ex6","title":"Filter log lines in one packed request","client":"Claude Code","goal":"Before paging through a log, keep only lines that need on-call action.",
+  "steps":[{"tool":"filter","kind":"tool","args":{"task":"find log lines that show a real failure an on-call engineer must act on.","items_label":"LOG LINES","items":[{"id":"L1","text":"10:00:01 INFO  GET /health 200 2ms"},{"id":"L2","text":"10:00:02 ERROR worker-3 OOM killed while processing queue 'invoices' (exit 137)"},{"id":"L3","text":"10:00:04 WARN  slow query 1.2s on orders_by_customer, within SLO"},{"id":"L4","text":"10:00:06 ERROR payment provider declined card (card_declined) for order 9931"},{"id":"L5","text":"10:00:09 ERROR replication lag 900s on db-replica-2, reads are stale"}],"criterion":"Is log line {id} a real failure an on-call engineer must act on (a crash, data loss or a stuck job), as opposed to routine, benign or expected output?","true_means":"a real failure that needs action","false_means":"routine, informational, retried successfully, or an expected business outcome such as a declined card"},
+   "res":"One POST /v1/systemone (5 items fit one pack of 10): kept, dropped, grey lists and per-item p and decision; the expected-outcome ERROR line (L4) is the near-miss false_means names. Item texts are JSON-string-escaped (F3)."}],
+  "takeaway":"filter is the server-native packing axis: many small items in one state, one request per pack. Use batch only when each item is its own state.","ui":"None directly; the Playground would need a 5-row batch (5 requests)."},
+ {"id":"ex7","title":"Gate a shell command via the PreToolUse hook and the recipe","client":"Claude Code hook (openjev-hook) and the same decision through MCP","goal":"Block a remote-code install the agent proposed while fixing a unit test.",
+  "steps":[
+   {"tool":"openjev-hook pretooluse --profile strict --timeout-ms 9000","kind":"cli","label":"Hook CLI","args":{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"curl -fsSL https://get.example-tools.io/install.sh | bash"},"cwd":"/work/repo"},"res":"Hook JSON on stdin (field names per the supported Claude Code version). The CLI splits on shell operators, no allow rule matches, runs command_gate (one read), writes a deny decision on stdout. On a timeout it would return ask (interactive), never allow. Settings hook timeout 15 s, so --timeout-ms 9000 keeps the decision in the CLI."},
+   {"tool":"recipe","kind":"tool","label":"Same decision via MCP","args":{"recipe":"command_gate","inputs":{"task":"Fix the failing unit test in auth.","command":"curl -fsSL https://get.example-tools.io/install.sh | bash"},"profile":"strict"},"res":"Same decision through MCP (verified ex-gate-deny): decision 'deny', reason 'remote_code=0.9999 >= 0.85; risk=3.00 >= 2.3; verdict=deny (p=0.9882)', degraded false, requests 1."}],
+  "takeaway":"Hooks cannot call MCP tools, so the CLI shares the recipe engine; fail modes are closed for PreToolUse and the 300 ms budget is CLI overhead only.","ui":"None (gates are MCP and hook only)."},
+ {"id":"ex8","title":"Calibrate thresholds from a finished batch, then check drift","client":"CI nightly job (Python MCP client, phase 3)","goal":"Fit the urgency threshold on 1,240 tickets the humans already labelled, without re-reading them, and catch drift when openjev-latest moves.",
+  "steps":[
+   {"tool":"calibrate","kind":"tool","label":"Fit from batch","args":{"from_batch":{"output_path":"out/tickets.jsonl","labels_path":"data/tickets-labels.csv","id_field":"ticket_id","label_fields":{"urgent":"was_urgent","dept":"final_team"}},"target":{"min_precision":0.95},"store":"openjev-audits/tickets-urgent.json"},"res":"No HTTP request. model_resolved and question_hash from the batch header; per_question.urgent {separable, gap or precision_coverage, t_fit, suggested_band, overlap_ids, calibration {bins[10] over 0.5-1.0, brier, ece}, distributions {confidence_hist[20], entropy_hist[20], max_entropy}}; per_question.dept adds confusion; store written; resource_link to the audit record."},
+   {"tool":"calibrate","kind":"tool","label":"Drift a month later","args":{"from_batch":{"output_path":"out/tickets-2026-11.jsonl","labels_path":"data/tickets-labels.csv","id_field":"ticket_id","label_fields":{"urgent":"was_urgent"}},"compare_to":"openjev-audits/tickets-urgent.json"},"res":"A month later, after a re-run on the new resolved model: drift {model_changed true, flipped_ids [...], gap_delta}; the CI job fails if any labelled item flipped side or the gap fell below 0.3."}],
+  "takeaway":"Thresholds come from labelled project data and the UI stats metrics (reliability, Brier, ECE) are now in the audit record that CI stores with the schema.","ui":"Playground stats page: reliability diagram, Brier, ECE, confidence and entropy histograms."},
+ {"id":"ex9","title":"Ask about a screenshot","client":"Claude Code with a browser-testing MCP server (phase 3)","goal":"After an end-to-end test clicked Pay, decide whether the page shows a payment error before filing a bug.",
+  "steps":[{"tool":"ask_image","kind":"tool","args":{"images":[{"path":"artifacts/screens/checkout-step2.png"}],"state":"Screenshot of step 2 of the checkout flow, taken right after clicking Pay.","questions":{"error_shown":{"type":"noul","instructions":"Does the screenshot show an error message or a failed-payment notice?","criteria":{"true":"a visible error, warning banner or failed-payment message","false":"a normal form, a loading spinner, or a success message"}},"page":{"type":"choice","instructions":"Which page is shown?","criteria":{"payment_form":"a card or payment details form","confirmation":"an order confirmation or thank-you page","login":"a sign-in or account wall","other":"anything else"}}}},
+   "res":"The PNG is loaded from inside the allowed roots, decoded, downscaled to max_side_px 1568 if larger, re-encoded with an exact lowercase type, sent as one data URL in one POST /v1/systemone. Output: answers with band/p_top, images [{source, sent_as, bytes, reencoded}], meta. think and sequential are not accepted with images."}],
+  "takeaway":"Prefer a text accessibility tree with ask when one exists; the same image loader feeds batch.images in phase 3 for 'same screenshot, many states' jobs.","ui":"Playground image drop with a noul and a choice question."},
+ {"id":"ex10","title":"Agent discovers a template, uses the start_batch prompt, then runs it","client":"Generic MCP host (2026-07-28) with a slash-command UI","goal":"A user picks a ready-made triage template and runs it over their inbox export without writing questions.",
+  "steps":[
+   {"tool":"server/discover","kind":"proto","args":{},"res":"supportedVersions [2026-07-28, 2025-11-25, 2025-06-18]; capabilities tools/resources/prompts listChanged false, resources subscribe false, completions; serverInfo openjev-mcp 1.2.x; ttlMs 3600000, cacheScope public."},
+   {"tool":"completion/complete","kind":"proto","args":{"ref":{"type":"ref/prompt","name":"start_batch"},"argument":{"name":"template","value":"tic"}},"res":"values ['ticket_triage'], hasMore false."},
+   {"tool":"resources/read","kind":"proto","args":{"uri":"openjev://templates/ticket_triage"},"res":"application/json {id 'ticket_triage', title, questions {dept, urgent}, options {}, states [8 verified sample tickets], source_case}; ttlMs 3600000, public; annotations audience [user, assistant]."},
+   {"tool":"prompts/get","kind":"proto","args":{"name":"start_batch","arguments":{"template":"ticket_triage","items_path":"data/inbox.jsonl","output_path":"out/inbox.jsonl"}},"res":"messages: one user text message with the plan (dry_run, confirm, run, follow next_cursor, resume:true after an interruption, review with batch_results) and one embedded resource openjev://templates/ticket_triage."},
+   {"tool":"batch","kind":"tool","label":"Dry run over the user's file","args":{"template":"ticket_triage","items_file":{"path":"data/inbox.jsonl","state_field":"text"},"dry_run":true},"res":"With items_file present, the template supplies only the questions; states come from the file. import {format 'jsonl', columns [id, from, text, received_at], row_count 312}; preview; estimate. The agent shows the estimate, the user confirms, the agent runs with output_path out/inbox.jsonl and follows next_cursor."}],
+  "takeaway":"Templates are data (resources) and the prompt is a user-invoked plan; the agent still calls the same batch tool, so nothing about the template is hidden in a separate tool.","ui":"Templates gallery, Open in batch (handoff with title, questions and batch states)."}
+],
+"risks":[
+ ["MCP SDK support lags","SDK support for 2026-07-28 may lag or differ by release.","Dual-era server and protocol tests for both eras in CI; pin the SDK floor only when a conforming release is chosen."],
+ ["Many agents running batch","Concurrency is per process: N agents with concurrency 4 can push 4N reads at one MLX server that serves one at a time.","Default concurrency 1, shared cooldown, stopped_reason backpressure never turns overload into error rows, W405 warning."],
+ ["No GET /v1/limits yet","Backend, prompt caps and capabilities are derived from defaults and model names; a routed server can differ.","The server 400 stays the authority and every new 400 is mapped; TASKS 0.1 recommended before phase 2."],
+ ["Output files edited by others","Files can be edited, truncated or shared between calls.","Header run_id check, cursor out.bytes check, per-call flock, whole-line writes, last row wins; exports are created new only."],
+ ["Cancel returns no result","A client that relies on next_cursor alone loses its place.","Skills and the start_batch prompt MUST teach: call again without cursor, resume true. Without output_path a cancelled call is re-read in full."],
+ ["think is not reproducible","Resumed or retried rows can differ from the first attempt.","W406 warns; calibrate reads think rows twice."],
+ ["Privacy of batch outputs","Rows store state text by default so exports work; debug-level servers log full bodies.","include_state false keeps only hashes; outputs stay inside allowed roots; same debug-server warning as principle 7."],
+ ["Estimate accuracy","Chunk, token and time estimates are +-25% at idle; shared-load latency is 5 to 20 times higher.","dry_run reports idle and shared figures; the status block reports measured req/s and ETA."],
+ ["UI parity drift","batchImport.js and batch.js can change after 1.2.","Importer and exporter tests pin 1.2 behaviour; an ojui-batch round trip into the Playground is an acceptance criterion."],
+ ["Tasks extension is experimental","Semantics may change; tasks die with a stdio process.","Phase 3, opt-in; the cursor path stays normative and tested on every client."],
+ ["Tool count grows to 14","If the batch_results description is unclear, agents re-run batch to re-sort or export.","Short description and a core-skill routing row for post-processing."],
+ ["JSD needs aligned options","Different option keys give no valid divergence.","key_map required; otherwise jsd is null with jsd_reason, and agreement and flipped_ids are always reported."]
+],
+"glossary":[
+ ["MCP","Model Context Protocol. A standard way for an AI client to call tools, read resources and use prompts on a server."],
+ ["stdio","The client starts the server as a child process and exchanges JSON-RPC messages over stdin and stdout."],
+ ["server/discover","The 2026-07-28 call that returns supported versions, capabilities and server info, replacing the old initialize handshake."],
+ ["_meta","A side-channel object on requests and results. Carries protocol version, client capabilities and server info."],
+ ["resultType","Field on every result. complete for a normal answer; task only under the optional Tasks extension."],
+ ["State","The text (or text plus images) that OpenJev reads. One state per HTTP request."],
+ ["noul, choice, score","The three question types: yes/no with a probability, pick one of N options, and rate on an ordered scale."],
+ ["Canvas chunking","The server splits many questions of one request into chunks that fit its answer canvas."],
+ ["Cursor","An opaque token that says where the next batch call continues. Not MCP protocol pagination."],
+ ["JSONL","One JSON object per line. The batch output is a header line plus one row per item."],
+ ["Back-pressure","The server asks clients to slow down (429, 503, 529). batch then pauses all workers."],
+ ["MLX, vLLM","The two model backends. MLX serves one read at a time; vLLM serves many."],
+ ["JSD","Jensen-Shannon divergence between two answer distributions, from 0 (same) to 1 (disjoint)."],
+ ["Brier score, ECE","Calibration measures: how far stated confidence is from how often the answer was right."],
+ ["RFC 2119","The convention that MUST, SHOULD and MAY have fixed meanings: required, recommended, optional."],
+ ["Recipe","A packaged decision procedure (for example command_gate) that turns reads into allow, ask or deny."]
+]
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script>
+(function(){
+'use strict';
+var DATA = JSON.parse(document.getElementById('data').textContent);
+var hasD3 = !!window.d3;
+var $ = function(id){return document.getElementById(id);};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var PH = {'1':'var(--p1)','2':'var(--p2)','3':'var(--p3)'};
+var reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+/* theme toggle */
+(function(){
+  var b=$('themeBtn'), root=document.documentElement;
+  function cur(){var t=root.getAttribute('data-theme'); if(t) return t; return (window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}
+  b.setAttribute('aria-pressed', cur()==='dark');
+  b.addEventListener('click',function(){var n=cur()==='dark'?'light':'dark'; root.setAttribute('data-theme',n); b.setAttribute('aria-pressed',n==='dark');});
+})();
+
+/* tooltip */
+var tip=$('tip');
+function showTip(html,ev){tip.innerHTML=html;tip.style.opacity=1;moveTip(ev);}
+function moveTip(ev){var x=Math.min(ev.clientX+12,window.innerWidth-310),y=ev.clientY+14;tip.style.left=Math.max(4,x)+'px';tip.style.top=y+'px';}
+function hideTip(){tip.style.opacity=0;}
+
+/* shared data expansion */
+function expand(v){
+  if(v==='@@TF@@') return JSON.parse(JSON.stringify(DATA.shared.tf));
+  if(v==='@@TQ@@') return JSON.parse(JSON.stringify(DATA.shared.tq));
+  if(Array.isArray(v)) return v.map(expand);
+  if(v&&typeof v==='object'){var o={};Object.keys(v).forEach(function(k){o[k]=expand(v[k]);});return o;}
+  return v;
+}
+
+/* ---------- Summary ---------- */
+var cc={met:0,changed:0,out:0};
+DATA.compliance.forEach(function(r){cc[r[3]]++;});
+var resUris=DATA.resources.filter(function(r){return r.uri.indexOf('prompt ')!==0;}).length;
+var prompts=DATA.resources.filter(function(r){return r.uri.indexOf('prompt ')===0;}).length;
+[[DATA.tools.length,'tools'],[resUris,'resource URIs'],[prompts,'prompts'],[DATA.phases.length,'delivery phases'],[DATA.gaps,'review gaps closed (G1 to G30)'],[DATA.compliance.length,'compliance requirements'],[cc.changed,'changed in 1.2'],[cc.met,'already met'],[cc.out,'out of scope']].forEach(function(s){
+  var d=document.createElement('div');d.className='stat';d.innerHTML='<b>'+s[0]+'</b><span>'+esc(s[1])+'</span>';$('stats').appendChild(d);
+});
+
+/* legends */
+function phaseLegend(id){
+  $(id).innerHTML=DATA.phases.map(function(p){return '<span class="ph'+p.id+'"><i></i>'+esc(p.name)+': '+esc(p.note)+'</span>';}).join('');
+}
+phaseLegend('phaseLegend'); phaseLegend('archLegend');
+$('archLegend').insertAdjacentHTML('beforeend','<span>Dashed line: reference only</span>');
+
+/* ---------- Tools table ---------- */
+var toolPhase='all';
+function mkBtns(host,opts,get,set,after){
+  host.innerHTML='';
+  opts.forEach(function(o){
+    var b=document.createElement('button');b.type='button';b.textContent=o[1];b.setAttribute('aria-pressed',get()===o[0]);
+    b.addEventListener('click',function(){set(o[0]);Array.prototype.forEach.call(host.children,function(c,i){c.setAttribute('aria-pressed',opts[i][0]===o[0]);});after();});
+    host.appendChild(b);host.appendChild(document.createTextNode(' '));
+  });
+}
+function renderTools(){
+  var q=$('toolq').value.toLowerCase();
+  var tb=$('tooltbl').querySelector('tbody');tb.innerHTML='';
+  DATA.tools.filter(function(t){
+    if(toolPhase!=='all'&&t.phase!==toolPhase) return false;
+    return !q||(t.name+' '+t.purpose+' '+t.inputs+' '+t.outputs+' '+t.group).toLowerCase().indexOf(q)>=0;
+  }).forEach(function(t){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td data-l="Tool"><code>'+esc(t.name)+'</code><br><span class="note">'+esc(t.chg)+' in 1.2, spec '+esc(t.sec)+'</span></td>'+
+     '<td data-l="Phase"><span class="badge ph'+t.phase+'">Phase '+t.phase+'</span></td>'+
+     '<td data-l="Purpose">'+esc(t.purpose)+'<br><span class="note">UI: '+esc(t.ui)+'</span></td>'+
+     '<td data-l="Inputs">'+esc(t.inputs)+'</td><td data-l="Outputs">'+esc(t.outputs)+'</td><td data-l="Annotations">'+esc(t.ann)+'</td>';
+    tb.appendChild(tr);
+  });
+  if(!tb.children.length) tb.innerHTML='<tr><td colspan="6">No tool matches. Clear the filter.</td></tr>';
+}
+mkBtns($('phaseBtns'),[['all','All phases'],['1','Phase 1'],['2','Phase 2'],['3','Phase 3']],function(){return toolPhase;},function(v){toolPhase=v;},renderTools);
+$('toolq').addEventListener('input',renderTools);
+renderTools();
+
+(function(){
+  var tb=$('restbl').querySelector('tbody');
+  DATA.resources.forEach(function(r){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td data-l="URI or prompt"><code>'+esc(r.uri)+'</code></td><td data-l="Phase"><span class="badge ph'+r.phase+'">Phase '+r.phase+'</span></td><td data-l="What">'+esc(r.what)+'</td><td data-l="Cache">'+esc(r.cache)+'</td>';
+    tb.appendChild(tr);
+  });
+})();
+
+/* ---------- Compliance table ---------- */
+var cStatus='all';
+var SNAME={met:'Met',changed:'Changed in 1.2',out:'Out of scope'};
+var SICON={met:'+',changed:'*',out:'-'};
+function renderCompl(){
+  var q=$('cq').value.toLowerCase();
+  var tb=$('ctbl').querySelector('tbody');tb.innerHTML='';
+  DATA.compliance.filter(function(r){
+    if(cStatus!=='all'&&r[3]!==cStatus) return false;
+    return !q||r.join(' ').toLowerCase().indexOf(q)>=0;
+  }).forEach(function(r){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td data-l="Area">'+(r[0]==='MCP'?'MCP revision':'OpenJev API')+'</td><td data-l="Requirement">'+esc(r[1])+'</td><td data-l="Source"><code>'+esc(r[2])+'</code></td><td data-l="Status"><b>'+SICON[r[3]]+' '+SNAME[r[3]]+'</b></td><td data-l="How">'+esc(r[4])+'</td>';
+    tb.appendChild(tr);
+  });
+  if(!tb.children.length) tb.innerHTML='<tr><td colspan="5">No requirement matches.</td></tr>';
+}
+mkBtns($('cBtns'),[['all','All'],['met','Met'],['changed','Changed in 1.2'],['out','Out of scope']],function(){return cStatus;},function(v){cStatus=v;},renderCompl);
+$('cq').addEventListener('input',renderCompl);
+renderCompl();
+
+/* parity table */
+function renderParity(){
+  var q=$('pq').value.toLowerCase();
+  var tb=$('ptbl').querySelector('tbody');tb.innerHTML='';
+  DATA.parity.filter(function(r){return !q||r.join(' ').toLowerCase().indexOf(q)>=0;}).forEach(function(r){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td data-l="UI group">'+esc(r[0])+'</td><td data-l="UI feature">'+esc(r[2])+'</td><td data-l="MCP surface"><code>'+esc(r[1])+'</code></td><td data-l="Where">'+esc(r[3])+'</td>';
+    tb.appendChild(tr);
+  });
+}
+$('pq').addEventListener('input',renderParity);renderParity();
+
+/* ---------- Examples ---------- */
+var LABEL={tool:'tools/call',proto:'MCP request params',cli:'CLI stdin'};
+function jsonText(o){return JSON.stringify(o,null,2);}
+DATA.examples.forEach(function(ex,i){
+  var c=document.createElement('article');c.className='card';c.id=ex.id;
+  var h='<h3>Example '+(i+1)+': '+esc(ex.title)+'</h3><p class="meta">Client: '+esc(ex.client)+'</p>'+
+    '<dl><dt>Goal</dt><dd>'+esc(ex.goal)+'</dd></dl><div class="viz flow" id="flow-'+ex.id+'"></div>';
+  ex.steps.forEach(function(s,k){
+    var name=s.tool, ttl=(ex.steps.length>1?'Step '+(k+1)+': ':'')+(s.label?esc(s.label)+' ':'')+'<code>'+esc(name)+'</code>';
+    var args=jsonText(expand(s.args));
+    h+='<div class="step"><h4>'+ttl+'</h4>'+
+      '<details><summary>Request ('+LABEL[s.kind]+(s.kind==='tool'?' arguments':'')+')</summary><pre>'+esc(args)+'</pre></details>'+
+      '<details><summary>Response (summary)</summary><pre class="wrapt">'+esc(s.res)+'</pre></details></div>';
+  });
+  h+='<dl><dt>UI equivalent</dt><dd>'+esc(ex.ui)+'</dd><dt>Takeaway</dt><dd>'+esc(ex.takeaway)+'</dd></dl>';
+  c.innerHTML=h;$('cards').appendChild(c);
+});
+
+/* risks and glossary */
+$('riskList').innerHTML=DATA.risks.map(function(r){return '<div><b>'+esc(r[0])+'</b>'+esc(r[1])+'<br><span class="note">Mitigation: '+esc(r[2])+'</span></div>';}).join('');
+$('glossary').innerHTML=DATA.glossary.map(function(g){return '<div><dt>'+esc(g[0])+'</dt><dd>'+esc(g[1])+'</dd></div>';}).join('');
+
+/* ---------- D3 diagrams ---------- */
+var VIZ=['archViz','toolmap','pipeline','seq','cbars','parity'];
+if(!hasD3){
+  VIZ.forEach(function(id){
+    $(id).innerHTML='<div class="fallback">The diagram could not be drawn because the D3 library did not load (it comes from cdn.jsdelivr.net). The tables on this page hold the same information.</div>';
+  });
+  document.querySelectorAll('.flow').forEach(function(f){f.innerHTML='<div class="note">Step flow needs D3. The request and response are below.</div>';});
+  return;
+}
+var d3=window.d3;
+function css(sel){return sel;}
+function textW(s,fs){return s.length*fs*0.58;}
+
+/* architecture */
+var archSel=null;
+function drawArch(){
+  var host=$('archViz');host.innerHTML='';
+  var W=Math.max(300,host.clientWidth),pad=10,chipH=28,gap=8,fs=W<520?11:12.5;
+  var svg=d3.select(host).append('svg').attr('width',W).attr('role','img').attr('aria-label','Layered architecture diagram: clients, protocol layer, server internals, local files, OpenJev HTTP API, engine');
+  var gb=svg.append('g'),ge=svg.append('g'),gc=svg.append('g');
+  var pos={},layerOf={},y=0,layerIdx={};
+  DATA.layers.forEach(function(L,li){
+    layerIdx[L.id]=li;
+    var comps=DATA.comps.filter(function(c){return c.layer===L.id;});
+    var x=pad,yy=y+28,rows=1,rowTop=yy;
+    comps.forEach(function(c){
+      var w=Math.min(W-2*pad,textW(c.label,fs)+22);
+      if(x+w>W-pad&&x>pad){x=pad;rows++;rowTop+=chipH+gap;}
+      pos[c.id]={x:x,y:rowTop,w:w,h:chipH,layer:L.id};
+      x+=w+gap;
+    });
+    var bh=28+rows*(chipH+gap)+2;
+    gb.append('rect').attr('x',0).attr('y',y).attr('width',W).attr('height',bh).attr('rx',8).style('fill','var(--panel2)').style('stroke','var(--rule)');
+    gb.append('text').attr('x',pad).attr('y',y+18).attr('font-size',12).style('fill','var(--mute)').text(L.name);
+    y+=bh+16;
+  });
+  svg.attr('height',y-16);
+  var edges=DATA.edges.map(function(e){return {a:e[0],b:e[1],l:e[2]};});
+  var paths=ge.selectAll('path').data(edges).enter().append('path').attr('fill','none').style('stroke','var(--mute)').attr('stroke-width',1.2).attr('opacity',.3)
+   .attr('stroke-dasharray',function(e){return e.a==='ui'?'4 3':null;})
+   .attr('d',function(e){
+     var A=pos[e.a],B=pos[e.b];if(!A||!B) return '';
+     var ax=A.x+A.w/2,bx=B.x+B.w/2,la=layerIdx[A.layer],lb=layerIdx[B.layer];
+     if(la<lb){var ay=A.y+A.h,by=B.y,m=(ay+by)/2;return 'M'+ax+','+ay+' C'+ax+','+m+' '+bx+','+m+' '+bx+','+by;}
+     if(la>lb){var ay2=A.y,by2=B.y+B.h,m2=(ay2+by2)/2;return 'M'+ax+','+ay2+' C'+ax+','+m2+' '+bx+','+m2+' '+bx+','+by2;}
+     var yb=Math.max(A.y,B.y)+A.h;return 'M'+ax+','+(A.y+A.h)+' C'+ax+','+(yb+22)+' '+bx+','+(yb+22)+' '+bx+','+(B.y+B.h);
+   });
+  var chips=gc.selectAll('g').data(DATA.comps).enter().append('g').attr('tabindex',0).attr('role','button').attr('aria-label',function(c){return c.label;}).style('cursor','pointer')
+   .attr('transform',function(c){return 'translate('+pos[c.id].x+','+pos[c.id].y+')';});
+  chips.append('rect').attr('width',function(c){return pos[c.id].w;}).attr('height',chipH).attr('rx',6).style('fill','var(--panel)').style('stroke','var(--ink2)').attr('stroke-width',1.2);
+  chips.append('text').attr('x',function(c){return pos[c.id].w/2;}).attr('y',chipH/2+4).attr('text-anchor','middle').attr('font-size',fs).style('fill','var(--ink)').text(function(c){return c.label;});
+  function focus(c,ev){
+    archSel=c.id;
+    var rel={};rel[c.id]=1;
+    paths.attr('opacity',function(e){var on=e.a===c.id||e.b===c.id;if(on){rel[e.a]=1;rel[e.b]=1;}return on?1:.07;}).attr('stroke-width',function(e){return (e.a===c.id||e.b===c.id)?2:1.2;})
+      .style('stroke',function(e){return (e.a===c.id||e.b===c.id)?'var(--p1)':'var(--mute)';});
+    chips.select('rect').style('stroke',function(d){return d.id===c.id?'var(--p1)':'var(--ink2)';}).attr('stroke-width',function(d){return d.id===c.id?2.6:1.2;}).attr('opacity',function(d){return rel[d.id]?1:.45;});
+    chips.select('text').attr('opacity',function(d){return rel[d.id]?1:.5;});
+    var links=edges.filter(function(e){return e.a===c.id||e.b===c.id;}).map(function(e){
+      var o=DATA.comps.filter(function(x){return x.id===(e.a===c.id?e.b:e.a);})[0];
+      return (e.a===c.id?'to ':'from ')+esc(o.label)+' ('+esc(e.l)+')';}).join('; ');
+    $('archDetail').innerHTML='<b>'+esc(c.label)+'</b>: '+esc(c.detail)+(links?'<br><span class="note">Connections: '+links+'</span>':'');
+  }
+  function reset(){
+    paths.attr('opacity',.3).attr('stroke-width',1.2).style('stroke','var(--mute)');
+    chips.select('rect').style('stroke','var(--ink2)').attr('stroke-width',1.2).attr('opacity',1);chips.select('text').attr('opacity',1);
+  }
+  chips.on('mouseenter',function(ev,c){focus(c,ev);}).on('focus',function(ev,c){focus(c,ev);}).on('click',function(ev,c){focus(c,ev);})
+       .on('mouseleave',reset).on('blur',reset);
+}
+
+/* tool map */
+function drawToolMap(){
+  var host=$('toolmap');host.innerHTML='';
+  var W=Math.max(300,host.clientWidth),H=W<600?Math.round(W*1.15):Math.round(W*0.55);
+  var groups={};DATA.tools.forEach(function(t){(groups[t.group]=groups[t.group]||[]).push(t);});
+  var root=d3.hierarchy({name:'root',children:Object.keys(groups).map(function(g){return {name:g,children:groups[g].map(function(t){return {name:t.name,tool:t,value:1};})};})}).sum(function(d){return d.value||0;});
+  d3.pack().size([W,H]).padding(function(d){return d.depth===0?10:7;})(root);
+  var svg=d3.select(host).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label','Tool map: tools grouped by purpose, outlined by delivery phase');
+  svg.selectAll('g.grp').data(root.children).enter().append('g').each(function(d){
+    var g=d3.select(this);
+    g.append('circle').attr('cx',d.x).attr('cy',d.y).attr('r',d.r).style('fill','var(--panel2)').style('stroke','var(--rule)').attr('stroke-dasharray','3 3');
+    var id='gp'+Math.round(d.x)+'_'+Math.round(d.y);
+    g.append('path').attr('id',id).attr('fill','none').attr('d','M'+(d.x-d.r+4)+','+d.y+' A'+(d.r-4)+','+(d.r-4)+' 0 0 1 '+(d.x+d.r-4)+','+d.y);
+    g.append('text').attr('font-size',11.5).style('fill','var(--mute)').append('textPath').attr('href','#'+id).attr('startOffset','50%').attr('text-anchor','middle').text(d.data.name);
+  });
+  var leaves=svg.selectAll('g.leaf').data(root.leaves()).enter().append('g').attr('tabindex',0).attr('role','button').style('cursor','pointer')
+    .attr('aria-label',function(d){return d.data.name+', phase '+d.data.tool.phase;});
+  leaves.append('circle').attr('cx',function(d){return d.x;}).attr('cy',function(d){return d.y+6;}).attr('r',function(d){return d.r;})
+    .style('fill',function(d){return 'color-mix(in srgb,'+PH[d.data.tool.phase]+' 20%,var(--panel))';}).style('stroke',function(d){return PH[d.data.tool.phase];}).attr('stroke-width',3);
+  var fs=function(d){return Math.max(9,Math.min(12.5,d.r*0.27));};
+  leaves.append('text').attr('x',function(d){return d.x;}).attr('y',function(d){return d.y+6;}).attr('text-anchor','middle').attr('font-size',fs).attr('font-weight',600).style('fill','var(--ink)').text(function(d){return d.data.name;});
+  leaves.append('text').attr('x',function(d){return d.x;}).attr('y',function(d){return d.y+6+fs(d)+3;}).attr('text-anchor','middle').attr('font-size',function(d){return fs(d)-1;}).style('fill','var(--ink2)').text(function(d){return 'P'+d.data.tool.phase+(d.data.tool.chg==='new'?' new':'');});
+  function tipFor(t){return '<b>'+esc(t.name)+'</b> (phase '+t.phase+', '+esc(t.chg)+')<br>'+esc(t.purpose);}
+  leaves.on('mousemove',function(ev,d){showTip(tipFor(d.data.tool),ev);}).on('mouseleave',hideTip)
+    .on('click',function(ev,d){$('toolq').value=d.data.name;toolPhase='all';Array.prototype.forEach.call($('phaseBtns').children,function(c,i){c.setAttribute('aria-pressed',i===0);});renderTools();$('tooltbl').scrollIntoView({behavior:reduce?'auto':'smooth',block:'nearest'});})
+    .on('focus',function(ev,d){var r=this.getBoundingClientRect();showTip(tipFor(d.data.tool),{clientX:r.left,clientY:r.top});}).on('blur',hideTip)
+    .on('keydown',function(ev,d){if(ev.key==='Enter'){$('toolq').value=d.data.name;renderTools();}});
+}
+
+/* pipeline */
+var STAGES=[
+ ['Source file','items_file, inline items or a template. CSV, TSV, JSONL, JSON, lines, blocks or ojui-batch.'],
+ ['Import and sniff','Detects format, delimiter and encoding, guesses the state column (warning W602), drops rows above max_items (W601), rejects spreadsheets (E030).'],
+ ['Lint once','The question set is linted before row 0, so a mistyped question type fails before any read is spent.'],
+ ['Worker pool','1 to 4 workers pull the next row index. A 429, 503 or 529 closes a shared cooldown and drops effective concurrency to 1.'],
+ ['Per-item reads','One POST /v1/systemone per state with the same questions. Records request_id, server_timing and body_hash.'],
+ ['Review + audit','Rows below the confidence rules join the review queue, and a seeded sample of auto-accepted rows is flagged for audit.'],
+ ['JSONL / CSV out','Header record plus one full row per item, written in input order as whole lines under an exclusive lock. CSV, Markdown and ojui-batch exports on the final call.']
+];
+var pipeTimer=null,pipeRun=true;
+function drawPipeline(){
+  var host=$('pipeline');host.innerHTML='';
+  if(pipeTimer){pipeTimer.stop();pipeTimer=null;}
+  var W=Math.max(300,host.clientWidth),horiz=W>=780,n=STAGES.length;
+  var bw=horiz?Math.floor((W-(n-1)*22)/n):Math.min(W-70,340),bh=horiz?64:46,gap=horiz?22:24;
+  var H=horiz?bh+120:n*(bh+gap)+60;
+  var svg=d3.select(host).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label','Batch pipeline from source file to JSONL output with a cursor loop');
+  svg.append('defs').append('marker').attr('id','arr').attr('viewBox','0 0 10 10').attr('refX',9).attr('refY',5).attr('markerWidth',7).attr('markerHeight',7).attr('orient','auto').append('path').attr('d','M0,0L10,5L0,10z').style('fill','var(--mute)');
+  var P=STAGES.map(function(s,i){return horiz?{x:i*(bw+gap),y:8}:{x:0,y:8+i*(bh+gap)};});
+  var pts=P.map(function(p){return [p.x+bw/2,p.y+bh/2];});
+  // links
+  for(var i=0;i<n-1;i++){
+    var a=P[i],b=P[i+1];
+    var x1=horiz?a.x+bw:a.x+bw/2,y1=horiz?a.y+bh/2:a.y+bh,x2=horiz?b.x:b.x+bw/2,y2=horiz?b.y+bh/2:b.y;
+    svg.append('line').attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2).style('stroke','var(--mute)').attr('stroke-width',1.5).attr('marker-end','url(#arr)');
+  }
+  // boxes
+  var g=svg.selectAll('g.st').data(STAGES).enter().append('g').attr('tabindex',0).attr('role','button').style('cursor','pointer').attr('transform',function(d,i){return 'translate('+P[i].x+','+P[i].y+')';});
+  var col=function(i){return i<=2?'var(--p1)':(i<=4?'var(--p2)':'var(--p3)');};
+  g.append('rect').attr('width',bw).attr('height',bh).attr('rx',8).style('fill',function(d,i){return 'color-mix(in srgb,'+col(i)+' 14%,var(--panel))';}).style('stroke',function(d,i){return col(i);}).attr('stroke-width',2);
+  g.append('text').attr('x',bw/2).attr('y',horiz?bh/2-2:bh/2+5).attr('text-anchor','middle').attr('font-size',horiz?12:13).attr('font-weight',600).style('fill','var(--ink)').text(function(d){return d[0];});
+  if(horiz) g.append('text').attr('x',bw/2).attr('y',bh/2+14).attr('text-anchor','middle').attr('font-size',10.5).style('fill','var(--ink2)').text(function(d,i){return ['','','','1 to 4 workers','POST per state','p_top, grey, audit','input order'][i]||(i===0?'file or inline':i===1?'format, columns':'before row 0');});
+  function sel(ev,d){$('pipeDetail').innerHTML='<b>'+esc(d[0])+'</b>: '+esc(d[1]);}
+  g.on('mouseenter',sel).on('focus',sel).on('click',sel);
+  // loops
+  if(horiz){
+    var xo=P[n-1].x+bw/2,xs=P[0].x+bw/2,yb=P[0].y+bh;
+    svg.append('path').attr('d','M'+xo+','+yb+' C'+xo+','+(yb+50)+' '+xs+','+(yb+50)+' '+xs+','+(yb+2)).attr('fill','none').style('stroke','var(--p3)').attr('stroke-width',1.6).attr('marker-end','url(#arr)');
+    svg.append('text').attr('x',W/2).attr('y',yb+44).attr('text-anchor','middle').attr('font-size',12).style('fill','var(--ink2)').text('Cursor loop: next_cursor goes back to the client, which calls batch again');
+    var x2=P[1].x+bw/2;
+    svg.append('path').attr('d','M'+xo+','+(yb+2)+' C'+xo+','+(yb+92)+' '+x2+','+(yb+92)+' '+x2+','+(yb+2)).attr('fill','none').style('stroke','var(--p2)').attr('stroke-width',1.6).attr('stroke-dasharray','5 4').attr('marker-end','url(#arr)');
+    svg.append('text').attr('x',W/2).attr('y',yb+86).attr('text-anchor','middle').attr('font-size',12).style('fill','var(--ink2)').text('Resume (no cursor): scan output_path, skip ids whose last row is ok');
+  } else {
+    svg.append('text').attr('x',0).attr('y',H-26).attr('font-size',12).style('fill','var(--ink2)').text('Cursor loop: next_cursor returns to the client, which calls again.');
+    svg.append('text').attr('x',0).attr('y',H-8).attr('font-size',12).style('fill','var(--ink2)').text('Resume: scan output_path and skip ok ids.');
+  }
+  // animated tokens along the main path
+  var line=d3.line()(pts);
+  var path=svg.append('path').attr('d',line).attr('fill','none').attr('stroke','none');
+  var L=path.node().getTotalLength();
+  var dots=svg.selectAll('circle.dot').data([0,1,2,3]).enter().append('circle').attr('class','dot').attr('r',5).style('fill','var(--ok)').style('stroke','var(--panel)').attr('stroke-width',1.5);
+  function place(t){
+    dots.each(function(d){var f=((t/6000)+d/4)%1;var p=path.node().getPointAtLength(f*L);d3.select(this).attr('cx',p.x).attr('cy',p.y).attr('opacity',f<.03||f>.97?0:1);});
+  }
+  if(reduce){place(0);dots.attr('opacity',.6);}
+  else{var t0=0,last=0;pipeTimer=d3.timer(function(el){ if(!pipeRun){last=el-t0;return;} t0=el-last; place(el-0); });}
+}
+$('pipePlay').addEventListener('click',function(){pipeRun=!pipeRun;this.textContent=pipeRun?'Pause animation':'Play animation';this.setAttribute('aria-pressed',pipeRun);});
+
+/* sequence diagram */
+var LANES=['Client','MCP server','Output JSONL','OpenJev API'];
+var MSG=[
+ [0,1,'batch(args, output_path, cursor?)'],
+ [1,1,'import, lint once (first call)'],
+ [1,2,'flock, read header, last row per id'],
+ [1,3,'POST /v1/systemone (x concurrency)'],
+ [3,1,'answers, x-request-id, server-timing'],
+ [1,2,'append whole rows, input order'],
+ [1,0,'status, results, next_cursor, resource_link'],
+ [0,1,'batch(same args, cursor)  (loop)'],
+ [1,0,'... until next_cursor null, stopped_reason complete'],
+ [0,1,'notifications/cancelled (any time)'],
+ [1,2,'keep whole lines only, release lock; no reply'],
+ [0,1,'batch(no cursor, resume: true)']
+];
+var seqTimer=null;
+function drawSeq(replay){
+  var host=$('seq');host.innerHTML='';
+  var W=Math.max(640,host.clientWidth),top=46,rowH=34,H=top+MSG.length*rowH+20;
+  var svg=d3.select(host).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label','Sequence diagram of the batch cursor loop');
+  svg.append('defs').append('marker').attr('id','arr2').attr('viewBox','0 0 10 10').attr('refX',9).attr('refY',5).attr('markerWidth',7).attr('markerHeight',7).attr('orient','auto').append('path').attr('d','M0,0L10,5L0,10z').style('fill','var(--ink2)');
+  var xs=LANES.map(function(_,i){return 70+i*((W-140)/3);});
+  LANES.forEach(function(l,i){
+    svg.append('rect').attr('x',xs[i]-52).attr('y',4).attr('width',104).attr('height',26).attr('rx',6).style('fill','var(--panel2)').style('stroke','var(--rule)');
+    svg.append('text').attr('x',xs[i]).attr('y',21).attr('text-anchor','middle').attr('font-size',12.5).attr('font-weight',600).style('fill','var(--ink)').text(l);
+    svg.append('line').attr('x1',xs[i]).attr('x2',xs[i]).attr('y1',30).attr('y2',H-6).style('stroke','var(--rule)').attr('stroke-dasharray','4 4');
+  });
+  // loop bracket
+  var lb=svg.append('rect').attr('x',xs[0]-14).attr('y',top+rowH*0-8).attr('width',xs[3]-xs[0]+28).attr('height',rowH*9+4).attr('rx',8).attr('fill','none').style('stroke','var(--p3)').attr('stroke-dasharray','6 4').attr('opacity',.6);
+  svg.append('text').attr('x',xs[3]+10).attr('y',top-12).attr('text-anchor','end').attr('font-size',11).style('fill','var(--p3)').text('repeat while next_cursor is not null');
+  var items=[];
+  MSG.forEach(function(m,i){
+    var y=top+i*rowH+14,g=svg.append('g').attr('opacity',(reduce||replay===false)?1:0);
+    var x1=xs[m[0]],x2=xs[m[1]];
+    if(m[0]===m[1]){
+      g.append('path').attr('d','M'+x1+','+(y-8)+' h34 v16 h-34').attr('fill','none').style('stroke','var(--ink2)').attr('marker-end','url(#arr2)');
+      g.append('text').attr('x',x1+42).attr('y',y+4).attr('font-size',12).style('fill','var(--ink)').text(m[2]);
+    } else {
+      var cancel=m[2].indexOf('cancelled')>=0||m[2].indexOf('no reply')>=0;
+      g.append('line').attr('x1',x1).attr('x2',x2+(x2>x1?-2:2)).attr('y1',y).attr('y2',y).style('stroke',cancel?'var(--p2)':'var(--ink2)').attr('stroke-width',1.6).attr('stroke-dasharray',m[0]>m[1]?'5 3':null).attr('marker-end','url(#arr2)');
+      g.append('text').attr('x',(x1+x2)/2).attr('y',y-6).attr('text-anchor','middle').attr('font-size',11.5).style('fill','var(--ink)').text(m[2]);
+    }
+    items.push(g);
+  });
+  if(seqTimer){clearTimeout(seqTimer);seqTimer=null;}
+  if(!reduce&&replay!==false){
+    var k=0;(function step(){ if(k>=items.length) return; items[k].transition().duration(250).attr('opacity',1); k++; seqTimer=setTimeout(step,420); })();
+  }
+}
+$('seqPlay').addEventListener('click',function(){drawSeq(true);});
+
+/* compliance bars */
+function drawCBars(){
+  var host=$('cbars');host.innerHTML='';
+  var W=Math.max(300,host.clientWidth),areas=[['MCP','MCP revision 2026-07-28'],['API','OpenJev API']];
+  var keys=['met','changed','out'],colors={met:'var(--ok)',changed:'var(--p1)',out:'var(--mute)'};
+  var data=areas.map(function(a){var rows=DATA.compliance.filter(function(r){return r[0]===a[0];});var o={name:a[1],total:rows.length};keys.forEach(function(k){o[k]=rows.filter(function(r){return r[3]===k;}).length;});return o;});
+  var lw=W<520?0:170,bh=34,H=data.length*(bh+(W<520?36:14))+8;
+  var svg=d3.select(host).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label','Compliance counts by status for the MCP revision and for the OpenJev API');
+  var mx=d3.max(data,function(d){return d.total;}),sx=d3.scaleLinear().domain([0,mx]).range([0,W-lw-4]);
+  data.forEach(function(d,i){
+    var y=i*(bh+(W<520?36:14))+(W<520?18:4);
+    if(W<520) svg.append('text').attr('x',0).attr('y',y-6).attr('font-size',12.5).style('fill','var(--ink)').text(d.name+' ('+d.total+')');
+    else svg.append('text').attr('x',0).attr('y',y+bh/2+4).attr('font-size',13).style('fill','var(--ink)').text(d.name+' ('+d.total+')');
+    var x=lw;
+    keys.forEach(function(k){
+      if(!d[k]) return;
+      var w=sx(d[k]);
+      var r=svg.append('rect').attr('x',x+1).attr('y',y).attr('width',Math.max(0,w-2)).attr('height',bh).attr('rx',3).style('fill',colors[k]).attr('opacity',.85);
+      svg.append('text').attr('x',x+w/2).attr('y',y+bh/2+4).attr('text-anchor','middle').attr('font-size',13).attr('font-weight',700).style('fill','#fff').style('paint-order','stroke').style('stroke','rgba(0,0,0,.35)').attr('stroke-width',2).text(d[k]);
+      r.on('mousemove',function(ev){showTip('<b>'+esc(d.name)+'</b><br>'+SNAME[k]+': '+d[k],ev);}).on('mouseleave',hideTip);
+      x+=w;
+    });
+  });
+  $('cLegend').innerHTML=keys.map(function(k){return '<span><i style="background:'+colors[k]+';border-color:'+colors[k]+'"></i>'+SICON[k]+' '+SNAME[k]+'</span>';}).join('');
+}
+
+/* parity bipartite */
+function drawParity(){
+  var host=$('parity');host.innerHTML='';
+  var W=Math.max(520,host.clientWidth),lw=W<640?112:150,rw=W<640?128:170,H=480;
+  var lefts=[],rights=[],cnt={};
+  DATA.parity.forEach(function(r){if(lefts.indexOf(r[0])<0)lefts.push(r[0]);if(rights.indexOf(r[1])<0)rights.push(r[1]);var k=r[0]+'|'+r[1];cnt[k]=(cnt[k]||0)+1;});
+  rights.sort(function(a,b){if(a==='out of scope')return 1;if(b==='out of scope')return -1;return DATA.parity.filter(function(r){return r[1]===b;}).length-DATA.parity.filter(function(r){return r[1]===a;}).length;});
+  var total=DATA.parity.length,gapv=10,sc=(H-gapv*Math.max(lefts.length,rights.length))/total;
+  var lpos={},rpos={},y=0;
+  lefts.forEach(function(l){var c=DATA.parity.filter(function(r){return r[0]===l;}).length;lpos[l]={y:y,h:c*sc,c:c,o:0};y+=c*sc+gapv;});
+  y=0;rights.forEach(function(r){var c=DATA.parity.filter(function(x){return x[1]===r;}).length;rpos[r]={y:y,h:c*sc,c:c,o:0};y+=c*sc+gapv;});
+  var svg=d3.select(host).append('svg').attr('width',W).attr('height',H+8).attr('role','img').attr('aria-label','UI feature groups on the left linked to MCP surfaces on the right');
+  var x0=lw,x1=W-rw;
+  var cols={'batch':'var(--p1)','batch_results':'var(--p2)','lint':'var(--ok)','calibrate':'var(--p3)','status':'#a02f6f','ask and Meta':'#8a6a00','resources and prompts':'#0b7f8a','protocol':'#5a6b3a','out of scope':'var(--mute)'};
+  var links=[];
+  lefts.forEach(function(l){rights.forEach(function(r){var c=cnt[l+'|'+r];if(!c)return;links.push({l:l,r:r,c:c});});});
+  links.forEach(function(k){k.y0=lpos[k.l].y+lpos[k.l].o*sc;lpos[k.l].o+=k.c;k.y1=rpos[k.r].y+rpos[k.r].o*sc;rpos[k.r].o+=k.c;k.h=k.c*sc;});
+  var gl=svg.append('g').attr('fill-opacity',.4);
+  var paths=gl.selectAll('path').data(links).enter().append('path').style('fill',function(k){return cols[k.r]||'var(--mute)';})
+    .attr('d',function(k){var m=(x0+10+x1-10)/2;return 'M'+(x0+10)+','+k.y0+' C'+m+','+k.y0+' '+m+','+k.y1+' '+(x1-10)+','+k.y1+' L'+(x1-10)+','+(k.y1+k.h)+' C'+m+','+(k.y1+k.h)+' '+m+','+(k.y0+k.h)+' '+(x0+10)+','+(k.y0+k.h)+'Z';});
+  function dim(f,msg){paths.attr('opacity',function(k){return f(k)?1:.12;});$('parityDetail').innerHTML=msg;}
+  function undim(){paths.attr('opacity',1);$('parityDetail').textContent='Hover a ribbon or a label.';}
+  paths.on('mousemove',function(ev,k){showTip(esc(k.l)+' to <b>'+esc(k.r)+'</b>: '+k.c+' feature'+(k.c>1?'s':''),ev);}).on('mouseleave',function(){hideTip();undim();}).on('mouseenter',function(ev,k){dim(function(x){return x===k;},'<b>'+esc(k.l)+'</b> to <code>'+esc(k.r)+'</code>: '+DATA.parity.filter(function(r){return r[0]===k.l&&r[1]===k.r;}).map(function(r){return esc(r[2]);}).join('; '));});
+  lefts.forEach(function(l){
+    var p=lpos[l];
+    svg.append('rect').attr('x',x0).attr('y',p.y).attr('width',10).attr('height',p.h).style('fill','var(--ink2)');
+    var t=svg.append('text').attr('x',x0-8).attr('y',p.y+p.h/2+4).attr('text-anchor','end').attr('font-size',12.5).style('fill','var(--ink)').style('cursor','default').text(l+' ('+p.c+')');
+    t.on('mouseenter',function(){dim(function(k){return k.l===l;},'<b>'+esc(l)+'</b>: '+DATA.parity.filter(function(r){return r[0]===l;}).length+' UI features');}).on('mouseleave',undim);
+  });
+  rights.forEach(function(r){
+    var p=rpos[r];
+    svg.append('rect').attr('x',x1-10).attr('y',p.y).attr('width',10).attr('height',p.h).style('fill',cols[r]||'var(--mute)');
+    var t=svg.append('text').attr('x',x1+4).attr('y',p.y+Math.max(p.h/2,7)+4).attr('font-size',12.5).style('fill','var(--ink)').text(r+' ('+p.c+')');
+    t.on('mouseenter',function(){dim(function(k){return k.r===r;},'<b>'+esc(r)+'</b>: '+DATA.parity.filter(function(x){return x[1]===r;}).map(function(x){return esc(x[2]);}).slice(0,10).join('; '));}).on('mouseleave',undim);
+  });
+}
+
+/* example step flows */
+function drawFlows(){
+  DATA.examples.forEach(function(ex){
+    var host=$('flow-'+ex.id);host.innerHTML='';
+    var W=Math.max(260,host.clientWidth),n=ex.steps.length,fs=11.5;
+    var vertical=W<520&&n>2;
+    var bw=vertical?Math.min(W-4,300):Math.max(70,Math.min(190,(W-(n-1)*22)/n)),bh=34,g=22;
+    var H=vertical?n*(bh+g)-g+4:bh+4;
+    var svg=d3.select(host).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label','Step flow for example: '+ex.steps.map(function(s){return s.tool;}).join(', then '));
+    var uid='m'+ex.id;
+    svg.append('defs').append('marker').attr('id',uid).attr('viewBox','0 0 10 10').attr('refX',9).attr('refY',5).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,0L10,5L0,10z').style('fill','var(--mute)');
+    ex.steps.forEach(function(s,i){
+      var x=vertical?0:i*(bw+g),y=vertical?i*(bh+g):0;
+      var gg=svg.append('g').attr('transform','translate('+(x+2)+','+(y+2)+')');
+      var c=s.kind==='tool'?'var(--p1)':(s.kind==='cli'?'var(--p2)':'var(--p3)');
+      gg.append('rect').attr('width',bw-4).attr('height',bh-4).attr('rx',6).style('fill','color-mix(in srgb,'+c+' 14%,var(--panel))').style('stroke',c).attr('stroke-width',1.8);
+      var lab=s.tool.length>Math.floor((bw-12)/(fs*0.58))?s.tool.slice(0,Math.floor((bw-12)/(fs*0.58))-1)+'...':s.tool;
+      gg.append('text').attr('x',(bw-4)/2).attr('y',(bh-4)/2+4).attr('text-anchor','middle').attr('font-size',fs).style('fill','var(--ink)').text((i+1)+'. '+lab);
+      gg.append('title').text(s.tool);
+      if(i<n-1){
+        if(vertical) svg.append('line').attr('x1',x+bw/2).attr('x2',x+bw/2).attr('y1',y+bh-2).attr('y2',y+bh+g-3).style('stroke','var(--mute)').attr('stroke-width',1.5).attr('marker-end','url(#'+uid+')');
+        else svg.append('line').attr('x1',x+bw-2).attr('x2',x+bw+g-3).attr('y1',bh/2+2).attr('y2',bh/2+2).style('stroke','var(--mute)').attr('stroke-width',1.5).attr('marker-end','url(#'+uid+')');
+      }
+    });
+  });
+}
+
+function drawAll(){drawArch();drawToolMap();drawPipeline();drawCBars();drawParity();drawFlows();}
+drawAll();drawSeq(true);
+var rt=null,lastW=window.innerWidth;
+window.addEventListener('resize',function(){ if(window.innerWidth===lastW) return; lastW=window.innerWidth; clearTimeout(rt); rt=setTimeout(function(){drawAll();drawSeq(false);},180); });
+})();
+</script>
+<noscript><div class="wrap"><p class="note">JavaScript is off. This report needs JavaScript to render its data.</p></div></noscript>
+</body>
+</html>
