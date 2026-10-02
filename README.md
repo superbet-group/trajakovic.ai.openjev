@@ -42,18 +42,19 @@ mise run install                 # Python 3.12, Node 24, packages in .venv, the 
 mise run start                   # or just: mise run
 ```
 
-Starts OpenJev on http://127.0.0.1:8080 and the UI on http://127.0.0.1:8090 in the background, waits for the model to load, and opens the UI in your browser.
+Starts OpenJev on http://127.0.0.1:8080, the UI on http://127.0.0.1:8090 and the MCP server on http://127.0.0.1:8100 in the background, waits for the model to load, and opens the UI in your browser.
 
 ## Tasks
 
 | Command | What it does |
 | --- | --- |
 | `mise run install` | Install or update everything |
-| `mise run start` (default) | Start OpenJev + UI, open the browser |
-| `mise run stop` | Stop both |
+| `mise run start` (default) | Start OpenJev + UI + MCP, open the browser |
+| `mise run mcp` | Start only the MCP server |
+| `mise run stop` | Stop all three |
 | `mise run restart` | Stop, then start |
 | `mise run status` | Is it running and ready? |
-| `mise run logs` | Follow the logs (`logs server` or `logs ui` for one) |
+| `mise run logs` | Follow the logs (`logs server`, `logs ui` or `logs mcp` for one) |
 | `mise run test` | Run the tests (no model needed) |
 | `mise run benchmark` | Latency and accuracy against the running server |
 
@@ -65,6 +66,8 @@ Set these env vars in front of a task, e.g. `OPENJEV_LOG_LEVEL=debug mise run re
 | --- | --- |
 | `OPENJEV_PORT` | OpenJev port (8080) |
 | `UI_PORT` | UI port (8090) |
+| `OPENJEV_MCP_PORT` | MCP server port (8100) |
+| `OPENJEV_MCP_TOKEN` | Require this bearer token on the MCP endpoint |
 | `OPENJEV_LOG_LEVEL` | `debug` logs request and response bodies |
 | `OPENJEV_API_KEY` | Require a key; the UI forwards it |
 | `OPENJEV_NO_BROWSER=1` | Don't open the browser |
@@ -73,6 +76,16 @@ Set these env vars in front of a task, e.g. `OPENJEV_LOG_LEVEL=debug mise run re
 | `OPENJEV_SKIP_RAM_CHECK=1` | Try on a Mac with less than 24 GB |
 | `OPENJEV_REINSTALL=1` | Force a package reinstall on `install` |
 | `OPENJEV_SKIP_MODEL_DOWNLOAD=1` | Skip the model download on `install` |
+
+## MCP server
+
+A separate process on its own port, for agents (Claude Code and other MCP clients). It calls OpenJev over HTTP and loads no model. It serves 14 tools (typed reads, `filter`, resumable `batch` jobs, `ask_image`, `recipe` gates, `calibrate`), resources, prompts, four Claude Code hooks (`openjev-hook`) and 11 skills.
+
+```sh
+claude mcp add --transport http openjev http://127.0.0.1:8100/mcp
+```
+
+See [mcp/README.md](mcp/README.md) for the tool surface, stdio, hooks, batch jobs, skills and settings.
 
 More: [API](docs/api.md) · [Self-hosting, NVIDIA/Docker, all settings](docs/self-hosting.md) · [Playground UI](docs/ui.md)
 

@@ -1,0 +1,119 @@
+{
+ "id": "semantic_lint",
+ "title": "Plain-English lint for code, diffs, commits and docs",
+ "usage_type": "06-semantic-code-lint",
+ "description": "Check code, diffs, commit messages or docs against a plain-English team rule (swallowed errors, secrets, commit matches diff)",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "one function, hunk, message, or 'Commit message:\\n...\\n\\nStaged diff:\\n...'"
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "secret",
+     "commit_mismatch",
+     "comment_contradicts",
+     "prose_slop",
+     "naming"
+    ],
+    "default": "strict",
+    "description": "the check, one per run so a blocking check is asked alone: strict = swallows, secret, commit_mismatch, comment_contradicts, prose_slop, naming (advisory score)"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{{text}}}"
+  },
+  {
+   "id": "again",
+   "kind": "read",
+   "reread": "read",
+   "options": {
+    "samples": 4
+   },
+   "when": "grey(swallows) or grey(secret) or grey(mismatch) or grey(contradicts) or grey(slop)"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "swallows": {
+    "type": "noul",
+    "instructions": "Does this function silently swallow an exception, meaning it catches an error and neither logs it, re-raises it, nor reports it to the caller?"
+   }
+  },
+  "secret": {
+   "secret": {
+    "type": "noul",
+    "instructions": "Does the added code contain a real, working-looking credential written as a string literal? A placeholder such as YOUR_API_KEY_HERE, <token>, xxx or changeme is not a real credential."
+   }
+  },
+  "commit_mismatch": {
+   "mismatch": {
+    "type": "noul",
+    "instructions": "Does the commit message describe a change that is NOT present in the diff?"
+   }
+  },
+  "comment_contradicts": {
+   "contradicts": {
+    "type": "noul",
+    "instructions": "Does the comment describe behavior that differs from what the code does?"
+   }
+  },
+  "prose_slop": {
+   "slop": {
+    "type": "noul",
+    "instructions": "Is this paragraph written in generic AI-sounding marketing filler, using stock phrases such as 'delve', 'tapestry', 'unlock the full potential' or 'in today's fast-paced world'?"
+   }
+  },
+  "naming": {
+   "naming": {
+    "type": "score",
+    "instructions": "How descriptive are the function and variable names in this code?",
+    "criteria": [
+     "completely opaque single letters",
+     "mostly unclear",
+     "mostly descriptive",
+     "fully descriptive"
+    ]
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.8,
+  "no_at": 0.2,
+  "warn_at": 0.7,
+  "block_at": 0.9,
+  "naming_warn": 1.0
+ },
+ "decisions": [
+  "ignore",
+  "warn",
+  "block"
+ ],
+ "combine": "block if secret >= block_at; warn if swallows >= warn_at or secret >= warn_at or mismatch >= warn_at or contradicts >= warn_at or slop >= warn_at or naming <= naming_warn; ignore otherwise",
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "ignore",
+  "unattended": "ignore"
+ },
+ "fallback_decision": "ignore",
+ "test_file": "tests/cases/06-semantic-code-lint.json",
+ "limitations": [
+  "sibling interference: a check is 0.996 alone and 0.33 co-asked, so each check is its own run",
+  "the lowest true positive 0.68 is ambiguous by definition",
+  "state is a snippet (no repo-wide claims)",
+  "naming is an advisory score and never blocks; prose_slop and swallows never block",
+  "custom team rules ({id, claim, true_means, false_means}) and several checks per call are not built: one profile per run"
+ ],
+ "notes": "# deviation: spec 5.6: the check is the `profile` input (one question set per run; `strict` is the swallows check); only secrets block (>= 0.9), every other check warns at >= 0.7; samples 4 is a re-read taken only when the first read is grey (0.2-0.8), so a confident first read is one request; the comment_contradicts question is the case wording without its case-specific tail"
+}

@@ -1,0 +1,102 @@
+{
+ "id": "done_gate",
+ "title": "Done-claim completion gate",
+ "usage_type": "05-done-claim-completion-gate",
+ "description": "Check at the end of an agent turn whether the work is really verified before the agent claims it is done",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "task",
+   "timeline",
+   "final_message"
+  ],
+  "properties": {
+   "task": {
+    "type": "string"
+   },
+   "timeline": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "one line per step, already numbered chronologically by the tool ('1. Read ...'); keep exit codes and pass/fail counts; name non-edit steps (git commit, npm install)"
+   },
+   "final_message": {
+    "type": "string"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "AGENT TURN REPORT\nUser task: {{task}}\nTimeline (chronological, last line is most recent):\n{{#timeline}}{{.}}\n{{/timeline}}Final assistant message: {{final_message}}"
+  },
+  {
+   "id": "again",
+   "kind": "read",
+   "reread": "read",
+   "options": {
+    "think": 512
+   },
+   "when": "grey(verified)"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "verified": {
+    "type": "noul",
+    "instructions": "Did a test, build or lint command that PASSED run AFTER the most recent file edit in the timeline?",
+    "criteria": {
+     "true": "a passing verification command appears in the timeline after the last edit",
+     "false": "no passing verification appears after the last edit (none ran, it failed, or it ran before the last edit)"
+    }
+   },
+   "claims": {
+    "type": "noul",
+    "instructions": "Does the final assistant message tell the user the task is finished or complete?",
+    "criteria": {
+     "true": "the final message declares the work done, fixed, complete or ready",
+     "false": "the final message reports partial progress, a blocker, or asks a question instead of declaring completion"
+    }
+   },
+   "next": {
+    "type": "choice",
+    "instructions": "What should the Stop hook do with this turn?",
+    "criteria": {
+     "allow_stop": "the work is verified or the agent honestly reports a blocker, so the turn may end",
+     "continue": "the agent claims completion or stops without verification and should keep working to run checks",
+     "escalate": "a human decision is required, so surface it to the user"
+    }
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.75,
+  "no_at": 0.3,
+  "block_verified_max": 0.3,
+  "block_claims_min": 0.7,
+  "block_next_p": 0.6
+ },
+ "decisions": [
+  "allow_stop",
+  "block",
+  "escalate"
+ ],
+ "combine": "escalate if next == 'escalate'; block if verified <= block_verified_max and claims >= block_claims_min; block if next == 'continue' and next.p >= block_next_p; allow_stop otherwise",
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "allow_stop",
+  "unattended": "allow_stop"
+ },
+ "fallback_decision": "allow_stop",
+ "test_file": "tests/cases/05-done-claim-completion-gate.json",
+ "limitations": [
+  "judges only what the report states (cannot know that the test covered the change)",
+  "borderline items sit near thresholds",
+  "single turn only (stall detection is a different decision)",
+  "at most 2 consecutive blocks is the caller's rule (the hook counts them)",
+  "the human >= 0.8 escalation question is not built; escalate follows the next choice"
+ ],
+ "notes": "# deviation: spec 5.5: the `human` signal is not read (no verbatim question); the 0.3-0.75 re-read uses think 512 and replaces the first read"
+}

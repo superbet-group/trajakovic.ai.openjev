@@ -43,17 +43,19 @@ esac
 "$OJ_PY" -m pip --version >/dev/null 2>&1 || "$OJ_PY" -m ensurepip --upgrade >/dev/null || oj_die "could not bootstrap pip in .venv"
 
 stamp="$OJ_ROOT/.venv/.openjev-install-stamp"
-want="$(shasum -a 256 "$OJ_ROOT/pyproject.toml" | awk '{print $1}')"
+want="$(cat "$OJ_ROOT/pyproject.toml" "$OJ_ROOT/mcp/pyproject.toml" | shasum -a 256 | awk '{print $1}')"
 have=""
 [ -f "$stamp" ] && have="$(cat "$stamp")"
 if [ "${OPENJEV_REINSTALL:-}" != "1" ] && [ "$have" = "$want" ] \
-   && "$OJ_PY" -c 'import openjev, fastapi, uvicorn, httpx, pytest, mlx.core, mlx_vlm' >/dev/null 2>&1; then
+   && "$OJ_PY" -c 'import openjev, fastapi, uvicorn, httpx, pytest, mlx.core, mlx_vlm, openjev_mcp, mcp, re2' >/dev/null 2>&1; then
   oj_info "Python packages are up to date"
 else
   oj_info "Installing Python packages (pip install -e '.[mlx,test]')..."
   "$OJ_PY" -m pip install --upgrade --quiet pip
   (cd "$OJ_ROOT" && "$OJ_PY" -m pip install -e ".[mlx,test]")
-  "$OJ_PY" -c 'import openjev, fastapi, uvicorn, httpx, pytest, mlx.core, mlx_vlm' \
+  oj_info "Installing the MCP server (pip install -e './mcp[test]')..."
+  (cd "$OJ_ROOT" && "$OJ_PY" -m pip install -e "./mcp[test]")
+  "$OJ_PY" -c 'import openjev, fastapi, uvicorn, httpx, pytest, mlx.core, mlx_vlm, openjev_mcp, mcp, re2' \
     || oj_die "packages installed but imports fail; try: OPENJEV_REINSTALL=1 mise run install"
   printf '%s\n' "$want" > "$stamp"
 fi

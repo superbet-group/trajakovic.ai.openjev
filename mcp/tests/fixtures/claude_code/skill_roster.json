@@ -1,0 +1,3 @@
+[{"id": "pdf", "description": "Read, extract, merge, split or fill PDF files"},
+ {"id": "xlsx", "description": "Create or edit Excel spreadsheets"},
+ {"id": "docx", "description": "Create or edit Word documents"}]

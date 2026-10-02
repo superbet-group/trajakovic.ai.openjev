@@ -1,0 +1,99 @@
+{
+ "id": "select_extraction",
+ "title": "Extraction by selection among candidates",
+ "usage_type": "11-extraction-by-selection",
+ "description": "Pick the right value among candidates found in a text (which phone number, which amount, which date part), or verify an extracted field",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text",
+   "field",
+   "candidates"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true
+   },
+   "field": {
+    "type": "string",
+    "description": "what the value is, as an exact stated fact, e.g. 'the number the customer asks to be called back on'"
+   },
+   "candidates": {
+    "type": "array",
+    "description": "{value, description} per candidate (how it differs); 'not_stated' is added",
+    "items": {
+     "type": "object",
+     "required": [
+      "value",
+      "description"
+     ],
+     "properties": {
+      "value": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{{text}}}"
+  },
+  {
+   "id": "again",
+   "kind": "read",
+   "reread": "read",
+   "options": {
+    "think": 256,
+    "samples": 2
+   },
+   "when": "value.p < select_p"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "value": {
+    "type": "choice",
+    "instructions": "Which candidate is {{field}}?",
+    "criteria": {
+     "$from": "candidates",
+     "key": "value",
+     "text": "description",
+     "extra": {
+      "not_stated": "the text does not state it"
+     }
+    }
+   }
+  }
+ },
+ "policy": {
+  "select_p": 0.7
+ },
+ "decisions": [
+  "not_stated",
+  "review",
+  "selected"
+ ],
+ "combine": "selected if value != 'not_stated' and value.p >= select_p; not_stated if value == 'not_stated' and value.p >= select_p; review otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "review",
+  "unattended": "review"
+ },
+ "fallback_decision": "review",
+ "test_file": "tests/cases/11-extraction-by-selection.json",
+ "limitations": [
+  "counting, sums and date arithmetic stay in code (direct counting spreads over 5-10 values); dates are read as components",
+  "the model selects, it does not confirm offsets",
+  "code must check that the chosen span is a substring of the text (signals.value)",
+  "a flat answer (p_top below 0.3) is review: do not act"
+ ],
+ "notes": "# deviation: spec 5.11: the question id is the fixed `value` (the verified u11 asks it as `callback`) and the not_stated text is generic; candidates is an array of {value, description}; decisions are ordered not_stated, review, selected so that a review does not end the run before the retry; the 0.4-0.7 retry is one re-read with think 256 and samples 2 that replaces the first read, and an answer still below 0.7 is review"
+}

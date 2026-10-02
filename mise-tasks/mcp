@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#MISE description="Start only the MCP server (:8100) in the background and print how to register it; --foreground runs it in this terminal"
+set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+oj_require_cmds curl lsof ps
+oj_require_mcp_installed
+
+foreground=0
+case "${1:-}" in
+  "") ;;
+  --foreground) foreground=1 ;;
+  *) oj_die "usage: mise run mcp [--foreground]" ;;
+esac
+
+if [ "$foreground" = 1 ]; then
+  cd "$OJ_ROOT"
+  export PYTHONUNBUFFERED=1 OPENJEV_BASE_URL="${OPENJEV_BASE_URL:-$OJ_SERVER_URL}"
+  exec "$OJ_PY" -m openjev_mcp --transport http --port "$OPENJEV_MCP_PORT"
+fi
+
+oj_svc mcp
+if pid="$(oj_find mcp)"; then
+  oj_info "MCP server already running (PID $pid) on $OJ_MCP_URL"
+else
+  if foreign="$(oj_port_foreign "$SVC_PORT")"; then
+    oj_die "port $SVC_PORT is in use by $foreign. Stop that process, or pick another port (check it is free): OPENJEV_MCP_PORT=$((OPENJEV_MCP_PORT + 1)) mise run mcp. Nothing was started."
+  fi
+  pid="$(oj_spawn mcp)"
+  oj_info "Started MCP server (PID $pid), log: $(basename "$SVC_LOG")"
+  rc=0
+  oj_wait_up "$OJ_MCP_URL/health" 20 "$pid" || rc=$?
+  if [ "$rc" != 0 ]; then
+    oj_tail mcp 30 >&2
+    oj_die "the MCP server did not come up on $OJ_MCP_URL (full log: mise run logs mcp)"
+  fi
+fi
+
+oj_ok "MCP:     $OJ_MCP_URL/mcp"
+echo
+echo "Register with Claude Code:"
+echo "  claude mcp add --transport http openjev $OJ_MCP_URL/mcp"
+echo "or in .mcp.json:"
+echo "  {\"mcpServers\": {\"openjev\": {\"type\": \"http\", \"url\": \"$OJ_MCP_URL/mcp\"}}}"
+if ! oj_http_up "$OJ_SERVER_URL/v1/models"; then
+  oj_warn "OpenJev is not up on $OJ_SERVER_URL yet; tools need it. Start it with: mise run start"
+fi
+echo "Logs: mise run logs mcp   Status: mise run status   Stop: mise run stop"

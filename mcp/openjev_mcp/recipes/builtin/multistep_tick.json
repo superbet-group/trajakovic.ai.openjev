@@ -1,0 +1,101 @@
+{
+ "id": "multistep_tick",
+ "title": "Multi-step move choice",
+ "usage_type": "23-think-multistep-navigation",
+ "description": "Choose the next hop, move or plan step in a graph, game or multi-step search",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "situation",
+   "question",
+   "legal_moves"
+  ],
+  "properties": {
+   "situation": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "the whole state text: goal, current node and content, visited set, board"
+   },
+   "question": {
+    "type": "string",
+    "description": "e.g. 'Which legal move should X play now?'"
+   },
+   "legal_moves": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "description"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    },
+    "maxItems": 120,
+    "description": "code owns legality; only these can be returned"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{{situation}}}"
+  },
+  {
+   "id": "again",
+   "kind": "read",
+   "reread": "read",
+   "options": {
+    "think": 512,
+    "samples": 4
+   },
+   "when": "move.p < follow_p"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "move": {
+    "type": "choice",
+    "instructions": "{{question}}",
+    "criteria": {
+     "$from": "legal_moves",
+     "key": "id",
+     "text": "description"
+    }
+   }
+  }
+ },
+ "policy": {
+  "follow_p": 0.8,
+  "tie_p": 0.5
+ },
+ "decisions": [
+  "tie",
+  "beam",
+  "move",
+  "stop"
+ ],
+ "combine": "tie if move.p < tie_p; beam if move.p < follow_p; move otherwise",
+ "decision_format": {
+  "move": "move:{move}"
+ },
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "tie",
+  "unattended": "tie"
+ },
+ "test_file": "tests/cases/23-think-multistep-navigation.json",
+ "limitations": [
+  "small graphs with explicit cues; beam and depth-N planning unmeasured; think latency 3-20 s and not reproducible",
+  "the caller owns legality, the visited set and the loop cap; goal_reached (stop) is a `yes_no` call, so `stop` is never returned here",
+  "pass read_options think (e.g. 512) for inherently sequential puzzles; with confidence in 0.5-0.8 the engine re-reads once with think 512 and samples 4"
+ ],
+ "notes": "# deviation: spec 5.23: the state is one caller-composed text (situation) with legal_moves as an array; goal_claim and the stop decision are not built (stop is listed but unreachable); beam is returned when the re-read still has p < 0.8, the code picks the beam"
+}

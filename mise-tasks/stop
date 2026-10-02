@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-#MISE description="Stop the UI and the OpenJev server (only the processes this project started)"
+#MISE description="Stop the MCP server, the UI and the OpenJev server (only the processes this project started)"
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 oj_require_cmds lsof ps
+oj_stop mcp
 oj_stop ui
 oj_stop server
 exit 0

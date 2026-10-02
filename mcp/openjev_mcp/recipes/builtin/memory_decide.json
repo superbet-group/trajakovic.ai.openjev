@@ -1,0 +1,100 @@
+{
+ "id": "memory_decide",
+ "title": "Memory consolidation",
+ "usage_type": "19-entity-match-memory-dedupe",
+ "variant_of": "entity_match",
+ "description": "Decide whether a new memory duplicates or updates a stored one",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "new_fact",
+   "neighbours"
+  ],
+  "properties": {
+   "new_fact": {
+    "type": "string"
+   },
+   "neighbours": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "text",
+      "topic"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "text": {
+       "type": "string"
+      },
+      "topic": {
+       "type": "string",
+       "description": "the option text of this memory in the target question, e.g. 'M3 (primary database): the new fact is about this same subject'"
+      }
+     }
+    },
+    "maxItems": 10
+   },
+   "note": {
+    "type": "string",
+    "description": "optional header note, e.g. 'nearest 5 by embedding'"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "STORED MEMORIES{{#note}} ({{note}}){{/note}}:{{#neighbours}}\n{{id}}: {{text}}{{/neighbours}}\n\nNEW FACT: {{new_fact}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "action": {
+    "type": "choice",
+    "instructions": "Given the NEW fact and the NEAREST STORED memories, what should the memory store do with the new fact?",
+    "criteria": {
+     "add": "The new fact carries information not already stored (new topic, or extra detail that does not contradict anything); store it as a new memory",
+     "duplicate": "An existing memory already says the same thing; drop the new fact",
+     "supersede": "The new fact contradicts or updates an existing memory (a value changed); replace the old memory"
+    }
+   },
+   "target": {
+    "type": "choice",
+    "instructions": "Which stored memory does the NEW fact overlap with or update? Choose none if no stored memory is about the same subject.",
+    "criteria": {
+     "$from": "neighbours",
+     "key": "id",
+     "text": "topic",
+     "extra": {
+      "none": "no stored memory is about the same subject"
+     }
+    }
+   }
+  }
+ },
+ "policy": {
+  "act_p": 0.8
+ },
+ "decisions": [
+  "add",
+  "duplicate",
+  "supersede"
+ ],
+ "combine": "duplicate if action == 'duplicate' and action.p >= act_p; supersede if action == 'supersede' and action.p >= act_p; add otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "add",
+  "unattended": "add"
+ },
+ "test_file": "tests/cases/19-entity-match-memory-dedupe.json",
+ "limitations": [
+  "only sees the state: the duplicate must be in the retriever's top-k",
+  "target is only meaningful for duplicate and supersede; below act_p the decision is add (read action_p to flag it)",
+  "zero neighbours is add without a call in the spec; here the engine refuses a one-option question, so the run degrades to add (OJ_INVALID_INPUT, no request): check for an empty list first"
+ ],
+ "notes": "# deviation: spec 5.19: each neighbour needs a `topic` (used verbatim as its target option text; the engine cannot derive it); zero neighbours degrades to add instead of a clean add; variant_of entity_match"
+}

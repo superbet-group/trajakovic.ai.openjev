@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-#MISE description="Run all tests: server (pytest), UI proxy (pytest ui/tests), UI batch import (node --test); no model needed"
+#MISE description="Run all tests: server (pytest), UI proxy (pytest ui/tests), UI batch import (node --test), MCP server (pytest mcp/tests); no model needed"
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 oj_require_installed
+oj_require_mcp_installed
 oj_require_mise_tool node
 cd "$OJ_ROOT"
 
@@ -26,6 +27,7 @@ run_suite() {
 run_suite "server (pytest)" "$OJ_PY" -m pytest -q
 run_suite "UI proxy (pytest ui/tests)" "$OJ_PY" -m pytest -q ui/tests
 run_suite "UI batch import (node --test)" node --test ui/tests/batch_import.test.mjs
+run_suite "MCP server (pytest mcp/tests)" "$OJ_PY" -m pytest -q mcp/tests
 
 echo
 echo "Summary:$summary"

@@ -13,13 +13,17 @@ mkdir -p "$OJ_RUN_DIR"
 
 export OPENJEV_PORT="${OPENJEV_PORT:-8080}"
 export UI_PORT="${UI_PORT:-8090}"
+export OPENJEV_MCP_PORT="${OPENJEV_MCP_PORT:-8100}"
 OJ_SERVER_URL="http://127.0.0.1:$OPENJEV_PORT"
 OJ_UI_URL="http://127.0.0.1:$UI_PORT"
+OJ_MCP_URL="http://127.0.0.1:$OPENJEV_MCP_PORT"
 
 OJ_SERVER_PIDFILE="$OJ_RUN_DIR/.openjev.pid"
 OJ_SERVER_LOG="$OJ_RUN_DIR/.openjev.log"
 OJ_UI_PIDFILE="$OJ_RUN_DIR/.openjev-ui.pid"
 OJ_UI_LOG="$OJ_RUN_DIR/.openjev-ui.log"
+OJ_MCP_PIDFILE="$OJ_RUN_DIR/.openjev-mcp.pid"
+OJ_MCP_LOG="$OJ_RUN_DIR/.openjev-mcp.log"
 
 OJ_MODEL="${OPENJEV_MLX_MODEL:-mlx-community/diffusiongemma-26B-A4B-it-4bit}"
 OJ_MIN_RAM_GB=24
@@ -49,6 +53,10 @@ oj_svc() {
       SVC_LABEL="UI"; SVC_PIDFILE="$OJ_UI_PIDFILE"; SVC_LOG="$OJ_UI_LOG"
       SVC_PORT="$UI_PORT"; SVC_URL="$OJ_UI_URL"
       SVC_HEALTH="$OJ_UI_URL/ui/api/config"; SVC_KIND=ui; SVC_MATCH="ui/server.py" ;;
+    mcp)
+      SVC_LABEL="MCP"; SVC_PIDFILE="$OJ_MCP_PIDFILE"; SVC_LOG="$OJ_MCP_LOG"
+      SVC_PORT="$OPENJEV_MCP_PORT"; SVC_URL="$OJ_MCP_URL"
+      SVC_HEALTH="$OJ_MCP_URL/health"; SVC_KIND=mcp; SVC_MATCH="-m openjev_mcp" ;;
     *) oj_die "internal: unknown service '$1'" ;;
   esac
 }
@@ -59,8 +67,8 @@ oj_pid_cwd() {
 }
 
 # oj_cmd_is CMD KIND: does a `ps` command line start with the venv interpreter
-# immediately followed by exactly `-m openjev` (KIND=server) or `ui/server.py`
-# (KIND=ui), at argv boundaries? Decoys such as `less ui/server.py`,
+# immediately followed by exactly `-m openjev` (KIND=server), `ui/server.py`
+# (KIND=ui) or `-m openjev_mcp` (KIND=mcp), at argv boundaries? Decoys such as `less ui/server.py`,
 # `git commit -m openjev-fix`, `python -m openjev.warmup` or spawn.py's own
 # argv (interpreter first, then spawn.py) do not match.
 oj_cmd_is() {
@@ -80,11 +88,12 @@ oj_cmd_is() {
   case "$kind" in
     server) case "$rest" in " -m openjev"|" -m openjev "*) return 0 ;; esac ;;
     ui)     case "$rest" in " ui/server.py"|" ui/server.py "*|" $OJ_ROOT/ui/server.py"|" $OJ_ROOT/ui/server.py "*) return 0 ;; esac ;;
+    mcp)    case "$rest" in " -m openjev_mcp"|" -m openjev_mcp "*) return 0 ;; esac ;;
   esac
   return 1
 }
 
-# oj_pid_is_ours PID KIND (server|ui)
+# oj_pid_is_ours PID KIND (server|ui|mcp)
 oj_pid_is_ours() {
   local pid="${1:-}" kind="${2:-}" cmd cwd
   case "$pid" in ''|*[!0-9]*) return 1 ;; esac
@@ -137,7 +146,7 @@ oj_find() {
 oj_port_foreign() {
   local port="$1" p cmd
   for p in $(oj_listeners "$port"); do
-    if oj_pid_is_ours "$p" server || oj_pid_is_ours "$p" ui; then
+    if oj_pid_is_ours "$p" server || oj_pid_is_ours "$p" ui || oj_pid_is_ours "$p" mcp; then
       continue
     fi
     cmd="$(ps -o command= -p "$p" 2>/dev/null || true)"
@@ -183,6 +192,11 @@ oj_spawn() {
     pid="$(PYTHONUNBUFFERED=1 OPENJEV_BACKEND="${OPENJEV_BACKEND:-mlx}" \
       "$OJ_PY" "$OJ_ROOT/mise-tasks/lib/spawn.py" --pidfile "$SVC_PIDFILE" --log "$SVC_LOG" \
       --cwd "$OJ_ROOT" -- "$OJ_PY" -m openjev)" || {
+      oj_tail "$1" 30 >&2; oj_die "$SVC_LABEL failed to start (full log: $SVC_LOG)"; }
+  elif [ "$1" = mcp ]; then
+    pid="$(PYTHONUNBUFFERED=1 OPENJEV_BASE_URL="${OPENJEV_BASE_URL:-$OJ_SERVER_URL}" \
+      "$OJ_PY" "$OJ_ROOT/mise-tasks/lib/spawn.py" --pidfile "$SVC_PIDFILE" --log "$SVC_LOG" \
+      --cwd "$OJ_ROOT" -- "$OJ_PY" -m openjev_mcp --transport http --port "$OPENJEV_MCP_PORT")" || {
       oj_tail "$1" 30 >&2; oj_die "$SVC_LABEL failed to start (full log: $SVC_LOG)"; }
   else
     pid="$(PYTHONUNBUFFERED=1 OPENJEV_URL="${OPENJEV_URL:-$OJ_SERVER_URL}" \
@@ -290,6 +304,14 @@ oj_installed() {
 
 oj_require_installed() {
   oj_installed || oj_die "OpenJev is not installed. Run: mise run install"
+}
+
+oj_mcp_installed() {
+  [ -x "$OJ_PY" ] && "$OJ_PY" -c 'import openjev_mcp, mcp, re2, jsonschema' >/dev/null 2>&1
+}
+
+oj_require_mcp_installed() {
+  oj_mcp_installed || oj_die "the MCP server is not installed. Run: mise run install"
 }
 
 oj_total_ram_gb() {

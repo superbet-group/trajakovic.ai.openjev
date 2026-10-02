@@ -1,0 +1,95 @@
+{
+ "id": "model_routing",
+ "title": "Per-turn model and effort routing",
+ "usage_type": "08-model-effort-routing",
+ "description": "Pick which model tier or thinking effort a coding task needs",
+ "routing": true,
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "summary"
+  ],
+  "properties": {
+   "summary": {
+    "type": "string",
+    "description": "Task summary: <verb> <object>; <scope>; <root cause known?>; <spec clear?>; <tests>"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "Task summary: {{summary}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "tier": {
+    "type": "choice",
+    "instructions": "Which model tier should handle this next agent turn? Pick the cheapest tier that will still do it correctly.",
+    "criteria": {
+     "haiku": "Trivial or mechanical: rename, typo, formatting, listing, simple lookup, one-line edit",
+     "sonnet": "Routine engineering: implement a well-specified feature, write tests, a bug fix with a known cause, small refactor",
+     "opus": "Hard: subtle concurrency or security reasoning, architecture or migration design, unknown root cause across many components"
+    }
+   },
+   "deep": {
+    "type": "noul",
+    "instructions": "Does this task require deep multi-step reasoning, where a fast shallow answer would likely be wrong?",
+    "criteria": {
+     "true": "Requires careful multi-step reasoning, tradeoff analysis, or hunting a subtle bug",
+     "false": "Mechanical, well-specified, or a lookup; no deep reasoning needed"
+    }
+   },
+   "cx": {
+    "type": "score",
+    "instructions": "How complex is this task for a coding agent?",
+    "criteria": [
+     "trivial: one mechanical edit",
+     "easy: small well-specified change",
+     "moderate: several files, clear approach",
+     "hard: subtle bugs or design decisions",
+     "expert: deep reasoning over many interacting components"
+    ]
+   }
+  }
+ },
+ "policy": {
+  "cx_opus": 3.0,
+  "tier_min_p": 0.5,
+  "haiku_p": 0.9,
+  "haiku_deep_max": 0.15,
+  "deep_high": 0.7
+ },
+ "decisions": [
+  "sonnet",
+  "haiku",
+  "opus"
+ ],
+ "combine": "opus if cx >= cx_opus; opus if tier == 'opus'; opus if tier == 'sonnet' and tier.p < tier_min_p; sonnet if tier == 'haiku' and tier.p < tier_min_p; haiku if tier == 'haiku' and deep <= haiku_deep_max and tier.p >= haiku_p; sonnet otherwise",
+ "outputs": {
+  "effort": {
+   "values": [
+    "low",
+    "medium",
+    "high"
+   ],
+   "combine": "high if deep >= deep_high; high if cx >= cx_opus; low if tier == 'haiku' and deep <= haiku_deep_max; medium otherwise"
+  }
+ },
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "sonnet",
+  "unattended": "sonnet"
+ },
+ "fallback_decision": "sonnet",
+ "test_file": "tests/cases/08-model-effort-routing.json",
+ "limitations": [
+  "routes on the summary only (a lazy summary routes cheap)",
+  "the sonnet middle band is soft (confidence 0.43 on a clean feature and on a flaky test)",
+  "the 5-way effort choice is a secondary signal only",
+  "kill switch OPENJEV_MCP_ROUTING=off returns sonnet without a read"
+ ],
+ "notes": "# deviation: spec 2.18/5.8: decisions are ordered sonnet, haiku, opus so a fail-open override gives the safe default sonnet; tiers is not an input (the verbatim tier criteria are fixed); effort is always returned in outputs; a degraded run returns sonnet without the effort medium"
+}

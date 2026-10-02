@@ -1,0 +1,96 @@
+{
+ "id": "bulk_label",
+ "title": "Bulk labelling with a review queue",
+ "usage_type": "21-bulk-labeling-active-learning",
+ "description": "Label many rows of a dataset and pick the least certain rows for human review",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "rows",
+   "taxonomy"
+  ],
+  "properties": {
+   "rows": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "text"
+     ],
+     "properties": {
+      "id": {},
+      "text": {
+       "type": "string"
+      }
+     }
+    },
+    "maxItems": 100
+   },
+   "taxonomy": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "description"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    },
+    "maxItems": 60,
+    "description": "label ids with descriptions; include other (and empty if blank rows occur)"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "rows",
+   "kind": "read_per_item",
+   "items": "rows",
+   "aggregate": "worst",
+   "state_template": "Row {{id}}: {{text}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "topic": {
+    "type": "choice",
+    "instructions": "What is the main topic of row {{id}}?",
+    "criteria": {
+     "$from": "taxonomy",
+     "key": "id",
+     "text": "description"
+    }
+   }
+  }
+ },
+ "policy": {
+  "auto_p": 0.9,
+  "review_p": 0.8
+ },
+ "decisions": [
+  "label",
+  "audit",
+  "needs_review"
+ ],
+ "combine": "needs_review if topic.p < review_p; audit if abstained(topic) or topic == 'empty'; label if topic.p >= auto_p; needs_review otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "needs_review",
+  "unattended": "needs_review"
+ },
+ "test_file": "tests/cases/21-bulk-labeling-active-learning.json",
+ "limitations": [
+  "one row per request (the packed rows_per_request form needs a choice-typed $each the engine lacks); the outcome decision is the worst over the rows and `items` has each row's decision",
+  "for a whole dataset use the `batch` tool (resume, retry, audit sampling, review queue, exports); this recipe decides up to 100 rows",
+  "extra features (pii, sentiment), the margin rule and the seeded audit sample are the batch tool's; model confidence is not labeller agreement"
+ ],
+ "notes": "# deviation: spec 5.21: one row per request (no rows_per_request packing); the taxonomy must list other (and empty) itself; the 2-5% audit sample and the margin column are the batch tool's"
+}

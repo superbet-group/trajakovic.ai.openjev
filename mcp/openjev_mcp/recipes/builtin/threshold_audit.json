@@ -1,0 +1,69 @@
+{
+ "id": "threshold_audit",
+ "title": "Threshold audit probe",
+ "usage_type": "24-calibration-threshold-audit",
+ "description": "Measure accuracy on labelled examples and choose thresholds, or detect drift after a model change",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text",
+   "question"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "one labelled example"
+   },
+   "question": {
+    "type": "string",
+    "description": "the yes/no question the threshold applies to"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{{text}}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "claim": {
+    "type": "noul",
+    "instructions": "{{question}}"
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.95,
+  "no_at": 0.05
+ },
+ "decisions": [
+  "report"
+ ],
+ "combine": "report otherwise",
+ "outputs": {
+  "zone": {
+   "values": [
+    "low",
+    "mid",
+    "high"
+   ],
+   "combine": "high if claim >= yes_at; low if claim <= no_at; mid otherwise"
+  }
+ },
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "report",
+  "unattended": "report"
+ },
+ "test_file": "tests/cases/24-calibration-threshold-audit.json",
+ "limitations": [
+  "reads one labelled example and reports its probability and zone against the provisional 0.05/0.95 band; the accuracy, threshold fit, N and rule-of-three bound over a labelled set are the `calibrate` tool's",
+  "drift alarm (a canary crossing 0.5, a reordered ladder, a changed model string) is a comparison of repeated probes by the caller; never tune on the canary set",
+  "fixtures are near-saturated; run-to-run spread is not a signal without think"
+ ],
+ "notes": "# deviation: spec 5.24: the recipe probes one example (decision report, the zone is an output); the audit itself is the calibrate tool; the question has no explicit criteria"
+}

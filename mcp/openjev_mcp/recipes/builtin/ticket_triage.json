@@ -1,0 +1,158 @@
+{
+ "id": "ticket_triage",
+ "title": "Support ticket, email and message triage",
+ "usage_type": "01-support-ticket-triage",
+ "description": "Route one customer ticket, email or chat message to a team and flag urgency, refund, churn or frustration",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text",
+   "teams"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "the ticket, email or chat message as written"
+   },
+   "teams": {
+    "type": "array",
+    "description": "label and description of each team; 'other' is added",
+    "items": {
+     "type": "object",
+     "required": [
+      "label",
+      "description"
+     ],
+     "properties": {
+      "label": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "full"
+    ],
+    "default": "strict",
+    "description": "strict asks dept, refund, churn; full also asks urgent and frustration (frustration >= 1.5 escalates)"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{{text}}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "dept": {
+    "type": "choice",
+    "instructions": "Which team should own this ticket?",
+    "criteria": {
+     "$from": "teams",
+     "key": "label",
+     "text": "description",
+     "extra": {
+      "other": "anything else, or too vague to tell"
+     }
+    }
+   },
+   "refund": {
+    "type": "noul",
+    "instructions": "Is the customer asking for money back (a refund or a credit)?"
+   },
+   "churn": {
+    "type": "noul",
+    "instructions": "Is the customer threatening to cancel or leave?"
+   }
+  },
+  "full": {
+   "dept": {
+    "type": "choice",
+    "instructions": "Which team should own this ticket?",
+    "criteria": {
+     "$from": "teams",
+     "key": "label",
+     "text": "description",
+     "extra": {
+      "other": "anything else, or too vague to tell"
+     }
+    }
+   },
+   "urgent": {
+    "type": "noul",
+    "instructions": "Does this need attention today (outage, money lost, deadline, or a blocked customer)?"
+   },
+   "frustration": {
+    "type": "score",
+    "instructions": "How frustrated is the customer?",
+    "criteria": [
+     "calm or neutral",
+     "somewhat annoyed",
+     "angry or furious"
+    ]
+   },
+   "refund": {
+    "type": "noul",
+    "instructions": "Is the customer asking for money back (a refund or a credit)?"
+   },
+   "churn": {
+    "type": "noul",
+    "instructions": "Is the customer threatening to cancel or leave?"
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.8,
+  "no_at": 0.2,
+  "route_p": 0.7,
+  "churn_escalate": 0.8,
+  "frustration_escalate": 1.5
+ },
+ "decisions": [
+  "route",
+  "human_review",
+  "escalate"
+ ],
+ "combine": "escalate if churn >= churn_escalate; escalate if frustration >= frustration_escalate; human_review if dept == 'other'; human_review if dept.p < route_p; human_review if grey(refund) or grey(churn) or grey(urgent); route otherwise",
+ "outputs": {
+  "priority": {
+   "values": [
+    "urgent",
+    "normal"
+   ],
+   "combine": "urgent if urgent >= yes_at; normal otherwise"
+  },
+  "refund_flag": {
+   "values": [
+    "yes",
+    "no",
+    "unsure"
+   ],
+   "combine": "yes if refund >= yes_at; unsure if grey(refund); no otherwise"
+  }
+ },
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "human_review",
+  "unattended": "human_review"
+ },
+ "fallback_decision": "human_review",
+ "test_file": "tests/cases/01-support-ticket-triage.json",
+ "limitations": [
+  "single-label (ask one noul per department for multi-label)",
+  "English plus one German case; tone reads are a sample of 3 cases",
+  "route on dept only; priority comes from the flags (priority and refund_flag outputs)",
+  "the intent and email-tray variants and the reply flag are not built: the question set is fixed per profile",
+  "a mailbox or ticket export is a batch job over the same questions, not one recipe call per row"
+ ],
+ "notes": "# deviation: spec 5.1: teams is a required array of {label, description} (the engine applies no schema defaults); the default profile `strict` asks the three questions of the verified u01 request (dept, refund, churn) and `full` adds urgent and frustration; flags and frustration are chosen by profile, not as inputs; escalation is by churn and frustration, urgency is the `priority` output; the intent and email variants are not built"
+}

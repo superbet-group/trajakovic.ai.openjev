@@ -1,0 +1,10 @@
+{
+  "session_id": "5f2c1d4e-0b7a-4c1e-9a52-3d0f6a1b7c10",
+  "transcript_path": "tests/fixtures/claude_code/transcript.jsonl",
+  "cwd": "/home/dev/app",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {"command": "git status", "description": "Show working tree status"},
+  "tool_use_id": "toolu_01HandBuiltFixture"
+}
