@@ -118,7 +118,7 @@ through `/js/jev/index.js`, and only with a dynamic `import()` (see §3.10). Nei
 1. **`GET /ui/api/config`** returns 200:
    ```json
    {
-     "uiVersion": "0.1.0",
+     "uiVersion": "0.5.0",
      "openjevUrl": "http://127.0.0.1:8080",
      "proxyBase": "",
      "authConfigured": false,

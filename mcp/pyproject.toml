@@ -1,6 +1,6 @@
 [project]
 name = "openjev-mcp"
-version = "1.4.0"
+version = "0.5.0"
 description = "MCP server, hook CLI and skills for OpenJev typed reads"
 requires-python = ">=3.10"
 license = "Apache-2.0"

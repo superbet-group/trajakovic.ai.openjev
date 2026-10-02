@@ -1,14 +1,14 @@
 # openjev-mcp: spec
 
-Spec version 1.4 (package `openjev-mcp` 1.4.0, `openjev_mcp.__version__`; `openjev_mcp.SPEC_VERSION` stays 1.2, the build spec revision). Status: phases 1, 2 and 3 implemented, 2026-10-02. Written from the code as built.
+Spec version 0.5 (package `openjev-mcp` 0.5.0, `openjev_mcp.__version__`; `openjev_mcp.SPEC_VERSION` stays 1.2, the build spec revision). Status: phases 1, 2 and 3 implemented, 2026-10-02. Written from the code as built.
 
 This is the MCP server's own spec, for upgrades (new SDK, new MCP revision, new tools). It does not repeat the build spec; where a rule is not written here, `docs/mcp-skill-spec/OPENJEV_MCP_SKILLS_SPEC.md` v1.2 ("build spec", cited "spec 2.x") and `docs/mcp-skill-spec/TASKS.md` stay normative. `mcp/docs/architecture.md` ("arch") is the build-time interface contract, `mcp/docs/tasks.md` the phase-1 package plan and `mcp/docs/tasks-phase2-3.md` the phase 2/3 plan ("plan", its numbered Decisions are cited "Decision N"); when they disagree with this file, this file (which follows the code) wins. Section 3 lists every difference from the build spec.
 
 ### Versioning of this file
 
-This file's version is the package version's `major.minor` and moves with it; `openjev_mcp.SPEC_VERSION` instead names the build-spec revision implemented (also 1.2) and changes only when `docs/mcp-skill-spec/` does. Rules: a patch release (1.4.x) fixes code to match this file and does not change it beyond the test count; a minor release (1.5) adds tools, resources, env variables or revisions and must update sections 1, 4, 9 and 10 in the same change; a major (2.0) is a breaking change to a tool schema, an error code or the transport contract. Phase-1 tool schemas only gained optional fields in 1.3/1.4 (TASKS 1.32). Every change to section 3 or the protocol decision (section 2) is a minor bump of this file.
+This file's version is the package version's `major.minor` and moves with it; `openjev_mcp.SPEC_VERSION` instead names the build-spec revision implemented (also 1.2) and changes only when `docs/mcp-skill-spec/` does. Rules: a patch release (0.5.x) fixes code to match this file and does not change it beyond the test count; a minor release (0.6) adds tools, resources, env variables or revisions and must update sections 1, 4, 9 and 10 in the same change; a major (1.0) is a breaking change to a tool schema, an error code or the transport contract. Phase-1 tool schemas only gained optional fields in 1.3/1.4 (TASKS 1.32). Every change to section 3 or the protocol decision (section 2) is a minor bump of this file.
 
-Change log:
+Change log (versions 1.2-1.4 below are the pre-release numbering; on 2026-10-02 the package was levelled with OpenJev and the UI at 0.5.0, so 1.4 is now 0.5):
 
 - 1.2: phase 1 as built (4 read tools, `lint`, `status`, `openjev-hook pretooluse`, 2 resources).
 - 1.3: phase 2 (TASKS 2.1-2.16): `filter`, `recipe`, `batch`, `batch_results`, 29 built-in recipes, hooks `stop`/`userprompt`/`posttooluse`, CLIs `openjev check`/`filter`, resources/templates/patterns/guide, prompts and completion, extension plumbing, `OPENJEV_MCP_RECIPES`/`_ROUTING`; gate-10 fixed by changing the `command_gate` combine (deviation 29). Section 2 "Not implemented" and the mismatch list re-checked.
