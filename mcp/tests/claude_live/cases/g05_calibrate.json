@@ -1,0 +1,102 @@
+{
+ "group": "g05",
+ "cases": {
+  "T041": {
+   "slug": "calibrate_ex_cal",
+   "feature": "calibrate ex-cal",
+   "spec": "build 2.15, mcp/spec.md dev 36",
+   "prompt": "Call the tool mcp__openjev__calibrate exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "args": {"case_file": "{cwd}/ex-cal.json", "options": {"samples": 1}},
+   "primary": ["calibrate"],
+   "covers": ["tool:calibrate"],
+   "pins": {"00": "ex-cal-1..ex-cal-7"},
+   "tier": "cheap",
+   "max_turns": 3
+  },
+  "T042": {
+   "slug": "audit_record_store",
+   "feature": "audit record",
+   "spec": "build 2.15; mcp/spec.md 71-95 audits",
+   "prompt": "Call the tool mcp__openjev__calibrate exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "args": {"case_file": "{cwd}/ex-cal.json", "options": {"samples": 1}, "store": "{cwd}/audit.json"},
+   "primary": ["calibrate"],
+   "covers": ["tool:calibrate"],
+   "pins": {"00": "ex-cal-1..ex-cal-7"},
+   "tier": "cheap",
+   "max_turns": 3
+  },
+  "T043": {
+   "slug": "read_audit_resource",
+   "feature": "read audit",
+   "spec": "mcp/spec.md 71-95 openjev://audits/{question_hash}",
+   "prompt": "Call the tool ReadMcpResourceTool exactly once with server \"openjev\" and uri \"openjev://audits/{seed:hash}\". Do not call any other tool. After the result, reply in one short sentence.",
+   "primary": ["ReadMcpResourceTool"],
+   "covers": ["template:openjev://audits/{question_hash}"],
+   "pins": {"00": "ex-cal-1..ex-cal-7"},
+   "tier": "cheap",
+   "max_turns": 3,
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": ["mcp__openjev", "ListMcpResourcesTool", "ReadMcpResourceTool"]
+  },
+  "T044": {
+   "slug": "calibrate_from_batch",
+   "feature": "from_batch",
+   "spec": "build 2.15 from_batch",
+   "prompt": "Call the tool mcp__openjev__calibrate exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "args": {"from_batch": {"output_path": "{cwd}/batch.jsonl", "labels_path": "{cwd}/labels.csv", "label_fields": {"escalate": "esc"}}},
+   "primary": ["calibrate"],
+   "covers": ["tool:calibrate"],
+   "pins": {"00": "ex-cal-1..ex-cal-6"},
+   "tier": "cheap",
+   "max_turns": 3
+  },
+  "T045": {
+   "slug": "target_holdout",
+   "feature": "target + holdout",
+   "spec": "build 2.15 target, holdout; use case 24",
+   "prompt": "Call the tool mcp__openjev__calibrate exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "args": {"case_file": "{cwd}/cal24.json", "options": {"samples": 1}, "target": {"max_errors": 0}, "holdout": 0.5},
+   "primary": ["calibrate"],
+   "covers": ["tool:calibrate"],
+   "pins": {"24": "cal-01,cal-02,cal-03-fit-leak,cal-03-fit-dataloss,cal-03-fit-howto,cal-03-fit-feature"},
+   "tier": "cheap",
+   "max_turns": 3
+  },
+  "T046": {
+   "slug": "chunked_calibrate",
+   "feature": "chunked calibrate",
+   "spec": "mcp/spec.md dev 36; build 2.15 chunking",
+   "prompt": "Call the tool mcp__openjev__calibrate with exactly these arguments: {args}\nIf the result has a next_cursor that is not null, call mcp__openjev__calibrate again with the same arguments plus cursor set to that next_cursor string, unchanged. Keep calling while next_cursor is not null. Do not call any other tool. When next_cursor is null, reply in one short sentence.",
+   "args": {"case_file": "{cwd}/ex-cal.json", "options": {"samples": 1}, "max_items_per_call": 3},
+   "primary": ["calibrate"],
+   "covers": ["tool:calibrate"],
+   "pins": {"00": "ex-cal-1..ex-cal-7"},
+   "tier": "cheap",
+   "max_turns": 8,
+   "timeout_s": 420
+  },
+  "T047": {
+   "slug": "compare_to_drift",
+   "feature": "compare_to drift",
+   "spec": "build 2.15 compare_to",
+   "prompt": "Call the tool mcp__openjev__calibrate exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool. After the result, reply in one short sentence.",
+   "args": {"case_file": "{cwd}/ex-cal.json", "options": {"samples": 1}, "compare_to": "{cwd}/prev.json"},
+   "primary": ["calibrate"],
+   "covers": ["tool:calibrate"],
+   "pins": {"00": "ex-cal-1..ex-cal-7"},
+   "tier": "cheap",
+   "max_turns": 3
+  },
+  "T048": {
+   "slug": "examples_without_labels",
+   "feature": "invalid examples",
+   "spec": "build 2.15, 2.4",
+   "prompt": "Call the tool mcp__openjev__calibrate exactly once with exactly these arguments, unchanged: {args}\nDo not call any other tool, and do not retry or fix the arguments. After the result, reply in one short sentence.",
+   "args": {"questions": {"escalate": {"type": "noul", "instructions": "Should this support ticket be escalated to the on-call engineer right now?"}}, "examples": [{"id": "a", "state": "Checkout returns HTTP 500 for all customers."}, {"id": "b", "state": "Typo on the pricing page."}], "options": {"samples": 1}},
+   "primary": ["calibrate"],
+   "covers": ["tool:calibrate"],
+   "tier": "cheap",
+   "max_turns": 3
+  }
+ }
+}

@@ -1,0 +1,131 @@
+{
+ "id": "claim_check",
+ "title": "Claim, citation and quote grounding check",
+ "usage_type": "16-claim-grounding-check",
+ "description": "Check whether a summary, citation, quote or changelog bullet is supported by its source text",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "claim",
+   "source",
+   "claim_label",
+   "source_label"
+  ],
+  "properties": {
+   "claim": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "the bullet, citation claim, quote or summary"
+   },
+   "source": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "the source text: it must contain the relevant passage"
+   },
+   "claim_label": {
+    "type": "string",
+    "description": "e.g. 'CHANGELOG BULLET', 'CLAIM IN DRAFT', 'QUOTE TO CHECK', 'SUMMARY TO CHECK'"
+   },
+   "source_label": {
+    "type": "string",
+    "description": "e.g. 'DIFF', 'ABSTRACT', 'SOURCE EXCERPT'"
+   },
+   "source_name": {
+    "type": "string",
+    "description": "optional, shown after the source label, e.g. 'src/http/client.py'"
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "grounded",
+     "quote",
+     "overstatement"
+    ],
+    "default": "strict",
+    "description": "the mode: strict = support (supports, contradicts, says_nothing), grounded (summary), quote (verbatim), overstatement"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{claim_label}}: \"{{{claim}}}\"\n\n{{source_label}}{{#source_name}} ({{source_name}}){{/source_name}}:\n{{{source}}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "v": {
+    "type": "choice",
+    "instructions": "Judging only from the {{source_label}}, does it support, contradict, or say nothing about the {{claim_label}}?",
+    "criteria": {
+     "supports": "the source text states or clearly entails the claim",
+     "contradicts": "the source text states something that conflicts with the claim",
+     "says_nothing": "the source text does not address the claim at all"
+    }
+   }
+  },
+  "grounded": {
+   "grounded": {
+    "type": "noul",
+    "instructions": "Is every factual statement in the {{claim_label}} supported by the {{source_label}}? Consider numbers, causes and durations.",
+    "criteria": {
+     "true": "all statements are supported by the source",
+     "false": "at least one statement is unsupported or contradicts the source"
+    }
+   }
+  },
+  "quote": {
+   "verbatim": {
+    "type": "noul",
+    "instructions": "Ignoring line breaks, extra spaces and markdown formatting marks, does the {{source_label}} contain the {{claim_label}} word for word, with no changed, added or dropped words or numbers?",
+    "criteria": {
+     "true": "the same words in the same order appear in the excerpt",
+     "false": "the quote differs from the excerpt in at least one word, number or method name"
+    }
+   }
+  },
+  "overstatement": {
+   "strength": {
+    "type": "noul",
+    "instructions": "Is the {{claim_label}} fully supported by the {{source_label}}, without any stronger wording than the source uses?",
+    "criteria": {
+     "true": "the source states this with the same strength",
+     "false": "the claim is stronger than the source or unsupported"
+    }
+   }
+  }
+ },
+ "policy": {
+  "support_p": 0.8,
+  "contra_p": 0.6,
+  "nothing_p": 0.6,
+  "pass_at": 0.85,
+  "block_at": 0.3,
+  "verbatim_ok": 0.85,
+  "verbatim_fab": 0.1
+ },
+ "decisions": [
+  "supported",
+  "review",
+  "unsupported",
+  "contradicted"
+ ],
+ "combine": "supported if v == 'supports' and v.p >= support_p; contradicted if v == 'contradicts' and v.p >= contra_p; unsupported if v == 'says_nothing' and v.p >= nothing_p; supported if grounded >= pass_at; unsupported if grounded <= block_at; supported if strength >= pass_at; unsupported if strength <= block_at; supported if verbatim >= verbatim_ok; contradicted if verbatim <= verbatim_fab; review otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "review",
+  "unattended": "review"
+ },
+ "fallback_decision": "review",
+ "test_file": "tests/cases/16-claim-grounding-check.json",
+ "limitations": [
+  "the relevant passage must be in state (else says_nothing is a retrieval failure)",
+  "long sources dilute",
+  "does not verify that URLs or DOIs exist",
+  "the substring and number checks that should run before any read are the caller's code",
+  "screen mode (inclusion and exclusion criteria) is not built",
+  "several bullets of one diff are a filter job"
+ ],
+ "notes": "# deviation: spec 5.16: the mode is the `profile` input; claim_label and source_label are required (the engine applies no schema defaults) and source_name completes the state line; a fabricated quote (verbatim <= 0.1) is contradicted and a grounded or overstatement score <= 0.3 is unsupported; the screen mode is not built"
+}

@@ -19,4 +19,6 @@ uv.lock
 .openjev.pid
 .openjev-ui.log
 .openjev-ui.pid
+.openjev-mcp.log
+.openjev-mcp.pid
 .playwright-mcp/

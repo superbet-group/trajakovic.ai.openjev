@@ -1,0 +1,81 @@
+{
+ "id": "judge_pairwise",
+ "variant_of": "judge_assert",
+ "title": "Pairwise LLM judge, both orders",
+ "usage_type": "12-judge-and-test-assertions",
+ "description": "Compare two replies A and B to the same message on a criterion, reading both orders to cancel position bias",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "user_message",
+   "a",
+   "b",
+   "criterion"
+  ],
+  "properties": {
+   "user_message": {
+    "type": "string",
+    "x-openjev-raw": true
+   },
+   "a": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "candidate A"
+   },
+   "b": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "candidate B"
+   },
+   "criterion": {
+    "type": "string",
+    "description": "completes 'Which candidate reply better ...?', e.g. \"answers the user's question: correct, specific, and safe\""
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "pair",
+   "kind": "read_twice_swapped",
+   "swap": [
+    "a",
+    "b"
+   ],
+   "state_template": "USER MESSAGE:\n{{{user_message}}}\n\nCANDIDATE A:\n{{{a}}}\n\nCANDIDATE B:\n{{{b}}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "better": {
+    "type": "choice",
+    "instructions": "Which candidate reply better {{criterion}}?",
+    "criteria": {
+     "A": "Candidate A is the better reply",
+     "B": "Candidate B is the better reply"
+    }
+   }
+  }
+ },
+ "policy": {
+  "win_p": 0.8
+ },
+ "decisions": [
+  "tie",
+  "A",
+  "B"
+ ],
+ "combine": "A if better == 'A' and better.p >= win_p and better_swapped == 'B' and better_swapped.p >= win_p; B if better == 'B' and better.p >= win_p and better_swapped == 'A' and better_swapped.p >= win_p; tie otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "tie",
+  "unattended": "tie"
+ },
+ "fallback_decision": "tie",
+ "test_file": "tests/cases/12-judge-and-test-assertions.json",
+ "limitations": [
+  "a winner needs both orders at p >= 0.8; any disagreement is a tie (position bias)",
+  "two requests per comparison",
+  "the suite is easy (saturated values)"
+ ],
+ "notes": "# deviation: spec 5.12: the criterion completes the question as 'Which candidate reply better <criterion>?'; a failed read gives tie (no winner), spec fail closed (fail) is the judge_assert decision"
+}

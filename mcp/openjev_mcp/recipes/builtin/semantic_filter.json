@@ -1,0 +1,104 @@
+{
+ "id": "semantic_filter",
+ "title": "Semantic filter (grep by meaning)",
+ "usage_type": "14-semantic-grep-relevance",
+ "description": "Filter many lines, files, diff hunks or tool results by relevance to a task, like grep by meaning",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "task",
+   "target",
+   "shows",
+   "lines"
+  ],
+  "properties": {
+   "task": {
+    "type": "string",
+    "description": "state header, e.g. 'find the line where the crash originates (root cause), not the follow-on symptoms.'"
+   },
+   "target": {
+    "type": "string",
+    "description": "completes 'Which tagged line is ...?', e.g. 'the root cause of the failure (the first thing that went wrong), not a consequence'"
+   },
+   "shows": {
+    "type": "string",
+    "description": "completes 'Does the tagged log contain at least one line that shows ...?', e.g. 'the root cause of a failure'"
+   },
+   "lines": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "text",
+      "gloss"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "text": {
+       "type": "string"
+      },
+      "gloss": {
+       "type": "string",
+       "description": "short option text for this line"
+      }
+     }
+    },
+    "maxItems": 100
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "TASK: {{task}}\nTAGGED LINES:{{#lines}}\n[{{id}}] {{text}}{{/lines}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "line": {
+    "type": "choice",
+    "instructions": "Which tagged line is {{target}}?",
+    "criteria": {
+     "$from": "lines",
+     "key": "id",
+     "text": "gloss"
+    }
+   },
+   "exists": {
+    "type": "noul",
+    "instructions": "Does the tagged log contain at least one line that shows {{shows}}?",
+    "criteria": {
+     "true": "yes, a line shows it",
+     "false": "no line shows it"
+    }
+   }
+  }
+ },
+ "policy": {
+  "exists_at": 0.8,
+  "nothing_at": 0.15,
+  "best_p": 0.5
+ },
+ "decisions": [
+  "keep",
+  "uncertain",
+  "drop"
+ ],
+ "combine": "keep if exists >= exists_at and line.p >= best_p; drop if exists <= nothing_at; uncertain otherwise",
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "keep",
+  "unattended": "keep"
+ },
+ "test_file": "tests/cases/14-semantic-grep-relevance.json",
+ "limitations": [
+  "decides one set of tagged lines (best line + exists); the per-line keep/drop/uncertain verdicts over many items are the `filter` tool's job",
+  "probabilities are saturated (use `filter` graded to rank); it reads only what is in state (give heads or summaries)",
+  "marginal items (0.77 for a no-match grep) are why the uncertain band keeps by default"
+ ],
+ "notes": "# deviation: spec 2.18/5.14: the grey decision is named `uncertain` (the combine grammar reserves the keyword grey); decides one tagged set with a best-line choice and an exists noul, not one verdict per item; the exists options are generic (the u14 body differs in its exists criteria); the line text is JSON-escaped"
+}

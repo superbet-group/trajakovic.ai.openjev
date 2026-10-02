@@ -1,0 +1,132 @@
+{
+ "id": "alert_triage",
+ "title": "Log, alert and incident triage",
+ "usage_type": "13-log-alert-triage",
+ "description": "Decide whether a log excerpt, CI failure or alert is real, how severe it is, and which team owns it",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "the log excerpt, CI failure or alert payload"
+   },
+   "open_incident": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "profile dedupe: the open incident and its root cause, put ahead of the alert in the state"
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "dedupe"
+    ],
+    "default": "strict",
+    "description": "dedupe also asks whether the alert is a symptom of open_incident (output open_duplicate)"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{#open_incident}}Open incident: {{{open_incident}}}\nNew alert: {{/open_incident}}{{{text}}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "real": {
+    "type": "noul",
+    "instructions": "Does this log excerpt or alert show a real failure that needs a human, as opposed to routine noise?",
+    "criteria": {
+     "true": "a real failure or risk that someone must look at",
+     "false": "routine, expected or self-healed noise; nobody needs to act"
+    }
+   },
+   "sev": {
+    "type": "score",
+    "instructions": "How severe is the problem shown in this log or alert?",
+    "criteria": [
+     "routine noise, no action",
+     "minor, worth watching",
+     "real problem, needs a human this week",
+     "service degraded or broken for users, needs a human now",
+     "outage or data loss, page immediately"
+    ]
+   }
+  },
+  "dedupe": {
+   "real": {
+    "type": "noul",
+    "instructions": "Does this log excerpt or alert show a real failure that needs a human, as opposed to routine noise?",
+    "criteria": {
+     "true": "a real failure or risk that someone must look at",
+     "false": "routine, expected or self-healed noise; nobody needs to act"
+    }
+   },
+   "sev": {
+    "type": "score",
+    "instructions": "How severe is the problem shown in this log or alert?",
+    "criteria": [
+     "routine noise, no action",
+     "minor, worth watching",
+     "real problem, needs a human this week",
+     "service degraded or broken for users, needs a human now",
+     "outage or data loss, page immediately"
+    ]
+   },
+   "dup": {
+    "type": "noul",
+    "instructions": "Is the new alert a symptom of the already open incident, rather than a separate new problem?",
+    "criteria": {
+     "true": "same root cause as the open incident; attach it, do not open a new one",
+     "false": "an unrelated problem that needs its own incident"
+    }
+   }
+  }
+ },
+ "policy": {
+  "page_real": 0.85,
+  "page_sev": 3.0,
+  "suppress_real": 0.2,
+  "suppress_sev": 1.0,
+  "watch_real": 0.5,
+  "review_sev": 2.0,
+  "dup_yes": 0.7
+ },
+ "decisions": [
+  "suppress",
+  "watch",
+  "review",
+  "page"
+ ],
+ "combine": "page if real >= page_real and sev >= page_sev; suppress if real < suppress_real and sev < suppress_sev; watch if real < watch_real; watch if sev >= suppress_sev and sev < review_sev; review otherwise",
+ "outputs": {
+  "open_duplicate": {
+   "values": [
+    "yes",
+    "no"
+   ],
+   "combine": "yes if dup >= dup_yes; no otherwise"
+  }
+ },
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "review",
+  "unattended": "review"
+ },
+ "fallback_decision": "review",
+ "test_file": "tests/cases/13-log-alert-triage.json",
+ "limitations": [
+  "severity reflects the text, not business context",
+  "collapse long logs into clusters (a filter job, one noul per cluster)",
+  "a SOC study found a linear SVM beat LLM prioritisation: deterministic rules stay ahead for known-critical alerts and verified secrets, the read refines",
+  "never execute remediation from a log",
+  "the subsystem and CODEOWNERS routing choices are not built",
+  "a day of alerts is a batch job over real and sev"
+ ],
+ "notes": "# deviation: spec 5.13: the dedupe noul is the profile `dedupe` with the open incident in state (output open_duplicate); the subsystem and owner routing questions are not built; 'choice p_top below 0.6 gives review' has no choice question to apply to"
+}

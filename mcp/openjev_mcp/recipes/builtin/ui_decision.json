@@ -1,0 +1,132 @@
+{
+ "id": "ui_decision",
+ "title": "UI decision from a screenshot or accessibility tree",
+ "usage_type": "22-image-and-ui-decisions",
+ "description": "Decide from a screenshot or accessibility tree which element to click next, or whether the page is blocked, done or irreversible",
+ "input_schema": {
+  "type": "object",
+  "properties": {
+   "goal": {
+    "type": "string"
+   },
+   "tree": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "candidate mode: 'Page: ... (accessibility tree)' then one 'e01 link Home' line per element"
+   },
+   "caption": {
+    "type": "string",
+    "description": "image mode: one sentence about the screenshot, e.g. 'Screenshot of the page the browser agent just loaded.'"
+   },
+   "images": {
+    "type": "array",
+    "x-openjev-images": true,
+    "maxItems": 8,
+    "description": "image mode: data URLs (the engine does not run the ask_image loader)"
+   },
+   "candidates": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "description"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    },
+    "maxItems": 120,
+    "description": "profile strict: element id and description"
+   },
+   "proposed_click": {
+    "type": "string",
+    "description": "the element the agent is about to click, e.g. \"e04 button 'Place order'\""
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "state",
+     "login_wall"
+    ],
+    "default": "strict",
+    "description": "strict: which element next; state: done, blocked, irreversible; login_wall: is a login wall blocking"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{#goal}}Goal: {{goal}}\n{{/goal}}{{{tree}}}{{caption}}{{#proposed_click}}\nProposed click: {{proposed_click}}{{/proposed_click}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "next": {
+    "type": "choice",
+    "instructions": "Which element should the agent interact with next to make progress on the goal?",
+    "criteria": {
+     "$from": "candidates",
+     "key": "id",
+     "text": "description"
+    }
+   }
+  },
+  "state": {
+   "done": {
+    "type": "noul",
+    "instructions": "Does the page state show that the goal is fully accomplished?"
+   },
+   "blocked": {
+    "type": "noul",
+    "instructions": "Is the agent blocked by something it cannot get past without human help, such as a CAPTCHA, a two-factor prompt or a permissions error?"
+   },
+   "irreversible": {
+    "type": "noul",
+    "instructions": "Does clicking this element commit an action that cannot be undone, such as submitting payment, deleting data or sending a message?"
+   }
+  },
+  "login_wall": {
+   "login_wall": {
+    "type": "noul",
+    "instructions": "Does this screenshot show a login wall or sign-in prompt that blocks the content the user wants to read?"
+   }
+  }
+ },
+ "policy": {
+  "act_p": 0.8,
+  "confirm_at": 0.5,
+  "click_p": 0.8,
+  "yes_at": 0.8,
+  "no_at": 0.2
+ },
+ "decisions": [
+  "refresh",
+  "click",
+  "done",
+  "confirm",
+  "blocked"
+ ],
+ "combine": "blocked if blocked >= act_p or login_wall >= act_p; confirm if irreversible >= confirm_at; done if done >= act_p; refresh if grey(blocked) or grey(login_wall) or grey(done); click if next.p >= click_p and not abstained(next); refresh otherwise",
+ "decision_format": {
+  "click": "click:{next}"
+ },
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "confirm",
+  "unattended": "confirm"
+ },
+ "test_file": "tests/cases/22b-accessibility-tree-ui-decisions.json",
+ "limitations": [
+  "synthetic clean screenshots only; no coordinates; no OCR; think and sequential are refused with images",
+  "one profile per call (the caller runs strict, then state with proposed_click, then re-validates the id against the live DOM); `refresh` also means no decisive state on this read",
+  "auto-click only at irreversible <= 0.15 and the done-alone rule for irreversible tasks are the caller's; ids go stale after navigation"
+ ],
+ "notes": "# deviation: spec 5.22: candidates is an array of {id, description}; flags is not built; the three question sets are profiles (strict, state, login_wall) that the caller composes; image mode takes data URLs; decisions are ordered refresh, click, done, confirm, blocked and click is formatted click:<id>"
+}

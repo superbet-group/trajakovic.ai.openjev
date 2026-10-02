@@ -1,0 +1,4 @@
+{"format": "ojui-batch", "version": 2, "exportedAt": 1759400000000, "title": "triage", "imageCount": 2,
+ "questions": {"urgent": {"type": "noul", "instructions": "Is this urgent?", "criteria": {"true": "outage", "false": "can wait"}}},
+ "options": {"samples": 1},
+ "rows": [{"index": 1, "state": "site is down", "status": "ok"}, {"index": 2, "state": {"subject": "refund", "body": "please"}, "status": "ok"}]}

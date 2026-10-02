@@ -1,0 +1,33 @@
+[project]
+name = "openjev-mcp"
+version = "1.4.0"
+description = "MCP server, hook CLI and skills for OpenJev typed reads"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+dependencies = ["mcp>=2.2,<3", "httpx>=0.27", "jsonschema>=4.18", "google-re2>=1.1", "uvicorn>=0.31", "anyio>=4.9"]
+
+[project.optional-dependencies]
+test = ["pytest", "Pillow>=10"]          # the contract tests also need the server package: pip install -e . (repo root)
+
+images = ["Pillow>=10"]
+
+[project.scripts]
+openjev-mcp = "openjev_mcp.server:main"
+openjev-hook = "openjev_mcp.hook:main"
+openjev = "openjev_mcp.cli:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["openjev_mcp*"]
+
+[tool.setuptools.package-data]
+openjev_mcp = ["recipes/builtin/*.json", "data/*.json", "data/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+pythonpath = ["tests"]
+markers = ["live: needs a real OpenJev with the model (skipped unless --live)"]

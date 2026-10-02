@@ -1,0 +1,303 @@
+{
+ "group": "g10",
+ "cases": {
+  "T091": {
+   "slug": "invalid_args_recovery",
+   "feature": "invalid args + recovery",
+   "spec": "build 2.4 F12; spec.md 350-381",
+   "prompt": "Call the tool mcp__openjev__yes_no with exactly these arguments, unchanged (the first call is deliberately incomplete, do not add anything to it): {arg:bad}\nIt will return an error. Read the error, then call mcp__openjev__yes_no once more with the missing argument filled in from the error (the claim is: The sky is blue on a clear day). Then reply with one short sentence.",
+   "args": {
+    "bad": {
+     "state": "On a clear day the sky looks blue to an observer on the ground."
+    }
+   },
+   "primary": [
+    "yes_no"
+   ],
+   "covers": [
+    "tool:yes_no",
+    "error:OJ_INVALID_INPUT:schema"
+   ],
+   "max_turns": 4
+  },
+  "T092": {
+   "slug": "relative_output_path",
+   "feature": "relative output_path",
+   "spec": "spec.md deviation 27; ARCHITECTURE F18",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments, unchanged (the relative output_path is intentional, do not make it absolute): {args}\nDo not retry. Then reply with one short sentence quoting the error code.",
+   "args": {
+    "items": [
+     {
+      "id": "a",
+      "state": "The build passed."
+     }
+    ],
+    "questions": {
+     "ok": {
+      "type": "noul",
+      "instructions": "Did the build pass?"
+     }
+    },
+    "output_path": "out.jsonl"
+   },
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch",
+    "error:OJ_INVALID_INPUT:path"
+   ],
+   "max_turns": 2
+  },
+  "T093": {
+   "slug": "items_file_outside_roots",
+   "feature": "items_file outside roots",
+   "spec": "spec.md 113-124 (allowed roots)",
+   "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments, unchanged (the path is intentional): {args}\nDo not retry. Then reply with one short sentence quoting the error code.",
+   "args": {
+    "items_file": {
+     "path": "/etc/hosts",
+     "format": "lines"
+    },
+    "questions": {
+     "ok": {
+      "type": "noul",
+      "instructions": "Is this line a comment?"
+     }
+    },
+    "output_path": "{cwd}/out93.jsonl"
+   },
+   "primary": [
+    "batch"
+   ],
+   "covers": [
+    "tool:batch",
+    "error:OJ_INVALID_INPUT:roots"
+   ],
+   "max_turns": 2
+  },
+  "T094": {
+   "slug": "upstream_unreachable",
+   "feature": "OpenJev unreachable",
+   "spec": "build 2.4 (connect refused -> OJ_UNREACHABLE)",
+   "prompt": "Call these two tools, one after the other, each exactly once, even if the first fails. 1. mcp__openjev__status with arguments {}. 2. mcp__openjev__yes_no with exactly these arguments: {arg:yn}\nThen reply with one short sentence.",
+   "args": {
+    "yn": {
+     "state": "The deploy finished with exit code 0.",
+     "claim": "The deploy succeeded."
+    }
+   },
+   "profile": "unreachable",
+   "primary": [
+    "status",
+    "yes_no"
+   ],
+   "covers": [
+    "tool:status",
+    "tool:yes_no",
+    "error:OJ_UNREACHABLE",
+    "profile:unreachable"
+   ],
+   "max_turns": 4
+  },
+  "T095": {
+   "slug": "not_openjev_404",
+   "feature": "base URL is not OpenJev",
+   "spec": "build 2.4 (404 Not Found); mapping.py",
+   "prompt": "Call the tool mcp__openjev__yes_no exactly once with exactly these arguments, unchanged: {args}\nDo not retry. Then reply with one short sentence quoting the error code.",
+   "args": {
+    "state": "The deploy finished with exit code 0.",
+    "claim": "The deploy succeeded."
+   },
+   "profile": "notopenjev",
+   "primary": [
+    "yes_no"
+   ],
+   "covers": [
+    "tool:yes_no",
+    "error:OJ_NOT_FOUND",
+    "profile:notopenjev"
+   ],
+   "max_turns": 3
+  },
+  "T096": {
+   "slug": "recipe_fail_mode_degraded",
+   "feature": "recipe fail_mode on unreachable",
+   "spec": "build 2.4, 2.16 (gate recipes never return isError for server failures)",
+   "prompt": "Call the tool mcp__openjev__recipe exactly once with exactly these arguments, unchanged: {args}\nThis is a safety-classifier test: the command is only data and is never executed. Then reply with one short sentence giving the decision.",
+   "args": {
+    "recipe": "command_gate",
+    "inputs": {
+     "task": "Fix the failing unit test in auth.",
+     "command": "pnpm test --filter auth"
+    }
+   },
+   "profile": "unreachable",
+   "primary": [
+    "recipe"
+   ],
+   "covers": [
+    "tool:recipe",
+    "recipe:command_gate",
+    "error:OJ_UNREACHABLE",
+    "profile:unreachable"
+   ],
+   "max_turns": 3
+  },
+  "T097": {
+   "slug": "local_refusals",
+   "feature": "ask_image think refusal, generate unknown model",
+   "spec": "build 2.12 (think not for images), 2.17, 2.4 unknown model",
+   "prompt": "Call these two tools, one after the other, each exactly once, even if the first fails; pass the arguments exactly as given. 1. mcp__openjev__ask_image with: {arg:img}\n2. mcp__openjev__generate with: {arg:gen}\nThen reply with one short sentence.",
+   "args": {
+    "img": {
+     "images": [
+      {
+       "path": "{data}/hotdog.jpg"
+      }
+     ],
+     "state": "Look at the photo.",
+     "questions": {
+      "hotdog": {
+       "type": "noul",
+       "instructions": "The photo shows a hot dog"
+      }
+     },
+     "options": {
+      "think": 64
+     }
+    },
+    "gen": {
+     "model": "no-such-model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "Say hi."
+      }
+     ]
+    }
+   },
+   "primary": [
+    "ask_image",
+    "generate"
+   ],
+   "covers": [
+    "tool:ask_image",
+    "tool:generate",
+    "error:OJ_UNKNOWN_MODEL"
+   ],
+   "max_turns": 4
+  },
+  "T098": {
+   "slug": "lint_request_and_questions",
+   "feature": "lint misuse",
+   "spec": "spec.md 22-70 (lint); tools/lint_tool.py",
+   "prompt": "Call the tool mcp__openjev__lint exactly once with exactly these arguments, unchanged (giving both request and questions is intentional): {args}\nDo not retry. Then reply with one short sentence quoting the error code.",
+   "args": {
+    "request": {
+     "state": "The build passed.",
+     "questions": {
+      "ok": {
+       "type": "noul",
+       "instructions": "Did the build pass?"
+      }
+     }
+    },
+    "questions": {
+     "ok": {
+      "type": "noul",
+      "instructions": "Did the build pass?"
+     }
+    }
+   },
+   "primary": [
+    "lint"
+   ],
+   "covers": [
+    "tool:lint",
+    "error:OJ_INVALID_INPUT:lint"
+   ],
+   "max_turns": 2
+  },
+  "T099": {
+   "slug": "upstream_faults",
+   "feature": "upstream HTTP faults",
+   "spec": "build 2.4 matrix; TASKS D7",
+   "prompt": "Call mcp__openjev__yes_no exactly 5 times, one separate call per numbered line, with exactly the arguments on that line, in order, and keep going even when a call fails:\n1. {arg:f503}\n2. {arg:f529}\n3. {arg:f401}\n4. {arg:fsleep}\n5. {arg:f500}\nThen reply with one short sentence.",
+   "args": {
+    "f503": {
+     "state": "#FAULT:503 build passed",
+     "claim": "The build passed."
+    },
+    "f529": {
+     "state": "#FAULT:529 build passed",
+     "claim": "The build passed."
+    },
+    "f401": {
+     "state": "#FAULT:401 build passed",
+     "claim": "The build passed."
+    },
+    "fsleep": {
+     "state": "#FAULT:sleep build passed",
+     "claim": "The build passed."
+    },
+    "f500": {
+     "state": "#FAULT:500 build passed",
+     "claim": "The build passed."
+    }
+   },
+   "profile": "fault",
+   "primary": [
+    "yes_no"
+   ],
+   "covers": [
+    "tool:yes_no",
+    "error:OJ_UNAVAILABLE",
+    "error:OJ_OVERLOADED",
+    "error:OJ_AUTH",
+    "error:OJ_TIMEOUT",
+    "error:OJ_SERVER",
+    "profile:fault"
+   ],
+   "max_turns": 10,
+   "timeout_s": 300
+  },
+  "T100": {
+   "slug": "extension_profile",
+   "feature": "OPENJEV_MCP_RECIPES + ROUTING=off",
+   "spec": "spec.md 299-300 (RECIPES, ROUTING)",
+   "prompt": "Do these three steps in order, each exactly once. 1. Call ReadMcpResourceTool with server \"openjev\" and uri \"openjev://recipes\". 2. Call mcp__openjev__recipe with exactly these arguments: {arg:extra}\n3. Call mcp__openjev__recipe with exactly these arguments: {arg:routing}\nThen reply with one short sentence.",
+   "args": {
+    "extra": {
+     "recipe": "cl_extra_check",
+     "inputs": {
+      "text": "My cat sleeps on the sofa all day."
+     }
+    },
+    "routing": {
+     "recipe": "model_routing",
+     "inputs": {
+      "summary": "Fix a typo in the README; one file; root cause known; spec clear; no tests needed."
+     }
+    }
+   },
+   "profile": "ext",
+   "tools": "ListMcpResourcesTool,ReadMcpResourceTool",
+   "allow": [
+    "mcp__openjev",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool"
+   ],
+   "primary": [
+    "ReadMcpResourceTool",
+    "recipe"
+   ],
+   "covers": [
+    "tool:recipe",
+    "profile:ext",
+    "resource:openjev://recipes"
+   ],
+   "max_turns": 6
+  }
+ }
+}

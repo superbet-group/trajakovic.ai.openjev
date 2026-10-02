@@ -1,0 +1,107 @@
+{
+ "id": "issue_triage",
+ "title": "Issue and pull request triage",
+ "usage_type": "07-issue-pr-triage-dedupe",
+ "description": "Label GitHub issues or pull requests by kind and severity, detect duplicates, or filter AI review comments",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "title",
+   "body"
+  ],
+  "properties": {
+   "title": {
+    "type": "string",
+    "x-openjev-raw": true
+   },
+   "body": {
+    "type": "string",
+    "x-openjev-raw": true
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "Title: {{{title}}}\nBody: {{{body}}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "kind": {
+    "type": "choice",
+    "instructions": "What kind of issue is this? Judge only the reporter's own content.",
+    "criteria": {
+     "bug": "Something that used to work, or should work, is broken or crashes",
+     "feature": "A request for new behaviour or an enhancement",
+     "question": "A usage or how-to question with no defect claimed",
+     "docs": "A problem or gap in documentation only"
+    }
+   },
+   "severity": {
+    "type": "score",
+    "instructions": "How severe is the impact described?",
+    "criteria": [
+     "Cosmetic or negligible; no functional impact",
+     "Minor; workaround is easy",
+     "Moderate; a feature is degraded for some users",
+     "Major; a core feature is broken for many users",
+     "Critical; total outage, data loss, or exposure of other people's private data (security breach)"
+    ]
+   },
+   "urgent": {
+    "type": "noul",
+    "instructions": "Does this issue need attention within a day?",
+    "criteria": {
+     "true": "Needs attention within a day: production is down or data/security at risk",
+     "false": "Can wait for normal backlog grooming"
+    }
+   },
+   "actionable": {
+    "type": "noul",
+    "instructions": "Does this issue say enough for a maintainer to start work?",
+    "criteria": {
+     "true": "The issue states what was done, what was expected and what happened, enough for a maintainer to start work",
+     "false": "The issue is too vague to act on; the maintainer must ask the reporter for more information"
+    }
+   }
+  }
+ },
+ "policy": {
+  "label_p": 0.7,
+  "needs_info_at": 0.2,
+  "urgent_escalate": 0.85,
+  "urgent_human": 0.3
+ },
+ "decisions": [
+  "label",
+  "needs_info",
+  "unsure"
+ ],
+ "combine": "needs_info if actionable <= needs_info_at; unsure if kind.p < label_p; label otherwise",
+ "outputs": {
+  "urgency": {
+   "values": [
+    "escalate",
+    "human",
+    "normal"
+   ],
+   "combine": "escalate if urgent >= urgent_escalate; human if urgent >= urgent_human; normal otherwise"
+  }
+ },
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "unsure",
+  "unattended": "unsure"
+ },
+ "fallback_decision": "unsure",
+ "test_file": "tests/cases/07-issue-pr-triage-dedupe.json",
+ "limitations": [
+  "sees only the state (a claimed regression needs the diff in state)",
+  "severity is coarse",
+  "a backlog is a batch job over the same questions, one row per issue",
+  "the label is signals.kind; severity is signals.severity"
+ ],
+ "notes": "# deviation: spec 5.7: `actionable` is asked with the other three (the spec case asks it alone), with the lint-style instruction the spec says the linter adds for `urgent`; urgent >= 0.85 / 0.3-0.85 is the `urgency` output (escalate, human, normal), not a decision; the label itself is the kind signal"
+}

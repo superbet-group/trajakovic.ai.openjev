@@ -1,0 +1,51 @@
+{
+ "id": "cl_extra_check",
+ "title": "Live-suite extra recipe",
+ "usage_type": "extension-live-test",
+ "description": "Extension recipe loaded through OPENJEV_MCP_RECIPES by the claude_live suite: is the text about cats",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "description": "one short text"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "Text: {{text}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "cats": {
+    "type": "noul",
+    "instructions": "Is this text about cats?",
+    "criteria": {
+     "true": "The text is about cats",
+     "false": "The text is about something else"
+    }
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.5
+ },
+ "decisions": [
+  "no",
+  "yes"
+ ],
+ "combine": "yes if cats >= yes_at; no otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "no",
+  "unattended": "no"
+ },
+ "notes": "# deviation: none; fixture of the claude_live suite (g10 T100)"
+}

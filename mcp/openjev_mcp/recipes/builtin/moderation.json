@@ -1,0 +1,208 @@
+{
+ "id": "moderation",
+ "title": "Guardrail with an uncertain outcome",
+ "usage_type": "17-moderation-guardrails",
+ "description": "Block, allow or send to review a message or LLM output that may be phishing, spam, harassment or abuse",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text",
+   "channel",
+   "categories"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true
+   },
+   "channel": {
+    "type": "string",
+    "description": "state header, e.g. 'Inbound email to support@shop.example'"
+   },
+   "categories": {
+    "type": "array",
+    "description": "label and description of each category; 'none' is added",
+    "items": {
+     "type": "object",
+     "required": [
+      "label",
+      "description"
+     ],
+     "properties": {
+      "label": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "paranoid",
+     "lenient"
+    ],
+    "default": "strict",
+    "description": "strict 0.85/0.15 (default), paranoid 0.5/0.05, lenient 0.95/0.3"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{channel}}\n{{{text}}}"
+  },
+  {
+   "id": "again",
+   "kind": "read",
+   "reread": "read",
+   "options": {
+    "samples": 3
+   },
+   "when": "grey(block)"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "block": {
+    "type": "noul",
+    "instructions": "Should this message be blocked because it is phishing, scam, spam, harassment or hate directed at a person, or a threat, rather than ordinary legitimate communication?",
+    "criteria": {
+     "true": "Phishing, scam, spam, harassment, hate or threats: block it",
+     "false": "Ordinary legitimate communication, including blunt criticism or venting that does not target a person"
+    }
+   },
+   "category": {
+    "type": "choice",
+    "instructions": "Which moderation category best fits this message?",
+    "criteria": {
+     "$from": "categories",
+     "key": "label",
+     "text": "description",
+     "extra": {
+      "none": "ordinary legitimate content"
+     }
+    }
+   },
+   "harm": {
+    "type": "score",
+    "instructions": "How harmful would it be to let this message through to its recipient?",
+    "criteria": [
+     "harmless",
+     "mildly unpleasant or annoying",
+     "clearly abusive, deceptive or unwanted",
+     "dangerous: credential theft, financial fraud or credible threat"
+    ]
+   }
+  },
+  "paranoid": {
+   "block": {
+    "type": "noul",
+    "instructions": "Should this message be blocked because it is phishing, scam, spam, harassment or hate directed at a person, or a threat, rather than ordinary legitimate communication?",
+    "criteria": {
+     "true": "Phishing, scam, spam, harassment, hate or threats: block it",
+     "false": "Ordinary legitimate communication, including blunt criticism or venting that does not target a person"
+    }
+   },
+   "category": {
+    "type": "choice",
+    "instructions": "Which moderation category best fits this message?",
+    "criteria": {
+     "$from": "categories",
+     "key": "label",
+     "text": "description",
+     "extra": {
+      "none": "ordinary legitimate content"
+     }
+    }
+   },
+   "harm": {
+    "type": "score",
+    "instructions": "How harmful would it be to let this message through to its recipient?",
+    "criteria": [
+     "harmless",
+     "mildly unpleasant or annoying",
+     "clearly abusive, deceptive or unwanted",
+     "dangerous: credential theft, financial fraud or credible threat"
+    ]
+   }
+  },
+  "lenient": {
+   "block": {
+    "type": "noul",
+    "instructions": "Should this message be blocked because it is phishing, scam, spam, harassment or hate directed at a person, or a threat, rather than ordinary legitimate communication?",
+    "criteria": {
+     "true": "Phishing, scam, spam, harassment, hate or threats: block it",
+     "false": "Ordinary legitimate communication, including blunt criticism or venting that does not target a person"
+    }
+   },
+   "category": {
+    "type": "choice",
+    "instructions": "Which moderation category best fits this message?",
+    "criteria": {
+     "$from": "categories",
+     "key": "label",
+     "text": "description",
+     "extra": {
+      "none": "ordinary legitimate content"
+     }
+    }
+   },
+   "harm": {
+    "type": "score",
+    "instructions": "How harmful would it be to let this message through to its recipient?",
+    "criteria": [
+     "harmless",
+     "mildly unpleasant or annoying",
+     "clearly abusive, deceptive or unwanted",
+     "dangerous: credential theft, financial fraud or credible threat"
+    ]
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.85,
+  "no_at": 0.15,
+  "block_at": 0.85,
+  "allow_at": 0.15
+ },
+ "policy_profiles": {
+  "paranoid": {
+   "yes_at": 0.5,
+   "no_at": 0.05,
+   "block_at": 0.5,
+   "allow_at": 0.05
+  },
+  "lenient": {
+   "yes_at": 0.95,
+   "no_at": 0.3,
+   "block_at": 0.95,
+   "allow_at": 0.3
+  }
+ },
+ "decisions": [
+  "allow",
+  "uncertain",
+  "block"
+ ],
+ "combine": "block if block >= block_at; allow if block <= allow_at; uncertain otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "uncertain",
+  "unattended": "uncertain"
+ },
+ "fallback_decision": "uncertain",
+ "test_file": "tests/cases/17-moderation-guardrails.json",
+ "limitations": [
+  "bimodal outputs (no smooth dial)",
+  "text only (no URL reputation or attachments)",
+  "relationship context must be in state",
+  "hate/self-harm/legal categories untested",
+  "inbound channels may run with fail_mode open (allow + log): pass it to run_recipe; outbound stays closed",
+  "a category p_top below 0.6 is not relabelled 'unclear'; read category_p"
+ ],
+ "notes": "# deviation: spec 2.18/5.17: decisions are ordered allow, uncertain, block (least to most severe); categories is an array of {label, description}; the default profile is `strict` = the spec default 0.85/0.15 and the spec's strict 0.5/0.05 is `paranoid`; direction, harm, deadline_ms and fail_mode are run parameters, not inputs; a failed read gives uncertain with the error code as the reason, not 'guardrail_unavailable'"
+}

@@ -1,0 +1,6 @@
+{"type":"summary","summary":"auth tests"}
+{"type":"user","message":{"role":"user","content":"Fix the failing unit test in auth."},"cwd":"/home/dev/app"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Running the tests."},{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"pnpm test"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"1 failed"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Fix the failing unit test in auth."},{"type":"text","text":"Do not touch the lockfile."}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"On it."}]}}

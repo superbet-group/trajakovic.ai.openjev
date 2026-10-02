@@ -1,0 +1,111 @@
+{
+ "id": "duplicate_check",
+ "variant_of": "issue_triage",
+ "title": "Duplicate issue check",
+ "usage_type": "07-issue-pr-triage-dedupe",
+ "description": "Decide whether a new issue duplicates one issue of a shortlist, or one given candidate",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "new"
+  ],
+  "properties": {
+   "new": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "the new issue, as written"
+   },
+   "candidates": {
+    "type": "array",
+    "description": "the shortlist, profile strict: {id, summary} per candidate; 'none' is added",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "summary"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "summary": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "candidate": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "profile pair: the one candidate issue"
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "pair"
+    ],
+    "default": "strict",
+    "description": "strict picks from the candidates shortlist; pair compares with one candidate"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "NEW issue: '{{{new}}}'{{#candidate}}\n\nCANDIDATE issue: '{{{candidate}}}'{{/candidate}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "dupe_of": {
+    "type": "choice",
+    "instructions": "Which candidate issue (if any) is the same underlying problem as the NEW issue? Pick 'none' unless one clearly matches.",
+    "criteria": {
+     "$from": "candidates",
+     "key": "id",
+     "text": "summary",
+     "extra": {
+      "none": "None of the candidates is the same problem"
+     }
+    }
+   }
+  },
+  "pair": {
+   "dup": {
+    "type": "noul",
+    "instructions": "Is the NEW issue describing the same underlying problem as the CANDIDATE issue, such that one could be closed in favour of the other?",
+    "criteria": {
+     "true": "Same root problem and same symptom; fixing one fixes the other",
+     "false": "Different problem, even if it touches the same component or keywords"
+    }
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.85,
+  "no_at": 0.4,
+  "dupe_p": 0.6,
+  "dup_yes": 0.85,
+  "dup_human": 0.4
+ },
+ "decisions": [
+  "not_duplicate",
+  "unsure",
+  "duplicate"
+ ],
+ "combine": "duplicate if dupe_of != 'none' and dupe_of.p >= dupe_p; duplicate if dup >= dup_yes; unsure if dupe_of != 'none'; unsure if dup >= dup_human; not_duplicate otherwise",
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "unsure",
+  "unattended": "unsure"
+ },
+ "fallback_decision": "unsure",
+ "test_file": "tests/cases/07-issue-pr-triage-dedupe.json",
+ "limitations": [
+  "dedupe is only as good as the shortlist",
+  "the shortlist must be part of each row's state when run as a batch",
+  "the duplicate is signals.dupe_of in the shortlist profile"
+ ],
+ "notes": "# deviation: spec 2.18 lists duplicate, not_duplicate; `unsure` is added for the human band (shortlist p_top below 0.6, pair 0.4-0.85) and as the open-failure decision; candidates is an array of {id, summary} (not an object); the pair candidate is the optional `candidate` input of profile pair"
+}

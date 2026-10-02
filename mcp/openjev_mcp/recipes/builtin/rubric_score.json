@@ -1,0 +1,100 @@
+{
+ "id": "rubric_score",
+ "title": "Weighted rubric scoring",
+ "usage_type": "18-composite-rubric-scoring",
+ "description": "Score a resume, sales lead or document on several rubric dimensions and combine them with weights",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text",
+   "label",
+   "dimensions"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true
+   },
+   "label": {
+    "type": "string",
+    "description": "state header naming the document, e.g. RESUME"
+   },
+   "dimensions": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "name",
+      "instructions",
+      "levels"
+     ],
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "instructions": {
+       "type": "string"
+      },
+      "levels": {
+       "type": "array",
+       "minItems": 2,
+       "maxItems": 10
+      },
+      "weight": {
+       "type": "number"
+      },
+      "floor": {
+       "type": "number"
+      }
+     }
+    },
+    "maxItems": 20
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{label}}\n{{{text}}}",
+   "questions": {
+    "$each": "dimensions",
+    "id": "name",
+    "type": "score",
+    "instructions": "instructions",
+    "criteria": "levels"
+   }
+  },
+  {
+   "id": "composite",
+   "kind": "compute",
+   "compute": "weighted_sum",
+   "dimensions": "dimensions",
+   "into": "composite",
+   "margin": 0.3
+  }
+ ],
+ "policy": {
+  "shortlist_at": 0.6,
+  "reject_at": 0.3
+ },
+ "decisions": [
+  "review",
+  "reject",
+  "shortlist"
+ ],
+ "combine": "shortlist if composite_floors >= 1 and composite >= shortlist_at; reject if composite < reject_at; review otherwise",
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "review",
+  "unattended": "review"
+ },
+ "test_file": "tests/cases/18-composite-rubric-scoring.json",
+ "limitations": [
+  "weights are applied here, never sent (a `weights` field in a request is ignored by the server)",
+  "scores are near-saturated; there is no bias or fairness audit, so a hiring decision keeps a human in the loop",
+  "evidence_gate and route are not built: ask them with `yes_no` and `classify`",
+  "a composite within 0.1 of a cut should be re-read with samples (pass read_options)"
+ ],
+ "notes": "# deviation: spec 2.18/5.18: decisions are review, reject, shortlist (the composite and floors are signals, not a decision); each dimension carries its instructions; evidence_gate and route are not built; levels are the score criteria"
+}

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-#MISE description="Follow the logs (all, or: mise run logs server | mise run logs ui); Ctrl+C stops following, not the servers"
+#MISE description="Follow the logs (all, or: mise run logs server | ui | mcp); Ctrl+C stops following, not the servers"
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 case "${1:-}" in
-  "") files="$OJ_SERVER_LOG|$OJ_UI_LOG" ;;
+  "") files="$OJ_SERVER_LOG|$OJ_UI_LOG|$OJ_MCP_LOG" ;;
   server|openjev) files="$OJ_SERVER_LOG" ;;
   ui) files="$OJ_UI_LOG" ;;
-  *) oj_die "usage: mise run logs [server|ui]" ;;
+  mcp) files="$OJ_MCP_LOG" ;;
+  *) oj_die "usage: mise run logs [server|ui|mcp]" ;;
 esac
 OLDIFS="$IFS"; IFS='|'
 set -- $files

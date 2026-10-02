@@ -1,0 +1,84 @@
+{
+ "id": "verify_fields",
+ "variant_of": "select_extraction",
+ "title": "Verify extracted fields against the text",
+ "usage_type": "11-extraction-by-selection",
+ "description": "Verify each field a cheaper extractor returned: does the text state this exact value as that field",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text",
+   "fields"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true
+   },
+   "fields": {
+    "type": "array",
+    "description": "{name, value} per extracted field (at most 100)",
+    "items": {
+     "type": "object",
+     "required": [
+      "name",
+      "value"
+     ],
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "value": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "per_field",
+   "kind": "read_per_item",
+   "items": "fields",
+   "aggregate": "worst",
+   "state_template": "{{{text}}}"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "ok": {
+    "type": "noul",
+    "instructions": "Extracted field: {{name}} = '{{value}}'. Does the text contain this exact string as the {{name}}?",
+    "criteria": {
+     "true": "the text states this {{name}}",
+     "false": "the text does not state this {{name}}"
+    }
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.85,
+  "no_at": 0.15,
+  "accept_at": 0.85,
+  "reject_at": 0.15
+ },
+ "decisions": [
+  "accept",
+  "review",
+  "reject"
+ ],
+ "combine": "accept if ok >= accept_at; reject if ok <= reject_at; review otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "review",
+  "unattended": "review"
+ },
+ "fallback_decision": "review",
+ "test_file": "tests/cases/11-extraction-by-selection.json",
+ "limitations": [
+  "one request per field (the text prefix is cached)",
+  "the decision is the most severe over the fields (reject > review > accept); read items for each field"
+ ],
+ "notes": "# deviation: spec 5.11: fields is an array of {name, value} and each field is its own request with the fixed question id `ok` (the engine cannot name a question after an input), so the decision is the worst over the fields and items carry the per-field decisions; the field-specific poles are 'the text states this <name>'"
+}

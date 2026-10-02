@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Show whether OpenJev and the UI are running and ready"
+#MISE description="Show whether OpenJev, the UI and the MCP server are running and ready"
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
@@ -20,4 +20,5 @@ show() {
 
 show server
 show ui
+show mcp
 exit 0

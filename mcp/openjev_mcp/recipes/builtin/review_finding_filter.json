@@ -1,0 +1,74 @@
+{
+ "id": "review_finding_filter",
+ "variant_of": "issue_triage",
+ "title": "AI review finding filter",
+ "usage_type": "07-issue-pr-triage-dedupe",
+ "description": "Decide for each AI review finding on a diff whether to post it, collapse it or drop it",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "diff",
+   "findings"
+  ],
+  "properties": {
+   "diff": {
+    "type": "string",
+    "x-openjev-raw": true,
+    "description": "the diff the findings are about"
+   },
+   "findings": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "one request per finding (at most 100)"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "per_finding",
+   "kind": "read_per_item",
+   "items": "findings",
+   "aggregate": "worst",
+   "state_template": "{{{diff}}}\n\nREVIEW FINDING: '{{item}}'"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "real": {
+    "type": "noul",
+    "instructions": "Is the review finding a real bug that is INTRODUCED BY THE ADDED LINES of this diff (lines starting with +)? Pre-existing code and style nits do not count.",
+    "criteria": {
+     "true": "The added lines create a concrete defect that will misbehave at runtime",
+     "false": "Style nit, speculation, already-handled case, or problem in unchanged code"
+    }
+   }
+  }
+ },
+ "policy": {
+  "yes_at": 0.8,
+  "no_at": 0.5,
+  "post_at": 0.8,
+  "collapse_at": 0.5
+ },
+ "decisions": [
+  "drop",
+  "collapse",
+  "post"
+ ],
+ "combine": "post if real >= post_at; collapse if real >= collapse_at; drop otherwise",
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "collapse",
+  "unattended": "collapse"
+ },
+ "fallback_decision": "collapse",
+ "test_file": "tests/cases/07-issue-pr-triage-dedupe.json",
+ "limitations": [
+  "long diffs are slow (the diff is re-sent with every finding; the prefix is cached)",
+  "sees only the diff in state",
+  "the decision is the most severe over the findings; read items for each finding"
+ ],
+ "notes": "# deviation: spec 5.7: one request per finding through read_per_item; the outcome decision is the most severe finding decision (post > collapse > drop) and items carry each finding's decision; a failed read gives collapse (spec: unsure), which neither posts nor drops"
+}

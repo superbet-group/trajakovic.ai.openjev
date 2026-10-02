@@ -1,0 +1,9 @@
+{
+  "session_id": "5f2c1d4e-0b7a-4c1e-9a52-3d0f6a1b7c10",
+  "transcript_path": "tests/fixtures/claude_code/stop_v2_transcript.jsonl",
+  "cwd": "/home/dev/app",
+  "permission_mode": "default",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "last_assistant_message": "Fixed the off-by-one in paginate(). Everything is working now and ready to merge."
+}

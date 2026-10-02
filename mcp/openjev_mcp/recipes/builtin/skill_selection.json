@@ -1,0 +1,99 @@
+{
+ "id": "skill_selection",
+ "title": "Tool, skill and MCP selection from a roster",
+ "usage_type": "09-tool-skill-selection",
+ "description": "Pick which skill, tool or MCP server from a roster fits a user prompt, or none",
+ "routing": true,
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "prompt",
+   "roster"
+  ],
+  "properties": {
+   "prompt": {
+    "type": "string"
+   },
+   "roster": {
+    "type": "array",
+    "maxItems": 254,
+    "description": "one {id, description} per skill; pre-filter rosters above 254 (to <= 100)",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "description"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "User prompt: {{prompt}}"
+  },
+  {
+   "id": "again",
+   "kind": "read",
+   "reread": "read",
+   "options": {
+    "samples": 3
+   },
+   "when": "skill.p < abstain_p"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "skill": {
+    "type": "choice",
+    "instructions": "Which single skill from the roster, if any, should be loaded for this user prompt?",
+    "criteria": {
+     "$from": "roster",
+     "key": "id",
+     "text": "description",
+     "extra": {
+      "none": "No skill from the roster applies; answer directly without loading any skill"
+     }
+    }
+   }
+  }
+ },
+ "policy": {
+  "inject_p": 0.8,
+  "abstain_p": 0.6
+ },
+ "decisions": [
+  "none",
+  "abstain",
+  "inject"
+ ],
+ "combine": "abstain if skill.p < abstain_p; none if skill == 'none'; inject if skill.p >= inject_p; abstain otherwise",
+ "decision_format": {
+  "inject": "inject:{skill}"
+ },
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "none",
+  "unattended": "none"
+ },
+ "fallback_decision": "none",
+ "test_file": "tests/cases/09-tool-skill-selection.json",
+ "limitations": [
+  "keyword-trap abstention is marginal when a roster topic word appears in a code fix",
+  "multi-intent prompts return the dominant skill",
+  "overlapping descriptions split probability; ~15 input tokens per option",
+  "gate mode (one noul per candidate) and the any_skill_needed pre-gate are not built: use filter or ask",
+  "the abstain re-read is the same roster with samples 3, not the top 3 + none"
+ ],
+ "notes": "# deviation: spec 5.9: roster is an array of {id, description}; threshold is the inject_p policy (policy_overrides); mode gate is not built"
+}

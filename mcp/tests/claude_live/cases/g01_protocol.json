@@ -1,0 +1,61 @@
+{
+  "group": "g01",
+  "cases": {
+    "T001": {
+      "slug": "isolated_session", "feature": "isolated session", "spec": "mcp/spec.md 1 (tools); ARCHITECTURE F2-F5",
+      "prompt": "Reply with the single word OK. Do not call any tool.",
+      "primary": [], "covers": [], "max_turns": 1, "timeout_s": 120
+    },
+    "T002": {
+      "slug": "era_and_headers", "feature": "2026-07-28 era and request headers", "spec": "mcp/spec.md 2 Revisions, 5 Streamable HTTP headers; build 2.0.1",
+      "prompt": "Call the tool mcp__openjev__status exactly once with the arguments {} and then reply with the single word DONE.",
+      "primary": ["status"], "covers": ["tool:status"], "max_turns": 3
+    },
+    "T003": {
+      "slug": "tools_list_contract", "feature": "tools/list contract", "spec": "mcp/spec.md 1 tools table, 2 SEP-2549 cache hints; build 2.0.1",
+      "prompt": "Call the tool mcp__openjev__status exactly once with the arguments {} and then reply with the single word DONE.",
+      "primary": ["status"], "covers": ["tool:status"], "max_turns": 3
+    },
+    "T004": {
+      "slug": "status_probe", "feature": "status with probe", "spec": "mcp/spec.md 1 status; deviation 17; build 2.17",
+      "prompt": "Call the tool mcp__openjev__status exactly once with the arguments {args} and then reply with the single word DONE.",
+      "args": {"probe": true},
+      "primary": ["status"], "covers": ["tool:status"], "max_turns": 3
+    },
+    "T005": {
+      "slug": "tasks_negative", "feature": "Tasks extension not declared by the client", "spec": "mcp/spec.md 1 Tasks; ARCHITECTURE F16",
+      "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (do not change them): {args} Then reply with the single word DONE.",
+      "args": {"items": [{"id": "a1", "state": "Checkout page returns a 500 error for every customer since 09:00."}, {"id": "a2", "state": "Please update the office plant watering rota for next month."}],
+               "questions": {"urgent": {"type": "noul", "instructions": "Does this need a human to look at it today?", "criteria": {"true": "something is broken or blocked", "false": "routine, can wait"}}},
+               "concurrency": 1, "output_path": "{cwd}/t005.jsonl"},
+      "profile": "tasks", "primary": ["batch"], "covers": ["tool:batch", "profile:tasks"], "max_turns": 3
+    },
+    "T006": {
+      "slug": "core_toolset", "feature": "core toolset", "spec": "mcp/spec.md 1 (TOOLSETS=core); deviation 16",
+      "prompt": "Reply with the single word OK. Do not call any tool.",
+      "profile": "core", "primary": [], "covers": ["profile:core"], "max_turns": 1, "timeout_s": 120
+    },
+    "T007": {
+      "slug": "progress", "feature": "progress notifications", "spec": "mcp/spec.md 6 Cancellation and progress; deviation 21",
+      "prompt": "Call the tool mcp__openjev__batch exactly once with exactly these arguments (do not change them): {args} Then reply with the single word DONE.",
+      "args": {"items": [
+        {"id": "p1", "state": "Checkout page returns a 500 error for every customer since 09:00."},
+        {"id": "p2", "state": "Please update the office plant watering rota for next month."},
+        {"id": "p3", "state": "Database password was pasted into a public channel."},
+        {"id": "p4", "state": "Lunch menu for Friday is attached."},
+        {"id": "p5", "state": "Nightly backup failed twice in a row."},
+        {"id": "p6", "state": "Thanks, the new keyboard works fine."},
+        {"id": "p7", "state": "Payment provider webhook has been failing since the deploy."},
+        {"id": "p8", "state": "Reminder: team photo next week."}],
+        "questions": {"urgent": {"type": "noul", "instructions": "Does this need a human to look at it today?", "criteria": {"true": "something is broken or blocked", "false": "routine, can wait"}}},
+        "concurrency": 1, "output_path": "{cwd}/t007.jsonl"},
+      "primary": ["batch"], "covers": ["tool:batch"], "max_turns": 3
+    },
+    "T008": {
+      "slug": "result_envelope", "feature": "result envelope", "spec": "mcp/spec.md 6 Result envelope",
+      "prompt": "Call the tool mcp__openjev__yes_no exactly once with exactly these arguments (do not change them): {args} Then reply with the single word DONE.",
+      "args": {"state": "The production database has been down for an hour and every customer sees an error page.", "claim": "Something is broken and needs urgent attention."},
+      "primary": ["yes_no"], "covers": ["tool:yes_no"], "max_turns": 3
+    }
+  }
+}

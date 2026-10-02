@@ -1,0 +1,383 @@
+{
+ "group": "g03",
+ "cases": {
+  "T019": {
+   "slug": "filter_ex_filter",
+   "feature": "filter",
+   "spec": "build 2.10; case 00 ex-filter",
+   "prompt": "Call the tool mcp__openjev__filter exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "task": "find log lines that show a real failure an on-call engineer must act on.",
+    "items_label": "LOG LINES",
+    "items": [
+     {
+      "id": "L1",
+      "text": "10:00:01 INFO  GET /health 200 2ms"
+     },
+     {
+      "id": "L2",
+      "text": "10:00:03 WARN  cache miss for key user:4411, refilled from DB"
+     },
+     {
+      "id": "L3",
+      "text": "10:00:04 ERROR payment provider declined card (card_declined) for order 9912"
+     },
+     {
+      "id": "L4",
+      "text": "10:00:05 ERROR nightly-export job aborted: disk full on /var/data (0 bytes free)"
+     },
+     {
+      "id": "L5",
+      "text": "10:00:07 INFO  retry 1/3 succeeded for webhook delivery wh_77"
+     }
+    ],
+    "criterion": "Is log line {id} a real failure an on-call engineer must act on (a crash, data loss or a stuck job), as opposed to routine, benign or expected output?",
+    "true_means": "a real failure that needs action",
+    "false_means": "routine, informational, retried successfully, or an expected business outcome such as a declined card"
+   },
+   "primary": [
+    "filter"
+   ],
+   "covers": [
+    "tool:filter"
+   ],
+   "pins": {
+    "00": "ex-filter"
+   },
+   "max_turns": 3
+  },
+  "T020": {
+   "slug": "filter_pick_best_graded",
+   "feature": "filter pick_best/graded",
+   "spec": "build 2.10",
+   "prompt": "Call the tool mcp__openjev__filter exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "task": "find the snippet that retries a failed operation with a growing delay.",
+    "items_label": "CODE SNIPPETS",
+    "items": [
+     {
+      "id": "S1",
+      "text": "def fetch(): for i in range(5): try: return get(url) except Timeout: time.sleep(2 ** i)  # exponential backoff between retries"
+     },
+     {
+      "id": "S2",
+      "text": "print('hello world')"
+     },
+     {
+      "id": "S3",
+      "text": "SELECT id, name FROM users WHERE active = 1;"
+     },
+     {
+      "id": "S4",
+      "text": "for i in range(3): fn()  # calls fn three times in a row, no waiting"
+     },
+     {
+      "id": "S5",
+      "text": ".btn { color: red; padding: 4px; }"
+     }
+    ],
+    "criterion": "Does snippet {id} retry a failed operation with a delay that grows between attempts?",
+    "true_means": "retries with a growing delay",
+    "false_means": "no retry, or retries without any delay",
+    "pick_best": {
+     "question": "Which snippet best retries a failed operation with a growing delay?"
+    },
+    "graded": {
+     "levels": [
+      "no retry",
+      "retry without delay",
+      "retry with a fixed delay",
+      "retry with a growing delay",
+      "retry with exponential backoff and a cap"
+     ],
+     "relevant_at": 2.5
+    }
+   },
+   "primary": [
+    "filter"
+   ],
+   "covers": [
+    "tool:filter"
+   ],
+   "max_turns": 3
+  },
+  "T021": {
+   "slug": "lint_valid",
+   "feature": "lint valid",
+   "spec": "build 2.13; case 00 ex-lint-fixed",
+   "prompt": "Call the tool mcp__openjev__lint exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "request": {
+     "model": "openjev-latest",
+     "state": "Checkout is down for every customer.",
+     "questions": {
+      "sev": {
+       "type": "score",
+       "instructions": "How severe is this?",
+       "criteria": [
+        "minor: one user, workaround exists",
+        "major: a feature is broken for many users",
+        "critical: outage or data loss for all users"
+       ]
+      },
+      "team": {
+       "type": "choice",
+       "instructions": "Which team should own this?",
+       "criteria": {
+        "payments": "charging cards, invoices, refunds",
+        "platform": "servers, deploys, databases, outages",
+        "other": "anything else, or too vague to tell"
+       }
+      }
+     }
+    },
+    "emit": [
+     "body"
+    ]
+   },
+   "primary": [
+    "lint"
+   ],
+   "covers": [
+    "tool:lint"
+   ],
+   "pins": {
+    "00": "ex-lint-fixed"
+   },
+   "max_turns": 3
+  },
+  "T022": {
+   "slug": "lint_invalid_autofix",
+   "feature": "lint invalid + autofix",
+   "spec": "build 2.13 (E010)",
+   "prompt": "Call the tool mcp__openjev__lint exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "request": {
+     "model": "openjev-latest",
+     "state": "Checkout is down for every customer.",
+     "questions": {
+      "team": {
+       "type": "choice",
+       "instructions": "Which team should own this?"
+      }
+     }
+    },
+    "autofix": true
+   },
+   "primary": [
+    "lint"
+   ],
+   "covers": [
+    "tool:lint"
+   ],
+   "pins": {
+    "00": "ex-lint-bad-400"
+   },
+   "max_turns": 3
+  },
+  "T023": {
+   "slug": "lint_emit",
+   "feature": "lint emit",
+   "spec": "build 2.13; mcp/spec.md Credentials",
+   "prompt": "Call the tool mcp__openjev__lint exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "request": {
+     "model": "openjev-latest",
+     "state": "Checkout is down for every customer.",
+     "questions": {
+      "sev": {
+       "type": "score",
+       "instructions": "How severe is this?",
+       "criteria": [
+        "minor: one user, workaround exists",
+        "major: a feature is broken for many users",
+        "critical: outage or data loss for all users"
+       ]
+      },
+      "team": {
+       "type": "choice",
+       "instructions": "Which team should own this?",
+       "criteria": {
+        "payments": "charging cards, invoices, refunds",
+        "platform": "servers, deploys, databases, outages",
+        "other": "anything else, or too vague to tell"
+       }
+      }
+     }
+    },
+    "emit": [
+     "curl",
+     "python"
+    ]
+   },
+   "primary": [
+    "lint"
+   ],
+   "covers": [
+    "tool:lint"
+   ],
+   "max_turns": 3
+  },
+  "T024": {
+   "slug": "compile_route_and_none",
+   "feature": "compile",
+   "spec": "build 2.14; case 00 ex-compile-*",
+   "prompt": "Call the tool mcp__openjev__compile exactly once with exactly these arguments (JSON): {arg:first}\nWait for the result. Then call mcp__openjev__compile exactly once more with exactly these arguments (JSON): {arg:second}\nThen reply with one short sentence.",
+   "args": {
+    "first": {
+     "intent": "tell me if a support email is angry and whether billing, tech or sales should take it",
+     "sub_decisions": [
+      "whether the ticket is urgent",
+      "which team should handle it",
+      "how angry the customer is",
+      "how many errors are in the log"
+     ]
+    },
+    "second": {
+     "intent": "write me a release announcement for version 2.0"
+    }
+   },
+   "primary": [
+    "compile"
+   ],
+   "covers": [
+    "tool:compile"
+   ],
+   "pins": {
+    "00": "ex-compile-recipe"
+   },
+   "max_turns": 4
+  },
+  "T025": {
+   "slug": "generate_two_plus_two",
+   "feature": "generate",
+   "spec": "build 2.17; case 00 ex-generate",
+   "prompt": "Call the tool mcp__openjev__generate exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "messages": [
+     {
+      "role": "user",
+      "content": "What is 2+2? Answer with one number."
+     }
+    ],
+    "max_tokens": 16
+   },
+   "primary": [
+    "generate"
+   ],
+   "covers": [
+    "tool:generate"
+   ],
+   "pins": {
+    "00": "ex-generate"
+   },
+   "max_turns": 3
+  },
+  "T026": {
+   "slug": "ask_image_path",
+   "feature": "ask_image path",
+   "spec": "build 2.12; case 00 ex-image",
+   "prompt": "Call the tool mcp__openjev__ask_image exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "images": [
+     {
+      "path": "{data}/hotdog.jpg"
+     }
+    ],
+    "state": "Look at the photo.",
+    "questions": {
+     "hotdog": {
+      "type": "noul",
+      "instructions": "The photo shows a hot dog"
+     },
+     "cat": {
+      "type": "noul",
+      "instructions": "The photo shows a cat"
+     }
+    }
+   },
+   "primary": [
+    "ask_image"
+   ],
+   "covers": [
+    "tool:ask_image"
+   ],
+   "pins": {
+    "00": "ex-image"
+   },
+   "max_turns": 3
+  },
+  "T027": {
+   "slug": "ask_image_two_ui_shots",
+   "feature": "ask_image 2 UI shots",
+   "spec": "build 2.12; case 22 ui-04",
+   "prompt": "Call the tool mcp__openjev__ask_image exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "images": [
+     {
+      "path": "{data}/ui22_cookie_modal.png"
+     },
+     {
+      "path": "{data}/ui22_dashboard.png"
+     }
+    ],
+    "state": "Two screenshots in order: image 1 is the blog landing page, image 2 is the analytics app.",
+    "questions": {
+     "kind": {
+      "type": "choice",
+      "instructions": "What kind of page does the FIRST screenshot show?",
+      "criteria": {
+       "login_wall": "a sign-in or paywall page asking for credentials or a subscription",
+       "dashboard": "a working application page with data, metrics or lists",
+       "error_page": "an HTTP error or crash page such as 404 or 500",
+       "consent_modal": "a cookie or privacy consent dialog covering the page"
+      }
+     }
+    }
+   },
+   "primary": [
+    "ask_image"
+   ],
+   "covers": [
+    "tool:ask_image"
+   ],
+   "pins": {
+    "22": "ui-04"
+   },
+   "max_turns": 3
+  },
+  "T028": {
+   "slug": "ask_think_multistep",
+   "feature": "ask think",
+   "spec": "build 3.6, 5.23; mcp/spec.md 4 timeout",
+   "prompt": "Call the tool mcp__openjev__ask exactly once with exactly these arguments (JSON): {args}\nThen reply with one short sentence.",
+   "args": {
+    "state": "GRAPH EDGES (directed): A->B, A->C, B->D, C->F, D->E, F->G, E->B.\nSTART: A. TARGET: G.\nCURRENT NODE: A. LEGAL MOVES: B, C.\nOnly one of the legal moves lies on a path that reaches G.",
+    "questions": {
+     "hop": {
+      "type": "choice",
+      "instructions": "Which legal move from A leads to a path reaching G?",
+      "criteria": {
+       "B": "go to B",
+       "C": "go to C"
+      }
+     }
+    },
+    "options": {
+     "think": 64
+    }
+   },
+   "primary": [
+    "ask"
+   ],
+   "covers": [
+    "tool:ask"
+   ],
+   "pins": {
+    "23": "nav-10-think-vs-off-multistep"
+   },
+   "max_turns": 3,
+   "timeout_s": 300
+  }
+ }
+}

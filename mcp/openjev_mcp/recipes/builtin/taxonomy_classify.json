@@ -1,0 +1,101 @@
+{
+ "id": "taxonomy_classify",
+ "title": "Taxonomy classification (one level)",
+ "usage_type": "20-taxonomy-classification",
+ "description": "Classify an item into a large or nested category tree with a fallback to the parent category",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "text",
+   "parent",
+   "noun",
+   "children"
+  ],
+  "properties": {
+   "text": {
+    "type": "string",
+    "x-openjev-raw": true
+   },
+   "parent": {
+    "type": "string",
+    "description": "the node being refined, e.g. backend"
+   },
+   "noun": {
+    "type": "string",
+    "description": "what the text is, e.g. issue"
+   },
+   "children": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "description"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    },
+    "maxItems": 120,
+    "description": "child ids with descriptions; include an escape child named other_<parent>"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "{{{text}}}"
+  },
+  {
+   "id": "again",
+   "kind": "read",
+   "reread": "read",
+   "options": {
+    "think": 256,
+    "samples": 2
+   },
+   "when": "sub.p < leaf_min_p"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "sub": {
+    "type": "choice",
+    "instructions": "This is a {{parent}} {{noun}}. Which {{parent}} subcategory best describes it? Choose other_{{parent}} if no listed child clearly fits.",
+    "criteria": {
+     "$from": "children",
+     "key": "id",
+     "text": "description"
+    }
+   }
+  }
+ },
+ "policy": {
+  "leaf_min_p": 0.6,
+  "human_p": 0.35
+ },
+ "decisions": [
+  "parent",
+  "leaf",
+  "human"
+ ],
+ "combine": "human if sub.p < human_p; parent if abstained(sub) or sub.p < leaf_min_p; leaf otherwise",
+ "fail_mode": "open",
+ "fallback": {
+  "interactive": "parent",
+  "unattended": "parent"
+ },
+ "test_file": "tests/cases/20-taxonomy-classification.json",
+ "limitations": [
+  "one tree level per call: the caller walks the tree (root, then the chosen child's children) and keeps the beam; path scores and noul subtree pruning are not built",
+  "keyword hijack (tax-18, the word 'worker'): send p < 0.7 to the parent",
+  "never act on a counterfactual branch answer alone; 120 options cost 6-14 s under load; the option cap differs by server"
+ ],
+ "notes": "# deviation: spec 5.20: one level per call (no beam, no path score, no subtree pruning); the escape child other_<parent> must be in `children`; the low-confidence re-read (think 256, samples 2) runs below leaf_min_p; the decision is leaf, the child is signal `sub`"
+}

@@ -1,0 +1,140 @@
+{
+ "id": "act_or_ask",
+ "title": "Confidence-gated act, ask or escalate",
+ "usage_type": "02-confidence-gated-action",
+ "description": "Decide whether an agent should act now, ask a clarifying question, or escalate, given how ambiguous or risky the request is",
+ "input_schema": {
+  "type": "object",
+  "required": [
+   "request"
+  ],
+  "properties": {
+   "request": {
+    "type": "string"
+   },
+   "planned_action": {
+    "type": "string",
+    "description": "the concrete command or diff; the blast-radius read needs it"
+   },
+   "profile": {
+    "enum": [
+     "strict",
+     "read_only",
+     "reversible_write",
+     "irreversible"
+    ],
+    "default": "strict",
+    "description": "the action class, chosen by code: read_only, reversible_write, irreversible; strict = irreversible"
+   }
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "kind": "read",
+   "state_template": "Coding agent session.\nUser: {{request}}{{#planned_action}}\nPlanned action: {{planned_action}}{{/planned_action}}",
+   "options": {
+    "samples": 4
+   }
+  },
+  {
+   "id": "blast",
+   "kind": "read",
+   "state_template": "Agent about to run on the production host: `{{planned_action}}`",
+   "questions": {
+    "blast": {
+     "type": "score",
+     "instructions": "How large is the blast radius if this command runs?",
+     "criteria": [
+      "none: read-only, no side effects",
+      "small: changes one local file, trivially restorable",
+      "large: changes shared state, restore is slow or partial",
+      "catastrophic: irreversibly destroys production data"
+     ]
+    }
+   },
+   "when": "go == 'proceed'"
+  }
+ ],
+ "question_profiles": {
+  "strict": {
+   "go": {
+    "type": "choice",
+    "instructions": "Should the agent proceed with the request as written, or ask a clarifying question first?",
+    "criteria": {
+     "proceed": "Only one reasonable interpretation, or all interpretations have the same safe effect; act now",
+     "ask": "Several plausible interpretations with different (possibly destructive) consequences; ask first"
+    }
+   }
+  },
+  "read_only": {
+   "go": {
+    "type": "choice",
+    "instructions": "Should the agent proceed with the request as written, or ask a clarifying question first?",
+    "criteria": {
+     "proceed": "Only one reasonable interpretation, or all interpretations have the same safe effect; act now",
+     "ask": "Several plausible interpretations with different (possibly destructive) consequences; ask first"
+    }
+   }
+  },
+  "reversible_write": {
+   "go": {
+    "type": "choice",
+    "instructions": "Should the agent proceed with the request as written, or ask a clarifying question first?",
+    "criteria": {
+     "proceed": "Only one reasonable interpretation, or all interpretations have the same safe effect; act now",
+     "ask": "Several plausible interpretations with different (possibly destructive) consequences; ask first"
+    }
+   }
+  },
+  "irreversible": {
+   "go": {
+    "type": "choice",
+    "instructions": "Should the agent proceed with the request as written, or ask a clarifying question first?",
+    "criteria": {
+     "proceed": "Only one reasonable interpretation, or all interpretations have the same safe effect; act now",
+     "ask": "Several plausible interpretations with different (possibly destructive) consequences; ask first"
+    }
+   }
+  }
+ },
+ "policy": {
+  "act_p": 0.85,
+  "escalate_p": 0.6,
+  "blast_escalate": 2.5,
+  "proceed_min": 0.8
+ },
+ "policy_profiles": {
+  "read_only": {
+   "act_p": 0.5,
+   "escalate_p": 0.3,
+   "blast_escalate": 9
+  },
+  "reversible_write": {
+   "act_p": 0.7,
+   "escalate_p": 0.5,
+   "blast_escalate": 9
+  }
+ },
+ "decisions": [
+  "act",
+  "ask",
+  "escalate"
+ ],
+ "combine": "escalate if go.p < escalate_p; escalate if blast >= blast_escalate; act if go == 'proceed' and go.p >= act_p and go.p >= proceed_min; ask otherwise",
+ "fail_mode": "closed",
+ "fallback": {
+  "interactive": "ask",
+  "unattended": "ask"
+ },
+ "fallback_decision": "ask",
+ "test_file": "tests/cases/02-confidence-gated-action.json",
+ "limitations": [
+  "noul answers are near-binary; grey values mainly with thin evidence",
+  "monotonicity holds only coarsely",
+  "the state must contain the resolved command, not only the request (pass planned_action)",
+  "domain-choice confidence is not an ambiguity detector (gate-19 known limitation)",
+  "the correct noul (fix input), the risk choice when no action class is given and the stricter 0.95 for auto-applied code are not built: the engine has no input-conditional steps or thresholds"
+ ],
+ "notes": "# deviation: spec 5.2: action_class is the `profile` input (the engine selects policy and questions by profile only); the blast read runs only when go == 'proceed'"
+}
