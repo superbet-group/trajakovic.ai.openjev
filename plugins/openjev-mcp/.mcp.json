@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openjev": {
+      "type": "http",
+      "url": "${OPENJEV_MCP_URL:-http://127.0.0.1:8100/mcp}"
+    }
+  }
+}

@@ -80,13 +80,24 @@ Set these env vars in front of a task, e.g. `OPENJEV_LOG_LEVEL=debug mise run re
 
 ## MCP server
 
-A separate process on its own port, for agents (Claude Code and other MCP clients). It calls OpenJev over HTTP and loads no model. It serves 14 tools (typed reads, `filter`, resumable `batch` jobs, `ask_image`, `recipe` gates, `calibrate`), resources, prompts, four Claude Code hooks (`openjev-hook`) and 11 skills.
+A separate process on its own port, for agents (Claude Code and other MCP clients). It calls OpenJev over HTTP and loads no model. It serves 14 tools (typed reads, `filter`, resumable `batch` jobs, `ask_image`, `recipe` gates, `calibrate`), resources, prompts, four Claude Code hooks (`openjev-hook`) and 12 skills.
 
 ```sh
 claude mcp add --transport http openjev http://127.0.0.1:8100/mcp
 ```
 
 See [mcp/README.md](mcp/README.md) for the tool surface, stdio, hooks, batch jobs, skills and settings.
+
+### Claude Code skills
+
+The 12 `openjev-*` skills teach a Claude Code session in any project how to prepare data for the MCP (state and question formats, each tool's input and output, chaining, batch items files). They ship as the plugin `openjev-skills` in the marketplace `openjev` of this repository:
+
+```sh
+claude plugin marketplace add /path/to/openjev        # or owner/repo
+claude plugin install openjev-skills@openjev
+```
+
+Working in this repository: `mise run skills-link` (symlinks into the gitignored `.claude/skills/`) or `claude --plugin-dir plugins/openjev-skills`. Install guide and the optional `openjev-mcp` connector plugin: [plugins/openjev-skills/README.md](plugins/openjev-skills/README.md); effectiveness score: [mcp/tests/skills_eval/README.md](mcp/tests/skills_eval/README.md).
 
 More: [API](docs/api.md) · [Self-hosting, NVIDIA/Docker, all settings](docs/self-hosting.md) · [Playground UI](docs/ui.md)
 

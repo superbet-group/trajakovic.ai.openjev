@@ -1,4 +1,4 @@
-"""g09 skills via --plugin-dir (T083-T090): claude -p loads the 11 openjev-skills; assertions are on the downstream MCP call each SKILL.md prescribes."""
+"""g09 skills via --plugin-dir (T083-T090): claude -p loads the 12 openjev-skills; assertions are on the downstream MCP call each SKILL.md prescribes."""
 import json
 
 import pytest
@@ -11,7 +11,7 @@ from run_live import make_csv
 
 DATA = CASES_DIR / "g09_skills.json"
 SPEC_CASES = REPO / "docs/mcp-skill-spec/tests/cases"
-SKILLS = sorted(p.name for p in (REPO / "mcp/skills").iterdir() if p.is_dir())
+SKILLS = sorted(p.name for p in (REPO / "plugins/openjev-skills/skills").iterdir() if p.is_dir())
 READS = ("ask", "yes_no", "classify", "score", "filter", "batch", "ask_image", "recipe")
 C01 = rl.load("01-support-ticket-triage.json")
 EX_CAL = [f"ex-cal-{i}" for i in range(1, 8)]
@@ -24,7 +24,7 @@ def _blob(c) -> str:
 def _t083(t, ctx):
     names = {s if isinstance(s, str) else s.get("name") for s in t.init.get("skills", [])}
     want = {f"openjev-skills:{s}" for s in SKILLS}
-    assert len(SKILLS) == 11, SKILLS
+    assert len(SKILLS) == 12, SKILLS
     missing = sorted(want - names)
     assert not missing, f"init.skills lacks {missing}; has {sorted(n for n in names if n)}"
     A.final_text_contains(t, "OK")

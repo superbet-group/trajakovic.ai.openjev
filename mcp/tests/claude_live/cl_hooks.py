@@ -12,7 +12,7 @@ import cl_env
 
 EVENTS = ("PreToolUse", "PostToolUse", "Stop", "UserPromptSubmit")
 HOOK_BIN = cl_env.REPO / ".venv" / "bin" / "openjev-hook"
-SKILLS_SRC = cl_env.REPO / "mcp" / "skills"
+SKILLS_SRC = cl_env.REPO / "plugins" / "openjev-skills" / "skills"
 DEFAULT_TIMEOUT_S = 15
 
 
@@ -61,19 +61,9 @@ def settings_for(case, ctx) -> Path:
     return p
 
 
-def plugin_dir(ctx) -> Path:
-    """<work>/plugin/openjev-skills with a skills/<name> symlink per mcp/skills/* (F14); built once per session."""
-    root = Path(ctx.work) / "plugin" / "openjev-skills"
-    (root / ".claude-plugin").mkdir(parents=True, exist_ok=True)
-    (root / "skills").mkdir(exist_ok=True)
-    pj = root / ".claude-plugin" / "plugin.json"
-    if not pj.exists():
-        pj.write_text(json.dumps({"name": "openjev-skills", "version": "0.0.0"}), encoding="utf-8")
-    for src in sorted(p for p in SKILLS_SRC.iterdir() if p.is_dir()):
-        link = root / "skills" / src.name
-        if not link.is_symlink():
-            link.symlink_to(src.resolve())
-    return root
+def plugin_dir(ctx=None) -> Path:
+    """The canonical openjev-skills plugin directory in the repo (F14); loaded in place via --plugin-dir."""
+    return SKILLS_SRC.parent
 
 
 def skill_names() -> list[str]:

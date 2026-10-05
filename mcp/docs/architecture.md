@@ -310,9 +310,8 @@ mcp/
     claude_hooks.py               Claude Code PreToolUse input/output mapping (the only such module)
     hook.py                       `openjev-hook` CLI (phase 1: pretooluse)
     cli.py                        `openjev` CLI (phase 1: version only)
-  skills/
-    openjev-decisions/SKILL.md            spec 4.1, phase-1 rows only (TASKS 1.22)
-    openjev-question-authoring/SKILL.md   spec 4.2, without compile (TASKS 1.23)
+  (skills moved out of this package: plugins/openjev-skills/skills/<name>/SKILL.md, 12 skills;
+   plugins/openjev-mcp/.mcp.json is the opt-in connector; .claude-plugin/marketplace.json lists both)
   tests/
     conftest.py                   fixtures of section G
     stubs.py                      StubEngine, openjev_app(), replay and fault transports, raw RPC session
@@ -1505,7 +1504,7 @@ Each package owns its files exclusively and codes against section D only.
 | 6 Server + transports | `server.py`, `http_app.py`, `tests/conftest.py`, `tests/stubs.py` (G.2 part), `test_mcp_protocol.py`, `test_mcp_http_transport.py`, `test_mcp_cancel_progress.py`, `test_mcp_stdio.py` | WP5 (`tools.TOOLS`, `call_tool`, `resources`) |
 | 7 Recipes + hook | `recipes/*`, `claude_hooks.py`, `hook.py`, `test_mcp_expr.py`, `test_mcp_rules.py`, `test_mcp_shell.py`, `test_mcp_template.py`, `test_mcp_command_gate.py`, `test_mcp_hook.py` | WP1, WP2 (`OpenJevClient`), WP3 (`derive`) |
 | 8 mise | `mise-tasks/lib/common.sh`, `start`, `stop`, `status`, `logs`, `install`, `test`, new `mcp`, `.gitignore` | `python -m openjev_mcp`, `/health` (B.2) |
-| 9 Docs + skills | `mcp/README.md`, `mcp/spec.md`, `mcp/skills/*/SKILL.md`, root `README.md`, `test_mcp_skills.py` | sections A, B, F, H |
+| 9 Docs + skills | `mcp/README.md`, `mcp/spec.md`, `plugins/openjev-skills/skills/*/SKILL.md`, root `README.md`, `test_mcp_skills.py` | sections A, B, F, H |
 
 `tests/stubs.py` is shared: WP2 writes G.1, WP6 appends G.2; `conftest.py` belongs to WP6 and only
 imports from `stubs.py`.

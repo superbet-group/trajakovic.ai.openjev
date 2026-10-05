@@ -49,7 +49,7 @@ Revisions advertised by `server/discover` and `/health`: `2026-07-28` (primary: 
 | resource | `openjev://patterns`, `openjev://guide/authoring` | Verified question patterns; the authoring guide |
 | prompt | `start_batch`, `review_batch` | Plan and run a batch job; work its review queue |
 | prompt | `author_question`, `audit_question`, `explain_answer` | Write a question; plan a calibration; read the numbers |
-| skill | 11 skills in `mcp/skills/` | `openjev-decisions` (start here), `-question-authoring`, `-triage-routing`, `-agent-gates`, `-code-checks`, `-dispatch`, `-retrieval-relevance`, `-multistep`, `-data-records`, `-ui-vision`, `-calibration` |
+| skill | 12 skills in the `openjev-skills` plugin (`plugins/openjev-skills/`) | `openjev-data-prep` (hub: connect, data formats, tool inputs and outputs, chaining), `openjev-decisions` (start here for a decision), `-question-authoring`, `-triage-routing`, `-agent-gates`, `-code-checks`, `-dispatch`, `-retrieval-relevance`, `-multistep`, `-data-records`, `-ui-vision`, `-calibration` |
 | hook | `openjev-hook pretooluse`, `stop`, `userprompt`, `posttooluse` | Gate Bash commands, claims of "done", skill choice, fetched content |
 | cli | `openjev check <recipe>`, `openjev filter` | Run a recipe or a filter from a shell; JSON out, exit code |
 
@@ -175,11 +175,22 @@ Privacy: output files hold the state text of every row (exports need it) and the
 
 ## Skills
 
+The skills are published as the Claude Code plugin `openjev-skills` in the marketplace `openjev` (`.claude-plugin/marketplace.json` at the repository root). Install it in any project, not just this one:
+
 ```sh
-mkdir -p .claude/skills && cp -R mcp/skills/* .claude/skills/        # or ln -s "$PWD"/mcp/skills/* .claude/skills/
+claude plugin marketplace add /path/to/openjev            # or owner/repo
+claude plugin install openjev-skills@openjev
+claude plugin install openjev-mcp@openjev                 # optional: registers this server (URL from OPENJEV_MCP_URL)
 ```
 
-Start with `openjev-decisions`; it routes to the other ten by task.
+In this repository, link them for local development instead (relative symlinks in the gitignored `.claude/skills/`), or load the plugin directory directly:
+
+```sh
+mise run skills-link
+claude --plugin-dir plugins/openjev-skills
+```
+
+Start with `openjev-data-prep` (connecting, data formats, what each tool takes and returns, chaining) or `openjev-decisions` (a single decision); each routes to the others by task. Install guide: [plugins/openjev-skills/README.md](../plugins/openjev-skills/README.md). Effectiveness score (static, offline, trigger and live checks): [tests/skills_eval/README.md](tests/skills_eval/README.md).
 
 ## Measured (real model, 2026-10-02)
 
