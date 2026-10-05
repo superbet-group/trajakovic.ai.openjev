@@ -22,3 +22,13 @@ uv.lock
 .openjev-mcp.log
 .openjev-mcp.pid
 .playwright-mcp/
+
+# scratch outputs (analysis runs, exports) and IDE files
+.tmp/
+.idea/
+*.iml
+
+# live-eval scratch written into the daemon cwd
+openjev-audits/
+tickets_labeled.jsonl
+tickets-labeled.jsonl

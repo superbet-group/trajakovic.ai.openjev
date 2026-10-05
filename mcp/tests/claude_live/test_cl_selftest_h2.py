@@ -157,12 +157,12 @@ def test_cc_fixtures_parse_with_server_hooks():
 def test_plugin_dir(tmp_path):
     ctx = ctx_for(tmp_path)
     root = H.plugin_dir(ctx)
-    assert root == tmp_path / "work" / "plugin" / "openjev-skills"
-    assert json.loads((root / ".claude-plugin" / "plugin.json").read_text()) == {"name": "openjev-skills", "version": "0.0.0"}
-    links = sorted((root / "skills").iterdir())
-    assert len(links) == 11 and all(p.is_symlink() and (p / "SKILL.md").exists() for p in links)
-    assert [p.name for p in links] == H.skill_names()
-    assert H.plugin_dir(ctx) == root and len(list((root / "skills").iterdir())) == 11
+    assert root == H.cl_env.REPO / "plugins" / "openjev-skills"
+    assert json.loads((root / ".claude-plugin" / "plugin.json").read_text())["name"] == "openjev-skills"
+    dirs = sorted((root / "skills").iterdir())
+    assert len(dirs) == 12 and all((p / "SKILL.md").exists() for p in dirs)
+    assert [p.name for p in dirs] == H.skill_names()
+    assert H.plugin_dir(ctx) == root
 
 
 # ---- FaultUpstream ------------------------------------------------------------------------------------------------------

@@ -1,0 +1,16 @@
+Ticket #,Created,Customer,Message Text
+TCK-4100,2026-03-01,cust0@example.com,There is a typo on the pricing page: 'Recieve' should be 'Receive'.
+TCK-4101,2026-03-02,cust1@example.com,Our enterprise contract renews Friday and the invoice still shows the old seat count.
+TCK-4102,2026-03-03,cust2@example.com,Password reset emails have not arrived for two hours for any user.
+TCK-4103,2026-03-04,cust3@example.com,Is there a way to export my dashboard as PDF? Not urgent.
+TCK-4104,2026-03-05,cust4@example.com,The API rate limiter is returning 429 to our production integration since this morning.
+TCK-4105,2026-03-06,cust0@example.com,"Thanks for the quick help yesterday, everything works now."
+TCK-4106,2026-03-07,cust1@example.com,Disk usage on db-primary is at 97 percent and growing; backups are failing.
+TCK-4107,2026-03-08,cust2@example.com,Can you send me a quote for 200 seats with SSO?
+TCK-4108,2026-03-09,cust3@example.com,The mobile app crashes on launch on Android 14 after the latest update.
+TCK-4109,2026-03-10,cust4@example.com,Search results page loads in about 8 seconds instead of 2 for some users.
+TCK-4110,2026-03-11,cust0@example.com,A user reports their saved projects vanished after the migration ran.
+TCK-4111,2026-03-12,cust1@example.com,Please update the company address on our invoices to the new office.
+TCK-4112,2026-03-13,cust2@example.com,Webhook deliveries to our endpoint have been failing with timeouts since noon.
+TCK-4113,2026-03-14,cust3@example.com,The onboarding tutorial video has no captions; accessibility request.
+TCK-4114,2026-03-15,cust4@example.com,Someone posted our API key in a public forum; we need it revoked now.

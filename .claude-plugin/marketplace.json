@@ -1,0 +1,21 @@
+{
+  "name": "openjev",
+  "owner": { "name": "OpenJev maintainers" },
+  "metadata": { "description": "Claude Code skills and an optional MCP connector for the OpenJev typed-question model." },
+  "plugins": [
+    {
+      "name": "openjev-skills",
+      "source": "./plugins/openjev-skills",
+      "description": "Skills that teach Claude Code to prepare data for the OpenJev MCP: state and question formats, tool inputs and outputs, tool chaining, batch items files.",
+      "category": "productivity",
+      "tags": ["openjev", "mcp", "data-prep", "classification"]
+    },
+    {
+      "name": "openjev-mcp",
+      "source": "./plugins/openjev-mcp",
+      "description": "Opt-in connector that registers the OpenJev MCP server over HTTP (URL override via OPENJEV_MCP_URL).",
+      "category": "productivity",
+      "tags": ["openjev", "mcp"]
+    }
+  ]
+}

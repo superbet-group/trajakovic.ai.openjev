@@ -1,0 +1,34 @@
+schema_version: "1.0"
+name: inline-items-dry-run
+description: Implicit use of the data-prep and data-records skills with inline records. The agent should preview a batch with dry_run before spending reads.
+tags: [openjev, batch, implicit]
+execution:
+  prompt: |
+    Use OpenJev to decide, for each of these three support tickets, whether it needs a human today (yes or no). Preview what will be processed before spending any reads.
+    t1: Checkout returns HTTP 500 for every customer since the deploy.
+    t2: Could you change the footer link colour? Purely cosmetic.
+    t3: Customer export is leaking other tenants' rows.
+    Report the answer per ticket.
+  max_turns: 12
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Skill, "mcp__openjev__*"]
+runs: 1
+graders:
+  - type: tool_used
+    name: dry-run-used
+    tool: mcp__openjev__batch
+    input_match: '"dry_run"\s*:\s*true'
+    min: 1
+  - type: tool_used
+    name: no-more-than-two-path-or-shape-errors
+    tool: mcp__openjev__batch
+    max: 6
+  - type: regex
+    name: mentions-all-tickets
+    pattern: "t1[\\s\\S]*t2[\\s\\S]*t3"
+    flags: i
+  - type: tool_used
+    name: skill-fired
+    tool: Skill
+    min: 1
+    arm: with-only

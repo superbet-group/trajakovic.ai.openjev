@@ -20,7 +20,7 @@ from openjev_mcp.tools.dispatch import call_tool
 
 pytestmark = pytest.mark.anyio
 
-SKILL = (Path(__file__).resolve().parents[1] / "skills" / "openjev-data-records" / "SKILL.md").read_text()
+SKILL = (Path(__file__).resolve().parents[2] / "plugins" / "openjev-skills" / "skills" / "openjev-data-records" / "SKILL.md").read_text()
 DEPT = {"billing": "charges, invoices, refunds, payment methods, plan pricing",
         "technical": "bugs, errors, outages, integrations, performance, login problems",
         "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",

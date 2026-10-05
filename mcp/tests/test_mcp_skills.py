@@ -13,11 +13,11 @@ from openjev_mcp.tools.dispatch import tools_for
 from openjev_mcp.recipes.engine import load_builtin
 
 MCP = Path(__file__).resolve().parents[1]
-SKILLS = MCP / "skills"
+SKILLS = MCP.parent / "plugins" / "openjev-skills" / "skills"
 README = MCP / "README.md"
 SKILL_NAMES = ("openjev-decisions", "openjev-question-authoring", "openjev-triage-routing", "openjev-agent-gates",
                "openjev-code-checks", "openjev-dispatch", "openjev-retrieval-relevance", "openjev-multistep",
-               "openjev-data-records", "openjev-ui-vision", "openjev-calibration")
+               "openjev-data-records", "openjev-ui-vision", "openjev-calibration", "openjev-data-prep")
 
 
 ALL_TOOLS = openjev_mcp.TOOL_NAMES
@@ -70,6 +70,12 @@ def json_blocks(text):
         yield json.loads(b)
 
 
+def labelled_json_blocks(text):
+    """Yield (label, parsed) per ```json block; label is the '<!-- X -->' comment on the line before the fence, else None."""
+    for m in re.finditer(r"(?:^<!-- ([^>]*?) -->[ \t]*\n)?```json\n(.*?)\n```", text, re.S | re.M):
+        yield (m.group(1).strip() if m.group(1) else None), json.loads(m.group(2))
+
+
 @pytest.mark.parametrize("name", SKILL_NAMES)
 def test_frontmatter(name):
     assert (SKILLS / name / "SKILL.md").is_file()
@@ -78,7 +84,7 @@ def test_frontmatter(name):
     assert len(fm["description"]) > 80
 
 
-def test_pack_is_exactly_the_eleven_skills():
+def test_pack_is_exactly_the_twelve_skills():
     assert sorted(p.name for p in SKILLS.iterdir() if p.is_dir()) == sorted(SKILL_NAMES)
 
 
@@ -101,8 +107,14 @@ def test_states_precedence_rule(name):
 @pytest.mark.parametrize("name", SKILL_NAMES)
 def test_json_blocks_validate_against_the_tool_schemas(name):
     tools_for(Config())   # registers the input schemas
-    for block in json_blocks(read(name)):
+    for label, block in labelled_json_blocks(read(name)):
         if not isinstance(block, dict):
+            continue
+        if label is not None:
+            m = re.fullmatch(r"openjev-(\w+): ?(\w*)", label)
+            if not (m and m.group(1) == "call"):
+                continue   # other openjev-* labels (result, questions, ...) are validated elsewhere
+            assert validate.validate_args(m.group(2), block) is None, (name, m.group(2), block)
             continue
         tool = next((TOOL_KEYS[k] for k in block if k in TOOL_KEYS), None)
         if tool is None or ("questions" in block and tool == "batch" and "items" not in block and "items_file" not in block and "template" not in block):
@@ -163,3 +175,34 @@ def test_readme_contents():
 
 def test_readme_has_no_docker():
     assert "docker" not in README.read_text().lower()
+
+
+def _hub_text():
+    hub = SKILLS / "openjev-data-prep"
+    return "\n".join(p.read_text() for p in [hub / "SKILL.md", *sorted((hub / "references").glob("*.md"))])
+
+
+def test_data_prep_hub_is_complete():
+    hub = SKILLS / "openjev-data-prep"
+    skill = (hub / "SKILL.md").read_text()
+    text = _hub_text()
+    assert "claude mcp add --transport http openjev" in text
+    for s in ("OPENJEV_MCP_ROOTS", "openjev://templates", "next_cursor", "state_template"):
+        assert s in text, s
+    assert "references/tool-io.md" in skill and "references/chaining.md" in skill
+    assert (hub / "references" / "tool-io.md").is_file()
+    assert "## Edges" in (hub / "references" / "chaining.md").read_text()
+
+
+@pytest.mark.parametrize("name", SKILL_NAMES)
+def test_every_tool_qualified_once(name):
+    """Each tool a skill names bare must also appear fully qualified (mcp__openjev__<tool>) at least once."""
+    text = read(name)
+    qualified = set(re.findall(r"mcp__openjev__(\w+)", text))
+    bare = {w for w in re.findall(r"`(\w+)(?:[.(][^`]*)?`", text) if w in ALL_TOOLS}
+    assert bare <= qualified, sorted(bare - qualified)
+
+
+def test_hub_qualifies_every_tool():
+    qualified = set(re.findall(r"mcp__openjev__(\w+)", _hub_text()))
+    assert qualified >= set(ALL_TOOLS), sorted(set(ALL_TOOLS) - qualified)

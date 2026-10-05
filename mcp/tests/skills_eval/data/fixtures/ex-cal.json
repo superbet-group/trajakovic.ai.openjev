@@ -1,0 +1,193 @@
+{
+ "cases": [
+  {
+   "id": "ex-cal-1",
+   "description": "calibrate: labelled item 1 (label escalate=True) from 24::cal-01-labelled-positive",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 1,
+    "state": "Ticket #4412: Since the 14:05 deploy every checkout request returns HTTP 500. Payments are failing for all customers. Error rate 100%.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.6
+     }
+    }
+   },
+   "label": true
+  },
+  {
+   "id": "ex-cal-2",
+   "description": "calibrate: labelled item 2 (label escalate=True) from 24::cal-03-fit-leak",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 1,
+    "state": "Ticket #4420: Support agent noticed the /export endpoint returns other customers' invoices when the account id is incremented by one. Looks like an IDOR, customer PII exposed.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.6
+     }
+    }
+   },
+   "label": true
+  },
+  {
+   "id": "ex-cal-3",
+   "description": "calibrate: labelled item 3 (label escalate=True) from 24::cal-03-fit-dataloss",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 1,
+    "state": "Ticket #4431: After the migration ran, about 2,000 users report their saved projects are gone. Backups not yet checked.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "escalate": {
+      "noul_gte": 0.6
+     }
+    }
+   },
+   "label": true
+  },
+  {
+   "id": "ex-cal-4",
+   "description": "calibrate: labelled item 4 (label escalate=False) from 24::cal-02-labelled-negative",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 1,
+    "state": "Ticket #4440: There is a typo on the pricing page: 'Recieve' should be 'Receive'. Not urgent at all.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.4
+     }
+    }
+   },
+   "label": false
+  },
+  {
+   "id": "ex-cal-5",
+   "description": "calibrate: labelled item 5 (label escalate=False) from 24::cal-03-fit-howto",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 1,
+    "state": "Ticket #4441: How do I change the language of my dashboard to German? Could not find the setting.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.4
+     }
+    }
+   },
+   "label": false
+  },
+  {
+   "id": "ex-cal-6",
+   "description": "calibrate: labelled item 6 (label escalate=False) from 24::cal-03-fit-feature",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 1,
+    "state": "Ticket #4442: Would be nice to have a dark mode option in the mobile app someday.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.4
+     }
+    }
+   },
+   "label": false
+  },
+  {
+   "id": "ex-cal-7",
+   "description": "calibrate: labelled item 7 (label escalate=False) from 24::cal-15-borderline-band",
+   "request": {
+    "model": "openjev-latest",
+    "samples": 1,
+    "state": "Ticket #4460: Checkout takes about 8 seconds instead of 2 for some users on mobile networks. Retrying usually works.",
+    "questions": {
+     "escalate": {
+      "type": "noul",
+      "instructions": "Should this support ticket be escalated to the on-call engineer right now?",
+      "criteria": {
+       "true": "production impact, data loss, security exposure, or all users blocked",
+       "false": "cosmetic, how-to, feature request, or a single-user inconvenience with a workaround"
+      }
+     }
+    }
+   },
+   "expect": {
+    "answers": {
+     "escalate": {
+      "noul_lte": 0.4
+     }
+    }
+   },
+   "label": false
+  }
+ ]
+}

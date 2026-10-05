@@ -1,0 +1,28 @@
+schema_version: "1.0"
+name: question-authoring-lint
+description: Implicit use of the question-authoring skill. The agent should draft a question for an intent and verify it with openjev lint before finishing.
+tags: [openjev, questions, implicit]
+execution:
+  prompt: |
+    Write an OpenJev question for this intent: "is this log line a real failure". I am not available for an interview, so assume sensible definitions yourself, and finish by checking your draft with the OpenJev tools. Show the final question.
+  max_turns: 8
+  timeout_seconds: 240
+  allowed_tools: [Read, Glob, Skill, "mcp__openjev__*"]
+runs: 1
+graders:
+  - type: tool_used
+    name: lint-called
+    tool: mcp__openjev__lint
+    min: 1
+  - type: tool_order
+    name: compile-or-lint-before-ask
+    before: mcp__openjev__lint
+    after: mcp__openjev__ask
+  - type: llm
+    name: final-question-is-typed
+    criteria: The final message shows a complete OpenJev question (a kind such as noul/yes-no, a question text, and defined terms or options) and states that lint reported it valid.
+  - type: tool_used
+    name: skill-fired
+    tool: Skill
+    min: 1
+    arm: with-only

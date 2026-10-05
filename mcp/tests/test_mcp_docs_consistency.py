@@ -44,13 +44,13 @@ def test_mise_tasks_exist():
 
 
 def test_skill_tools_are_real():
-    skills = os.path.join(MCP, "skills")
+    skills = os.path.join(REPO, "plugins", "openjev-skills", "skills")
     names = sorted(os.listdir(skills))
-    assert len(names) == 11 and "openjev-decisions" in names and "openjev-calibration" in names
+    assert len(names) == 12 and {"openjev-decisions", "openjev-calibration", "openjev-data-prep"} <= set(names)
     mentioned: set[str] = set()
     for n in names:
-        mentioned |= set(re.findall(r"`(\w+)`", read("mcp", "skills", n, "SKILL.md"))) & set(openjev_mcp.TOOL_NAMES)
-    assert mentioned == set(openjev_mcp.TOOL_NAMES) - {"generate"}, sorted(set(openjev_mcp.TOOL_NAMES) - mentioned)
+        mentioned |= set(re.findall(r"`(\w+)`", read("plugins", "openjev-skills", "skills", n, "SKILL.md"))) & set(openjev_mcp.TOOL_NAMES)
+    assert mentioned >= set(openjev_mcp.TOOL_NAMES) - {"generate"}, sorted(set(openjev_mcp.TOOL_NAMES) - mentioned)
 
 
 def test_readme_surface_table_names_every_tool():

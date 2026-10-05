@@ -1,0 +1,1014 @@
+{
+ "_note": "Captured from the live openjev MCP server (0.5.0, model openjev-0.1) and trimmed: arrays cut to 2 items, meta cut to model/requests/latency_ms. Absolute paths are replaced by /abs/path/to/. Regenerate references/tool-io.md with gen_tool_io.py after editing.",
+ "status": [
+  {
+   "label": "Health check",
+   "call": {
+    "probe": false
+   },
+   "result": {
+    "healthy": true,
+    "base_url": "http://127.0.0.1:8080",
+    "decide_models": [
+     "openjev-latest",
+     "openjev-0.1"
+    ],
+    "chat_models": [
+     "diffusiongemma-26b"
+    ],
+    "aliases_accepted": [
+     "jev-latest",
+     "jev-preview"
+    ],
+    "auth": "none",
+    "backend": "unknown",
+    "limit_source": "default",
+    "limits": {
+     "questions": 256,
+     "choice_options": 255,
+     "score_levels": 10,
+     "images": 8,
+     "image_bytes": 5242880,
+     "body_bytes": 67108864,
+     "batch": {
+      "concurrency_max": 4,
+      "max_items_per_call": 100,
+      "max_items": 5000,
+      "max_inflight_batch": 4
+     }
+    },
+    "mcp": {
+     "server_version": "0.5.0",
+     "transport": "http"
+    },
+    "warnings": []
+   }
+  }
+ ],
+ "ask": [
+  {
+   "label": "One state, three typed questions (noul, choice, score)",
+   "call": {
+    "state": "USER MESSAGE: My invoice total is wrong, I was charged twice.",
+    "questions": {
+     "angry": {
+      "type": "noul",
+      "instructions": "The user is angry."
+     },
+     "topic": {
+      "type": "choice",
+      "instructions": "What is the topic?",
+      "criteria": {
+       "billing": "charges, invoices, refunds",
+       "tech": "bugs, errors",
+       "other": "anything else"
+      }
+     },
+     "urgency": {
+      "type": "score",
+      "instructions": "How urgent is it?",
+      "criteria": [
+       "not urgent",
+       "somewhat urgent",
+       "urgent"
+      ]
+     }
+    },
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "answers": {
+     "angry": {
+      "type": "noul",
+      "p": 1.26e-05,
+      "band": "no",
+      "margin": 0.99997
+     },
+     "topic": {
+      "type": "choice",
+      "choice": "billing",
+      "p_top": 0.99999,
+      "runner_up": "tech",
+      "margin": 0.99999,
+      "probabilities": {
+       "billing": 0.99999,
+       "tech": 4.6e-06,
+       "other": 5.2e-07
+      },
+      "confidence": 0.99994,
+      "entropy": 7e-05,
+      "abstained": false
+     },
+     "urgency": {
+      "type": "score",
+      "score": 1.9987,
+      "level": 2,
+      "level_label": "urgent",
+      "probabilities": {
+       "0": 3e-05,
+       "1": 0.00122,
+       "2": 0.99875
+      },
+      "confidence": 0.99112,
+      "spread": 0.03663,
+      "bimodal": false
+     }
+    },
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 1,
+     "latency_ms": 393
+    },
+    "lint": {
+     "warnings": [
+      {
+       "code": "W101",
+       "path": "questions.angry",
+       "message": "noul without criteria",
+       "fix": "add criteria {true, false} that define both poles",
+       "rule": "R4"
+      },
+      {
+       "code": "W202",
+       "path": "questions.topic.criteria",
+       "message": "option descriptions are missing, equal to their keys or shorter than 3 words",
+       "fix": "describe what inputs of each option look like",
+       "rule": "R6"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "yes_no": [
+  {
+   "label": "One literal claim",
+   "call": {
+    "state": "USER MESSAGE: My invoice total is wrong, I was charged twice.",
+    "claim": "The user reports a billing problem.",
+    "false_means": "The message is about something else, such as a bug or a feature request.",
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "decision": "yes",
+    "p": 0.99961,
+    "margin": 0.99922,
+    "thresholds_used": {
+     "yes_at": 0.8,
+     "no_at": 0.2
+    },
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 1,
+     "latency_ms": 161
+    }
+   }
+  }
+ ],
+ "classify": [
+  {
+   "label": "One label from a closed set (escape option added automatically)",
+   "call": {
+    "state": "USER MESSAGE: My invoice total is wrong, I was charged twice.",
+    "question": "What is the message about?",
+    "labels": {
+     "billing": "charges, invoices, refunds",
+     "tech": "bugs, errors, crashes"
+    },
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "label": "billing",
+    "abstained": false,
+    "top": "billing",
+    "p_top": 0.9974,
+    "runner_up": "tech",
+    "margin": 0.99483,
+    "probabilities": {
+     "billing": 0.9974,
+     "tech": 0.00257,
+     "other": 2e-05
+    },
+    "confidence": 0.98347,
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 1,
+     "latency_ms": 161
+    }
+   }
+  }
+ ],
+ "score": [
+  {
+   "label": "Ordinal scale, lowest level first",
+   "call": {
+    "state": "USER MESSAGE: My invoice total is wrong, I was charged twice.",
+    "question": "How urgent is the request?",
+    "levels": [
+     "no deadline or impact stated",
+     "money lost but no deadline",
+     "money lost and a deadline or escalation is stated"
+    ],
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "score": 0.65886,
+    "level": 1,
+    "level_label": "money lost but no deadline",
+    "probabilities": {
+     "0": 0.34605,
+     "1": 0.64903,
+     "2": 0.00492
+    },
+    "confidence": 0.38657,
+    "spread": 0.48435,
+    "bimodal": false,
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 1,
+     "latency_ms": 163
+    }
+   }
+  }
+ ],
+ "filter": [
+  {
+   "label": "Keep or drop items by one criterion containing {id}",
+   "call": {
+    "task": "Find real failures in a deploy log.",
+    "items": [
+     {
+      "id": "l1",
+      "text": "ERROR db connection refused"
+     },
+     {
+      "id": "l2",
+      "text": "INFO request ok 200"
+     },
+     {
+      "id": "l3",
+      "text": "WARN retrying in 5s"
+     }
+    ],
+    "criterion": "Is log line {id} a real failure that needs a human?",
+    "items_label": "LOG LINES",
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "kept": [
+     "l1"
+    ],
+    "dropped": [
+     "l2",
+     "l3"
+    ],
+    "grey": [],
+    "items": [
+     {
+      "id": "l1",
+      "p": 0.99942,
+      "decision": "keep"
+     },
+     {
+      "id": "l2",
+      "p": 8e-05,
+      "decision": "drop"
+     }
+    ],
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 1,
+     "latency_ms": 210
+    }
+   }
+  }
+ ],
+ "batch": [
+  {
+   "label": "Dry run on 3 inline items (no reads, no file written)",
+   "call": {
+    "items": [
+     {
+      "id": "t1",
+      "state": "USER MESSAGE: I was charged twice."
+     },
+     {
+      "id": "t2",
+      "state": "USER MESSAGE: The app crashes on launch."
+     },
+     {
+      "id": "t3",
+      "state": "USER MESSAGE: How do I change my avatar?"
+     }
+    ],
+    "questions": {
+     "billing": {
+      "type": "noul",
+      "instructions": "The message is about a billing problem.",
+      "criteria": {
+       "true": "charges, invoices or refunds",
+       "false": "anything else, such as a crash or a how-to"
+      }
+     }
+    },
+    "dry_run": true
+   },
+   "result": {
+    "status": {
+     "done": 0,
+     "total": 3,
+     "remaining": 3,
+     "ok": 0,
+     "errors": 0,
+     "skipped": 0,
+     "stopped_reason": "dry_run"
+    },
+    "summary": {
+     "scope": "call",
+     "n": 0,
+     "ok": 0,
+     "errors": 0,
+     "needs_review": 0,
+     "audit": 0,
+     "per_question": {
+      "billing": {
+       "type": "noul",
+       "n": 0,
+       "mean_p": 0,
+       "yes": 0,
+       "no": 0,
+       "grey": 0,
+       "mean_margin": 0
+      }
+     }
+    },
+    "results": [],
+    "review_queue": [],
+    "audit_ids": [],
+    "output_path": null,
+    "import": {
+     "format": "items",
+     "delimiter": null,
+     "encoding": "utf-8",
+     "state_field": null,
+     "id_field": null,
+     "columns": [],
+     "row_count": 3,
+     "truncated": false,
+     "warnings": []
+    },
+    "preview": [
+     {
+      "id": "t1",
+      "state": "USER MESSAGE: I was charged twice."
+     },
+     {
+      "id": "t2",
+      "state": "USER MESSAGE: The app crashes on launch."
+     }
+    ],
+    "first_body": {
+     "model": "openjev-latest",
+     "samples": 1,
+     "state": "USER MESSAGE: I was charged twice.",
+     "questions": {
+      "billing": {
+       "type": "noul",
+       "instructions": "The message is about a billing problem.",
+       "criteria": {
+        "true": "charges, invoices or refunds",
+        "false": "anything else, such as a crash or a how-to"
+       }
+      }
+     }
+    },
+    "estimate": {
+     "requests": 3,
+     "billed_reads": 3,
+     "input_tokens_approx": 191,
+     "time_s_idle_approx": 0.9,
+     "time_s_shared_approx": 4.5
+    },
+    "next_cursor": null,
+    "meta": {
+     "model": "openjev-latest",
+     "requests": 0,
+     "latency_ms": 0
+    }
+   }
+  },
+  {
+   "label": "Real run on the same 3 items, writing a resumable JSONL",
+   "call": {
+    "items": [
+     {
+      "id": "t1",
+      "state": "USER MESSAGE: I was charged twice."
+     },
+     {
+      "id": "t2",
+      "state": "USER MESSAGE: The app crashes on launch."
+     },
+     {
+      "id": "t3",
+      "state": "USER MESSAGE: How do I change my avatar?"
+     }
+    ],
+    "questions": {
+     "billing": {
+      "type": "noul",
+      "instructions": "The message is about a billing problem.",
+      "criteria": {
+       "true": "charges, invoices or refunds",
+       "false": "anything else, such as a crash or a how-to"
+      }
+     }
+    },
+    "output_path": "/abs/path/to/out/batch1.jsonl"
+   },
+   "result": {
+    "status": {
+     "done": 3,
+     "total": 3,
+     "remaining": 0,
+     "ok": 3,
+     "errors": 0,
+     "skipped": 0,
+     "stopped_reason": "complete",
+     "elapsed_ms": 652.4,
+     "eta_ms": null,
+     "req_per_s": 4.6,
+     "effective_concurrency": 1,
+     "backoffs": 0,
+     "input_tokens": 752,
+     "output_tokens": 0
+    },
+    "summary": {
+     "scope": "output_path",
+     "n": 3,
+     "ok": 3,
+     "errors": 0,
+     "needs_review": 1,
+     "audit": 0,
+     "per_question": {
+      "billing": {
+       "type": "noul",
+       "n": 3,
+       "mean_p": 0.1798,
+       "yes": 0,
+       "no": 2,
+       "grey": 1,
+       "mean_margin": 0.6915
+      }
+     }
+    },
+    "results": [
+     {
+      "index": 1,
+      "id": "t1",
+      "status": "ok",
+      "answers": {
+       "billing": {
+        "p": 0.53827,
+        "band": "grey"
+       }
+      },
+      "needs_review": true,
+      "error": null
+     },
+     {
+      "index": 2,
+      "id": "t2",
+      "status": "ok",
+      "answers": {
+       "billing": {
+        "p": 0.00093,
+        "band": "no"
+       }
+      },
+      "needs_review": false,
+      "error": null
+     }
+    ],
+    "review_queue": [
+     {
+      "id": "t1",
+      "question": "billing",
+      "reason": "noul_grey",
+      "confidence": 0.07654
+     }
+    ],
+    "audit_ids": [],
+    "output_path": "/abs/path/to/out/batch1.jsonl",
+    "next_cursor": null,
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 4,
+     "latency_ms": 652
+    }
+   }
+  }
+ ],
+ "ask_image": [
+  {
+   "label": "One screenshot, one noul question",
+   "call": {
+    "images": [
+     {
+      "path": "/abs/path/to/screenshots/error_500.png"
+     }
+    ],
+    "questions": {
+     "is_error": {
+      "type": "noul",
+      "instructions": "The screenshot shows an error page.",
+      "criteria": {
+       "true": "an error message such as 500 is visible",
+       "false": "a normal page"
+      }
+     }
+    },
+    "state": "Screenshot of a web page.",
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "answers": {
+     "is_error": {
+      "type": "noul",
+      "p": 0.99996,
+      "band": "yes",
+      "margin": 0.99993
+     }
+    },
+    "images": [
+     {
+      "source": "/abs/path/to/screenshots/error_500.png",
+      "sent_as": "image/png",
+      "bytes": 17855,
+      "reencoded": false
+     }
+    ],
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 1,
+     "latency_ms": 640
+    }
+   }
+  }
+ ],
+ "lint": [
+  {
+   "label": "Strict lint of a question set (no network)",
+   "call": {
+    "state": "USER MESSAGE: I was charged twice.",
+    "questions": {
+     "billing": {
+      "type": "noul",
+      "instructions": "The message is about a billing problem."
+     }
+    },
+    "profile": "strict"
+   },
+   "result": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+     {
+      "code": "W101",
+      "path": "questions.billing",
+      "message": "noul without criteria",
+      "fix": "add criteria {true, false} that define both poles",
+      "rule": "R4"
+     }
+    ],
+    "estimate": {
+     "questions": 1,
+     "chunks": 1,
+     "input_tokens_approx": 111,
+     "latency_ms_idle_approx": 300,
+     "billed_reads": 1
+    }
+   }
+  }
+ ],
+ "compile": [
+  {
+   "label": "Prose intent to a linted draft request with slots for a human",
+   "call": {
+    "intent": "tell me if a support email is about billing or about a technical bug",
+    "sub_decisions": [
+     "which topic the email is about"
+    ],
+    "labels": {
+     "which topic the email is about": {
+      "billing": "charges, invoices, refunds",
+      "bug": "crashes, errors"
+     }
+    }
+   },
+   "result": {
+    "recipe": {
+     "id": "ticket_triage",
+     "p": 0.86319,
+     "runner_up": "taxonomy_classify",
+     "not_a_decision": false
+    },
+    "draft_request": {
+     "model": "openjev-latest",
+     "state": "{<SLOT:text>}",
+     "questions": {
+      "dept": {
+       "type": "choice",
+       "instructions": "Which team should own this ticket?",
+       "criteria": {
+        "<SLOT:teams: label>": "<SLOT:teams: description>",
+        "other": "anything else, or too vague to tell"
+       }
+      },
+      "topic_email_about": {
+       "type": "choice",
+       "instructions": "Which topic the email is about?",
+       "criteria": {
+        "billing": "charges, invoices, refunds",
+        "bug": "crashes, errors"
+       }
+      }
+     }
+    },
+    "slots": [
+     {
+      "name": "text",
+      "path": "state",
+      "why": "the text to judge",
+      "example": "<the text>"
+     },
+     {
+      "name": "teams: label",
+      "path": "questions.dept.criteria.<SLOT:teams: label>",
+      "why": "needs a description only the human knows",
+      "example": "label: what an input with this label looks like"
+     }
+    ],
+    "human_questions": [
+     "What does 'teams: label' mean for you? (questions.dept.criteria.<SLOT:teams: label>)",
+     "Recipe default yes_at = 0.8: does that threshold fit your risk?"
+    ],
+    "lint": {
+     "valid": true,
+     "errors": [],
+     "warnings": [
+      {
+       "code": "W201",
+       "path": "questions.topic_email_about.criteria",
+       "message": "no escape option; a choice cannot abstain",
+       "fix": "add \"other\": \"anything else, or too vague to tell\"",
+       "rule": "R5"
+      }
+     ]
+    },
+    "sub_decisions": [
+     {
+      "text": "which topic the email is about",
+      "qtype": "choice",
+      "p": null,
+      "question_id": "topic_email_about",
+      "note": "pre-rule; no recipe question fits, new question"
+     }
+    ],
+    "next_steps": [
+     "fill the <SLOT:...> placeholders in draft_request (probe and calibrate wait for them)",
+     "answer human_questions"
+    ]
+   }
+  }
+ ],
+ "calibrate": [
+  {
+   "label": "Eight labelled examples for one noul question (smoke test, nothing stored)",
+   "call": {
+    "questions": {
+     "billing": {
+      "type": "noul",
+      "instructions": "The message is about a billing problem.",
+      "criteria": {
+       "true": "charges, invoices or refunds",
+       "false": "anything else, such as a crash or a how-to"
+      }
+     }
+    },
+    "examples": [
+     {
+      "id": "e1",
+      "state": "USER MESSAGE: I was charged twice.",
+      "label": {
+       "billing": true
+      }
+     },
+     {
+      "id": "e2",
+      "state": "USER MESSAGE: Please refund my last invoice.",
+      "label": {
+       "billing": true
+      }
+     },
+     {
+      "id": "e3",
+      "state": "USER MESSAGE: My card was billed after I cancelled.",
+      "label": {
+       "billing": true
+      }
+     },
+     {
+      "id": "e4",
+      "state": "USER MESSAGE: Where is the invoice PDF for March?",
+      "label": {
+       "billing": true
+      }
+     },
+     {
+      "id": "e5",
+      "state": "USER MESSAGE: The app crashes on launch.",
+      "label": {
+       "billing": false
+      }
+     },
+     {
+      "id": "e6",
+      "state": "USER MESSAGE: How do I change my avatar?",
+      "label": {
+       "billing": false
+      }
+     },
+     {
+      "id": "e7",
+      "state": "USER MESSAGE: Dark mode would be great.",
+      "label": {
+       "billing": false
+      }
+     },
+     {
+      "id": "e8",
+      "state": "USER MESSAGE: Login page shows a 500 error.",
+      "label": {
+       "billing": false
+      }
+     }
+    ],
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "model_resolved": "openjev-0.1",
+    "n": 8,
+    "question_hash": "sha256:34896b89cc4e0b3944c05427be44b206ac979239eb7a8d25c5c6b14e35fa5fe3",
+    "per_question": {
+     "billing": {
+      "type": "noul",
+      "n": 8,
+      "n_pos": 4,
+      "n_neg": 4,
+      "accuracy_at_0.5": 1,
+      "separable": true,
+      "max_negative": 0.0009,
+      "min_positive": 0.5,
+      "gap": 0.4991,
+      "t_fit": 0.2505,
+      "suggested_band": {
+       "no_at": 0.05,
+       "yes_at": 0.95
+      },
+      "overlap_ids": [],
+      "most_borderline": "e1",
+      "zero_error_upper_bound_95": 0.375,
+      "calibration": {
+       "bins": [
+        {
+         "lo": 0.5,
+         "hi": 0.55,
+         "count": 1,
+         "acc": 1,
+         "conf": 0.5
+        },
+        {
+         "lo": 0.55,
+         "hi": 0.6,
+         "count": 1,
+         "acc": 1,
+         "conf": 0.5977
+        },
+        {
+         "lo": 0.6,
+         "hi": 0.65,
+         "count": 0,
+         "acc": null,
+         "conf": null
+        },
+        {
+         "lo": 0.65,
+         "hi": 0.7,
+         "count": 0,
+         "acc": null,
+         "conf": null
+        },
+        {
+         "lo": 0.7,
+         "hi": 0.75,
+         "count": 1,
+         "acc": 1,
+         "conf": 0.7177
+        },
+        {
+         "lo": 0.75,
+         "hi": 0.8,
+         "count": 0,
+         "acc": null,
+         "conf": null
+        },
+        {
+         "lo": 0.8,
+         "hi": 0.85,
+         "count": 1,
+         "acc": 1,
+         "conf": 0.8398
+        },
+        {
+         "lo": 0.85,
+         "hi": 0.9,
+         "count": 0,
+         "acc": null,
+         "conf": null
+        },
+        {
+         "lo": 0.9,
+         "hi": 0.95,
+         "count": 0,
+         "acc": null,
+         "conf": null
+        },
+        {
+         "lo": 0.95,
+         "hi": 1,
+         "count": 4,
+         "acc": 1,
+         "conf": 0.9996
+        }
+       ],
+       "brier": 0.0647,
+       "ece": 0.1683
+      }
+     }
+    },
+    "items": [
+     {
+      "id": "e1",
+      "label": true,
+      "p": 0.5
+     },
+     {
+      "id": "e2",
+      "label": true,
+      "p": 0.8398
+     }
+    ],
+    "warnings": [
+     "n=8: smoke test only; 0 errors in 8 bounds the error rate at ~38% (rule of three)"
+    ]
+   }
+  }
+ ],
+ "recipe": [
+  {
+   "label": "command_gate on a destructive command",
+   "call": {
+    "recipe": "command_gate",
+    "inputs": {
+     "task": "Clean build artifacts in the project",
+     "command": "rm -rf build/"
+    },
+    "options": {
+     "samples": 1
+    }
+   },
+   "result": {
+    "recipe": "command_gate",
+    "decision": "deny",
+    "reason": "destructive=0.9065 >= 0.85",
+    "signals": {
+     "destructive": 0.9065,
+     "exfiltrates": 4e-05,
+     "remote_code": 0.00014,
+     "out_of_scope": 0.00807,
+     "weakens_security": 0.00063,
+     "risk": 0.96999,
+     "verdict": "allow",
+     "verdict_p": 0.99833
+    },
+    "thresholds_used": {
+     "deny_hazard": 0.85,
+     "ask_hazard_low": 0.4,
+     "deny_verdict_p": 0.6,
+     "deny_risk": 2.3,
+     "ask_risk_low": 1.3,
+     "allow_hazard_max": 0.2,
+     "allow_scope_max": 0.3,
+     "allow_risk_max": 1
+    },
+    "degraded": false,
+    "requests": 1,
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 1,
+     "latency_ms": 388.1
+    }
+   }
+  }
+ ],
+ "generate": [
+  {
+   "label": "Short text draft (text only, never a decision)",
+   "call": {
+    "messages": [
+     {
+      "role": "user",
+      "content": "Say hello in five words."
+     }
+    ],
+    "max_tokens": 16
+   },
+   "result": {
+    "content": "Hello to you, friend.",
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 19,
+     "completion_tokens": 6,
+     "total_tokens": 25
+    },
+    "retried": false,
+    "warnings": [
+     "MLX backend: newlines are dropped from replies; tools, logprobs and image parts are ignored"
+    ]
+   }
+  }
+ ],
+ "batch_results": [
+  {
+   "label": "Review queue of the batch written above (no reads spent)",
+   "call": {
+    "path": "/abs/path/to/out/batch1.jsonl",
+    "view": "review"
+   },
+   "result": {
+    "view": "review",
+    "matched": 3,
+    "next_cursor": null,
+    "review_queue": [
+     {
+      "id": "t1",
+      "question": "billing",
+      "reason": "noul_grey",
+      "confidence": 0.07654
+     }
+    ],
+    "warnings": [],
+    "meta": {
+     "model": "openjev-0.1",
+     "requests": 0
+    }
+   }
+  }
+ ],
+ "_errors": {
+  "recipe": [
+   {
+    "call": {
+     "recipe": "command_gate",
+     "inputs": {
+      "command": "ls -la"
+     },
+     "dry_run": true
+    },
+    "error": {
+     "code": "OJ_INVALID_INPUT",
+     "message": "inputs: 'task' is a required property",
+     "path": "inputs",
+     "retryable": false,
+     "hint": "{\"type\":\"object\",\"required\":[\"task\",\"command\"],...}"
+    },
+    "note": "inputs are validated against the recipe's input_schema; read openjev://recipes/command_gate first"
+   }
+  ]
+ }
+}

@@ -190,6 +190,7 @@ oj_spawn() {
   : > /dev/null
   if [ "$1" = server ]; then
     pid="$(PYTHONUNBUFFERED=1 OPENJEV_BACKEND="${OPENJEV_BACKEND:-mlx}" \
+      OPENJEV_MLX_CACHE_LIMIT_GB="${OPENJEV_MLX_CACHE_LIMIT_GB-4}" \
       "$OJ_PY" "$OJ_ROOT/mise-tasks/lib/spawn.py" --pidfile "$SVC_PIDFILE" --log "$SVC_LOG" \
       --cwd "$OJ_ROOT" -- "$OJ_PY" -m openjev)" || {
       oj_tail "$1" 30 >&2; oj_die "$SVC_LABEL failed to start (full log: $SVC_LOG)"; }

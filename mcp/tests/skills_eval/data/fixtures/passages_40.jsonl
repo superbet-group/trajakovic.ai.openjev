@@ -1,0 +1,40 @@
+{"id": "p01", "text": "The cafeteria menu this week includes soup, salad and a vegetarian pasta bake."}
+{"id": "p02", "text": "Quarterly revenue grew 4 percent driven by the enterprise segment."}
+{"id": "p03", "text": "To rotate an API key, open Settings, create a new key, update your services, then revoke the old key."}
+{"id": "p04", "text": "To change the dashboard language, open Profile and pick a language from the list."}
+{"id": "p05", "text": "The office will be closed on Monday for the public holiday."}
+{"id": "p06", "text": "Pagination in the list API uses a cursor returned in the next_cursor field."}
+{"id": "p07", "text": "Our brand colours are a deep blue and a warm orange; avoid gradients."}
+{"id": "p08", "text": "If a credential leaks, revoke it immediately from the security page and issue a replacement token."}
+{"id": "p09", "text": "Use the export button to download your invoices as a PDF file."}
+{"id": "p10", "text": "The mobile app supports dark mode starting with version 3.1."}
+{"id": "p11", "text": "Team standup is at 10:00 in the main room; remote members join by video."}
+{"id": "p12", "text": "Invoices are issued on the first business day of each month."}
+{"id": "p13", "text": "Service account secrets should be rotated every 90 days; the console shows the age of each secret."}
+{"id": "p14", "text": "Caching headers on static assets are set to one week."}
+{"id": "p15", "text": "The new onboarding checklist has five steps and takes about ten minutes."}
+{"id": "p16", "text": "Webhook payloads are signed with an HMAC header so receivers can verify them."}
+{"id": "p17", "text": "Enable two-factor authentication under Security to protect your account."}
+{"id": "p18", "text": "After rotating a database password, restart the workers so they pick up the new secret."}
+{"id": "p19", "text": "The search index is rebuilt nightly and takes roughly twenty minutes."}
+{"id": "p20", "text": "Support hours are 08:00 to 18:00 CET on weekdays."}
+{"id": "p21", "text": "Storage quotas are shown in the billing tab and refresh hourly."}
+{"id": "p22", "text": "To invite a teammate, enter their email address on the Members page."}
+{"id": "p23", "text": "Revoking an OAuth token signs the integration out everywhere; reissue it from the integrations tab."}
+{"id": "p24", "text": "The release train ships every second Tuesday after a freeze on Friday."}
+{"id": "p25", "text": "Dashboards can be shared by link with view-only permission."}
+{"id": "p26", "text": "Log retention defaults to thirty days and can be extended on request."}
+{"id": "p27", "text": "The status page lists past incidents with a short post-mortem."}
+{"id": "p28", "text": "To rotate signing keys, publish the new public key first, wait for caches to expire, then retire the old one."}
+{"id": "p29", "text": "Keyboard shortcuts are listed under the question-mark menu."}
+{"id": "p30", "text": "Rate limits are 600 requests per minute per API token."}
+{"id": "p31", "text": "A sandbox environment is available for integration testing."}
+{"id": "p32", "text": "The data warehouse is refreshed every six hours."}
+{"id": "p33", "text": "Deploy tokens can be revoked per project; generate a replacement before revoking so CI does not break."}
+{"id": "p34", "text": "Custom domains require a CNAME record pointing to our edge."}
+{"id": "p35", "text": "Audit logs record who changed a setting and when."}
+{"id": "p36", "text": "Imports accept CSV and JSON files up to 50 MB."}
+{"id": "p37", "text": "The team wiki explains how to request a new laptop."}
+{"id": "p38", "text": "A compromised SSH key must be removed from authorized_keys on every host and a new key pair generated."}
+{"id": "p39", "text": "Notifications can be muted per project from the bell menu."}
+{"id": "p40", "text": "Time zones are stored in UTC and rendered in the viewer's locale."}

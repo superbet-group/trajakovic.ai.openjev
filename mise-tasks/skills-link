@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#MISE description="Symlink the openjev-* plugin skills into .claude/skills for local development (idempotent)"
+set -euo pipefail
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+mkdir -p "$root/.claude/skills"
+for src in "$root"/plugins/openjev-skills/skills/openjev-*/; do
+  name="$(basename "$src")"
+  link="$root/.claude/skills/$name"
+  if [ -e "$link" ] && [ ! -L "$link" ]; then
+    echo "skip $name: $link exists and is not a symlink" >&2
+    continue
+  fi
+  ln -sfn "../../plugins/openjev-skills/skills/$name" "$link"
+  echo "linked $name"
+done

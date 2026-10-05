@@ -124,7 +124,7 @@ One module, `paths.py`. Roots are `Config.roots` = `(realpath(cwd), *OPENJEV_MCP
 
 ### Skills
 
-11 skills in `mcp/skills/<name>/SKILL.md`: `openjev-decisions`, `openjev-question-authoring`, `openjev-agent-gates`, `openjev-code-checks`, `openjev-dispatch`, `openjev-triage-routing`, `openjev-retrieval-relevance`, `openjev-multistep`, `openjev-data-records`, `openjev-ui-vision`, `openjev-calibration`. They are files in the repo, not package data of the wheel (`package-data` ships `recipes/builtin/*.json`, `data/*.json`, `data/*.md`).
+12 skills in `plugins/openjev-skills/skills/<name>/SKILL.md` (the Claude Code plugin `openjev-skills`, listed in the marketplace `.claude-plugin/marketplace.json`; the optional plugin `openjev-mcp` registers the server): `openjev-data-prep` (hub), `openjev-decisions`, `openjev-question-authoring`, `openjev-agent-gates`, `openjev-code-checks`, `openjev-dispatch`, `openjev-triage-routing`, `openjev-retrieval-relevance`, `openjev-multistep`, `openjev-data-records`, `openjev-ui-vision`, `openjev-calibration`. They are plugin files in the repo, not package data of the wheel (`package-data` ships `recipes/builtin/*.json`, `data/*.json`, `data/*.md`).
 
 ### Processes and ports
 

@@ -1,0 +1,31 @@
+id,state
+t001,[ref 001] Checkout returns HTTP 500 for every customer since the 14:05 deploy; payments are failing.
+t002,[ref 002] Could you change the colour of the footer links to dark blue? Purely cosmetic.
+t003,[ref 003] Customer data export is leaking other tenants' rows; security exposure confirmed.
+t004,[ref 004] How do I rename a project in the settings page? Just curious.
+t005,[ref 005] All users are blocked: login loops forever after the SSO change.
+t006,[ref 006] I was charged twice for the Pro plan on March 3. Please refund the duplicate.
+t007,[ref 007] Would be nice to have a dark mode option in the mobile app someday.
+t008,[ref 008] The nightly sync job crashed with KeyError 'sku'; 412 items did not sync.
+t009,[ref 009] There is a typo on the pricing page: 'Recieve' should be 'Receive'.
+t010,[ref 010] Our enterprise contract renews Friday and the invoice still shows the old seat count.
+t011,[ref 011] Password reset emails have not arrived for two hours for any user.
+t012,[ref 012] Is there a way to export my dashboard as PDF? Not urgent.
+t013,[ref 013] The API rate limiter is returning 429 to our production integration since this morning.
+t014,"[ref 014] Thanks for the quick help yesterday, everything works now."
+t015,[ref 015] Disk usage on db-primary is at 97 percent and growing; backups are failing.
+t016,[ref 016] Can you send me a quote for 200 seats with SSO?
+t017,[ref 017] The mobile app crashes on launch on Android 14 after the latest update.
+t018,[ref 018] Search results page loads in about 8 seconds instead of 2 for some users.
+t019,[ref 019] A user reports their saved projects vanished after the migration ran.
+t020,[ref 020] Please update the company address on our invoices to the new office.
+t021,[ref 021] Webhook deliveries to our endpoint have been failing with timeouts since noon.
+t022,[ref 022] The onboarding tutorial video has no captions; accessibility request.
+t023,[ref 023] Someone posted our API key in a public forum; we need it revoked now.
+t024,[ref 024] How long do you keep audit logs? Asking for a compliance form.
+t025,[ref 025] Two-factor codes are rejected for all accounts in our organisation.
+t026,[ref 026] The settings icon looks blurry on retina screens.
+t027,[ref 027] We want to cancel our subscription if the outage is not fixed today.
+t028,[ref 028] What is the difference between the Team and Business plans?
+t029,[ref 029] CSV import silently drops rows with a comma in the name column.
+t030,[ref 030] Order confirmation emails show the wrong currency for EUR customers.

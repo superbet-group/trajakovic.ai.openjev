@@ -1,0 +1,35 @@
+schema_version: "1.0"
+name: csv-batch-dry-run
+description: Needs --scaffold. Writes tickets.csv into the eval scaffold dir, then checks the agent previews the CSV import with batch dry_run before labelling. Paths come from the scaffold dir; the MCP server must allow that directory (see evals/README.md).
+tags: [openjev, batch, csv, needs-scaffold]
+context:
+  scaffold_script: scaffold/setup.sh
+execution:
+  prompt: |
+    The file tickets.csv in the current working directory has support tickets (columns id, state). For each one decide whether it needs a human today (yes or no) and write the labelled rows to out.jsonl in the same directory, using absolute paths. Check what will be imported before spending any reads.
+  max_turns: 12
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Write, Skill, "mcp__openjev__*"]
+runs: 1
+graders:
+  - type: tool_used
+    name: dry-run-first
+    tool: mcp__openjev__batch
+    input_match: '"dry_run"\s*:\s*true'
+    min: 1
+  - type: tool_order
+    name: dry-run-before-real-batch
+    before:
+      tool: mcp__openjev__batch
+      input_match: '"dry_run"\s*:\s*true'
+    after:
+      tool: mcp__openjev__batch
+      input_match: '"dry_run"\s*:\s*false'
+  - type: file_exists
+    name: output-written
+    path: out.jsonl
+  - type: tool_used
+    name: skill-fired
+    tool: Skill
+    min: 1
+    arm: with-only

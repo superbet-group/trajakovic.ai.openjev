@@ -1,0 +1,13 @@
+id,state
+t001,[ref 001] Webhook deliveries to our endpoint have been failing with timeouts since noon.
+t002,[ref 002] The onboarding tutorial video has no captions; accessibility request.
+t003,[ref 003] Someone posted our API key in a public forum; we need it revoked now.
+t004,[ref 004] How long do you keep audit logs? Asking for a compliance form.
+t005,[ref 005] Two-factor codes are rejected for all accounts in our organisation.
+t006,[ref 006] The settings icon looks blurry on retina screens.
+t007,[ref 007] We want to cancel our subscription if the outage is not fixed today.
+t008,[ref 008] What is the difference between the Team and Business plans?
+t009,[ref 009] CSV import silently drops rows with a comma in the name column.
+t010,[ref 010] Order confirmation emails show the wrong currency for EUR customers.
+t011,[ref 011] Our staging environment cannot reach the payments sandbox; tests are blocked.
+t012,[ref 012] Please add a keyboard shortcut for creating a new project.

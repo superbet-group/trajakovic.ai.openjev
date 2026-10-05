@@ -40,7 +40,7 @@ not assumed.
 | F11 | hook model-deny: `git push --force` with task "Summarise the README" -> `tool_result.is_error`, text `PreToolUse:Bash hook error: openjev command_gate: destructive=...`, plus `permission_denials` | reliable deny case |
 | F12 | haiku refuses to issue `echo aGk= \| base64 -d \| sh` at all (no tool_use) | rule-deny case runs on the strong tier |
 | F13 | Stop hook prints nothing when the turn has no tool call (`hook.decide_stop`: empty timeline -> allow, by design) | a done_gate hook case needs a tool call before the done claim |
-| F14 | `--plugin-dir <dir>` with `.claude-plugin/plugin.json` + `skills/<name>` symlinks to `mcp/skills/*` loads all 11 as `openjev-skills:<name>`; `/openjev-skills:openjev-agent-gates ...` runs the skill (model then called `recipe command_gate`); without the slash the model called `yes_no` directly, no `Skill` tool_use | skill assertions are on the downstream MCP call |
+| F14 | `--plugin-dir plugins/openjev-skills` (the real plugin: `.claude-plugin/plugin.json` + `skills/<name>/`) loads all 12 as `openjev-skills:<name>`; `/openjev-skills:openjev-agent-gates ...` runs the skill (model then called `recipe command_gate`); without the slash the model called `yes_no` directly, no `Skill` tool_use | skill assertions are on the downstream MCP call |
 | F15 | Claude Code speaks 2026-07-28: `server/discover` first, then `prompts/list`, `resources/list`, `tools/list`; every request has `MCP-Protocol-Version`, `Mcp-Method`, and `Mcp-Name` on `tools/call`; `_meta` holds `clientCapabilities {roots, elicitation}` (no `extensions`), `progressToken`, `claudecode/toolUseId` | wire assertions; `claudecode/toolUseId` joins wire and transcript |
 | F16 | With `OPENJEV_MCP_TASKS=on`, discover advertises `io.modelcontextprotocol/tasks` but Claude does not declare it, so `batch` returns the normal synchronous result | one negative Tasks case; Tasks proper stays covered by `live/test_live_tools.py::test_tasks_on` |
 | F17 | A result with `resource_link` reaches the model as a list: `{"type":"text","text":"[Resource link: name] file:///..."}` then the JSON text block | parser takes the last text block that parses as JSON |
@@ -111,8 +111,7 @@ Module names start with `cl_` (pytest runs `--import-mode=importlib` with `pytho
   `/v1/systemone` body whose `state` contains `#FAULT:<kind>`: `401` (`{"detail":{"error_type":"authentication_error"}}`),
   `503` (`retry-after: 1`), `529` (`overloaded_error`), `500` text/plain, `sleep` (30 s, client times out). The
   bodies follow build 2.4 and `tests/stubs.py`; check `mapping.py` for the exact shapes before writing them.
-- `skills_plugin` (session): `<work>/plugin/openjev-skills/.claude-plugin/plugin.json`
-  (`{"name":"openjev-skills","version":"0.0.0"}`) plus `skills/<name>` symlinks to every `mcp/skills/*` (F14).
+- `skills_plugin` (session): `plugins/openjev-skills` itself (name `openjev-skills`, 12 skills); no generated symlink farm (F14).
 - Per case attempt: logs in `run_dir = results/<run_id>/runs/<Tid>-a<n>/`; Claude's cwd is
   `<work>/cwd/<Tid>-a<n>/` (realpath'd, inside the MCP roots, so every absolute path a prompt names is readable and
   writable by the server). `git init -q` there only for hook cases that run git.
