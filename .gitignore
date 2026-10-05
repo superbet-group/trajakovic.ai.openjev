@@ -22,3 +22,8 @@ uv.lock
 .openjev-mcp.log
 .openjev-mcp.pid
 .playwright-mcp/
+
+# scratch outputs (analysis runs, exports) and IDE files
+.tmp/
+.idea/
+*.iml
