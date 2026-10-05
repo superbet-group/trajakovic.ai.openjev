@@ -72,6 +72,7 @@ Set these env vars in front of a task, e.g. `OPENJEV_LOG_LEVEL=debug mise run re
 | `OPENJEV_API_KEY` | Require a key; the UI forwards it |
 | `OPENJEV_NO_BROWSER=1` | Don't open the browser |
 | `OPENJEV_START_TIMEOUT` | Seconds `start` waits for the model (600) |
+| `OPENJEV_MLX_CACHE_LIMIT_GB` | MLX buffer pool ceiling. `start` defaults it to 4, which keeps memory near 24 GB with the 4-bit model. Raise it for the 8-bit or bf16 weights, or set it empty to leave MLX alone |
 | `HF_HOME` | Where the model is stored |
 | `OPENJEV_SKIP_RAM_CHECK=1` | Try on a Mac with less than 24 GB |
 | `OPENJEV_REINSTALL=1` | Force a package reinstall on `install` |
