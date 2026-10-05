@@ -1,0 +1,21 @@
+{
+ "severity": {
+  "type": "score",
+  "instructions": "How severe is the problem in this report?",
+  "criteria": {
+   "0": "cosmetic",
+   "1": "annoying",
+   "2": "blocks some users",
+   "3": "outage or data loss"
+  }
+ },
+ "kind": {
+  "type": "choice",
+  "instructions": "What kind of report is this?",
+  "criteria": {
+   "bug": "something is broken",
+   "question": "a how-to question",
+   "request": "a feature request"
+  }
+ }
+}

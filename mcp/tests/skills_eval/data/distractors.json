@@ -1,0 +1,42 @@
+[
+ {
+  "id": "xlsx",
+  "description": "Reads, creates and edits spreadsheet files (.xlsx, .csv) including formulas, formatting and charts. Use when the user asks for spreadsheet work or mentions Excel."
+ },
+ {
+  "id": "pdf",
+  "description": "Extracts text and tables from PDF files, fills forms, merges and splits documents. Use when the user works with PDF files."
+ },
+ {
+  "id": "docx",
+  "description": "Creates and edits Word documents with headings, tables, tracked changes and comments. Use when the user wants a .docx file."
+ },
+ {
+  "id": "pr-review",
+  "description": "Reviews a pull request for bugs, style and test coverage and writes inline comments. Use when asked to review a PR or diff."
+ },
+ {
+  "id": "systematic-debugging",
+  "description": "Guides root-cause investigation of bugs and test failures before proposing fixes. Use when encountering any bug or unexpected behavior."
+ },
+ {
+  "id": "frontend-design",
+  "description": "Builds polished web interfaces with deliberate typography, color and layout. Use for landing pages, dashboards and components."
+ },
+ {
+  "id": "sql-query",
+  "description": "Writes, explains and optimises SQL queries for warehouses and databases. Use when the user needs a query or schema help."
+ },
+ {
+  "id": "dataviz",
+  "description": "Creates accessible charts, graphs and dashboards with consistent color systems. Use before writing any plotting code."
+ },
+ {
+  "id": "slack-messaging",
+  "description": "Drafts and formats Slack messages, announcements and replies. Use when writing or scheduling a Slack message."
+ },
+ {
+  "id": "test-driven-development",
+  "description": "Drives implementation by writing a failing test first, then the minimal code to pass it. Use when implementing a feature or bugfix."
+ }
+]
