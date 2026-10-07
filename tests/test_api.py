@@ -82,6 +82,15 @@ def test_widest_schema_fits_one_read_of_label_ids(tok):
     assert len(labels) == 255 + 10 + 2 <= MAX_LABEL_IDS
 
 
+
+def test_constrained_reads_are_opt_in(tok):
+    """diffusion_constrained changes what a slot's entropy measures, so it is sent
+    only when OPENJEV_CONSTRAINED asks for it."""
+    template, slots = [0] * 8, [{"pos": 2, "label_ids": [5, 6]}]
+    assert "diffusion_constrained" not in Engine(Settings(), tok)._xargs(template, slots, 0, 1)
+    xargs = Engine(Settings(constrained=True), tok)._xargs(template, slots, 0, 1)
+    assert xargs["diffusion_constrained"] is True
+
 def test_choice_limit_is_jevs(tok):
     eng = Engine(Settings(), tok)
     with pytest.raises(SchemaError) as excinfo:
@@ -180,6 +189,9 @@ def test_confidence():
     assert confidence([0.5, 0.5]) == pytest.approx(0.0)
     # matches Jev's documented example (0.84/0.159/0.001 -> ~0.596)
     assert confidence([0.84, 0.159, 0.001]) == pytest.approx(0.596, abs=0.01)
+    # one option is fully certain; before the fix this divided by ln(1)=0
+    assert confidence([1.0]) == 1.0
+    assert confidence([]) == 0.0
 
 
 def test_answer_shapes_roundtrip():
