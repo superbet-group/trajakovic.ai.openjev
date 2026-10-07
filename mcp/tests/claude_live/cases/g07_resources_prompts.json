@@ -179,8 +179,13 @@
    "covers": [
     "prompt:audit_question"
    ],
+   "tools": "Read",
+   "allow": [
+    "mcp__openjev",
+    "Read"
+   ],
    "tier": "cheap",
-   "max_turns": 4
+   "max_turns": 6
   },
   "T072": {
    "slug": "prompt_explain_answer",

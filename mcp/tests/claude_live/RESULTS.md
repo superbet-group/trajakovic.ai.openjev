@@ -74,3 +74,18 @@ Not edited here (not owned). Candidates:
 ## Follow-up
 
 T029 (shared work dir between pytest processes) and T030 (tolerate one corrective retry) were harness defects, fixed in conftest.py and test_g04_batch.py. g04 reruns 12/12; with T100 fixed in triage, all 100 cases pass.
+
+## 2026-10-07 run on 0.6.0 (merge of razorback16/openjev 0.6.0)
+
+First full run: 96/100 (g03 T021, g04 T034, g07 T071, g09 T086). Two further full runs: 99/100 (T046 only) and 100/100. No server
+defect found; the merge touched none of the MCP code.
+
+| Id | error_class | Verdict | Cause | Action |
+|---|---|---|---|---|
+| T021 lint_valid | assertion (`body_hash` missing) | model flake | haiku dropped `emit: ["body"]` from "exactly these arguments"; lint then has no body to hash | none; passes on rerun |
+| T034 batch_cursor_args_changed, T046 chunked_calibrate | assertion (cursor differs from `next_cursor`) | model flake | haiku mistyped one character while copying a ~230-char base64 cursor; the server rejected it with `OJ_INVALID_INPUT` as it should | none; pass on rerun. Copying opaque cursors is the weakest point of the cheap tier |
+| T071 prompt_audit_question | assertion (first openjev call was `read`) | harness defect | the prompt hands over file paths but the case ran with no built-in tools, so the model could not read the question file (it passed on 2026-10-02 only because the model guessed) | case now gets `Read`; "first openjev call" ignores built-ins; 3/3 reruns pass |
+| T086 triage_routing_ticket | assertion (`signals.dept` missing) | harness defect | haiku previewed with `dry_run: true` before the real call; the check read `rc[0]`, the dry run, whose `signals` is `{}` | check skips `decision == "dry_run"` calls |
+
+Also fixed outside the live suite: `mcp/tests/test_mcp_batch_walkthrough.py::test_skill_dry_run_block_is_what_the_test_sends`
+had failed since commit 2a091d8 moved and reworded the skills; its `DEPT` criteria now match `openjev-data-records/SKILL.md`.

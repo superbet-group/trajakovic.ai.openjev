@@ -21,9 +21,9 @@ from openjev_mcp.tools.dispatch import call_tool
 pytestmark = pytest.mark.anyio
 
 SKILL = (Path(__file__).resolve().parents[2] / "plugins" / "openjev-skills" / "skills" / "openjev-data-records" / "SKILL.md").read_text()
-DEPT = {"billing": "charges, invoices, refunds, payment methods, plan pricing",
-        "technical": "bugs, errors, outages, integrations, performance, login problems",
-        "sales": "pre-purchase questions, quotes, upgrades, demos, enterprise pricing",
+DEPT = {"billing": "money questions: invoices, refunds, charges, payment methods",
+        "technical": "product defects: errors, outages, slow pages, integrations, sign-in trouble",
+        "sales": "buying interest: quotes, demos, upgrades, enterprise plans",
         "other": "anything else, or too vague to tell"}
 QUESTIONS = {"dept": {"type": "choice", "instructions": "Which team should own this ticket?", "criteria": DEPT}}
 N = 7
