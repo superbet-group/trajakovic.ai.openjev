@@ -18,7 +18,7 @@ from openjev_mcp.limits import (ALIASES_ACCEPTED, BATCH_CAPS, CAPABILITY_MATRIX,
 BASE = "http://oj.test:8080"
 MODELS = {"models": [{"name": "openjev-latest"}, {"name": "openjev-0.1"}, {"name": "diffusiongemma-26b"}]}
 PAYLOAD = {  # 00-api-surface 15.1
-    "backend": "mlx", "server_version": "0.5.0", "logs_bodies": False,
+    "backend": "mlx", "server_version": "0.6.0", "logs_bodies": False,
     "request": {"max_questions": 256, "max_images": 8, "max_image_bytes": 5242880, "max_body_bytes": 67108864,
                 "image_types": ["image/jpeg", "image/png", "image/webp", "image/gif"],
                 "steps": [1, 8], "samples": [1, 32], "think": [0, 4096]},

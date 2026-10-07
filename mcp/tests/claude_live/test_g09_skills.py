@@ -61,6 +61,7 @@ def _setup_t086(ctx):
 def _t086(t, ctx):
     ok = lambda cs: [c for c in cs if c.result and not c.result.is_error]   # a first call with a wrong inputs key may be refused, then corrected
     rc = ok(c for c in t.of("recipe") if c.use.input.get("recipe") == "ticket_triage")
+    rc = [c for c in rc if (c.result.json or {}).get("decision") != "dry_run"]   # a dry-run preview decides nothing; judge the call that routed
     cl = ok(t.of("classify"))
     assert rc or cl, f"no ticket_triage recipe or classify call\n{A.summary(t)}"
     want = C01["triage-01"]["expect"]["answers"]["dept"]["choice"]

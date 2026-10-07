@@ -81,7 +81,7 @@ export function installMockOpenJev() {
     const path = new URL(url, location.href).pathname;
     if (init.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (path === '/ui/api/config') {
-      return json(200, { uiVersion: '0.5.0-dev', openjevUrl: 'http://127.0.0.1:8080', proxyBase: '', authConfigured: false, defaults: { model: 'openjev-latest', chatModel: 'diffusiongemma-26b' },
+      return json(200, { uiVersion: '0.6.0-dev', openjevUrl: 'http://127.0.0.1:8080', proxyBase: '', authConfigured: false, defaults: { model: 'openjev-latest', chatModel: 'diffusiongemma-26b' },
         limits: { maxImages: 8, maxImageBytes: 5242880, maxQuestions: 256, stepsMax: 8, samplesMax: 32, thinkMax: 4096, chatMaxTokensDefault: 1024, chatMaxTokensCap: 8192, choiceMaxOptions: 255, scoreMaxLevels: 10 },
         hints: { start: 'mise run start', logs: 'mise run logs', status: 'mise run status', stop: 'mise run stop' } });
     }

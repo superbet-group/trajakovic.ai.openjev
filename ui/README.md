@@ -19,7 +19,7 @@ The server starts even when OpenJev is down. The startup banner tells you whethe
 answered `GET /v1/models`:
 
 ```
-  OpenJev Playground  v0.5.0
+  OpenJev Playground  v0.6.0
 
   UI        http://127.0.0.1:8090
   OpenJev   http://127.0.0.1:8080
