@@ -712,7 +712,7 @@ engine, with no model call.
 ```json
 {
  "backend": "mlx",
- "server_version": "0.5.0",
+ "server_version": "0.6.0",
  "logs_bodies": false,
  "request": {"max_questions": 256, "max_images": 8, "max_image_bytes": 5242880,
              "max_body_bytes": 67108864, "image_types": ["image/jpeg", "image/png", "image/webp", "image/gif"],

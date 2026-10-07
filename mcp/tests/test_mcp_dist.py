@@ -20,7 +20,7 @@ def test_requirements_stay_light():
 def test_version_constants():
     # deviation: P14: installed dist-info is refreshed only by `pip install -e`, so compare with pyproject.toml, not metadata
     pyproject = os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")
-    assert openjev_mcp.__version__ == "0.5.0" and 'version = "0.5.0"' in open(pyproject).read()
+    assert openjev_mcp.__version__ == "0.6.0" and 'version = "0.6.0"' in open(pyproject).read()
     assert openjev_mcp.TOOL_NAMES == ("ask", "yes_no", "classify", "score", "filter", "batch", "ask_image", "lint",
                                           "compile", "calibrate", "recipe", "status", "generate", "batch_results")
     assert openjev_mcp.CORE_TOOL_NAMES == ("ask", "yes_no", "classify", "score", "lint", "status")

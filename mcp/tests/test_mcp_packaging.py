@@ -36,7 +36,7 @@ def test_script_help_exits_zero(name):
 
 def test_openjev_version():
     run = subprocess.run([os.path.join(BIN, "openjev"), "--version"], capture_output=True, text=True, timeout=30)
-    assert run.returncode == 0 and "0.5.0" in run.stdout
+    assert run.returncode == 0 and "0.6.0" in run.stdout
 
 
 def test_command_gate_package_data():

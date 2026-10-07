@@ -1,6 +1,6 @@
 {
   "name": "openjev-mcp",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Opt-in connector registering the OpenJev MCP server (HTTP, default http://127.0.0.1:8100/mcp, override with OPENJEV_MCP_URL).",
   "author": { "name": "OpenJev maintainers" },
   "keywords": ["openjev", "mcp"]

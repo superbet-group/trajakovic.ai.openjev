@@ -1789,7 +1789,7 @@ Result (trimmed to 2 array items; `meta` cut to model, requests, latency_ms):
     }
   },
   "mcp": {
-    "server_version": "0.5.0",
+    "server_version": "0.6.0",
     "transport": "http"
   },
   "warnings": []

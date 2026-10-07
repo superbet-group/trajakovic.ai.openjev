@@ -1,6 +1,6 @@
 # openjev-mcp: spec
 
-Spec version 0.5 (package `openjev-mcp` 0.5.0, `openjev_mcp.__version__`; `openjev_mcp.SPEC_VERSION` stays 1.2, the build spec revision). Status: phases 1, 2 and 3 implemented, 2026-10-02. Written from the code as built.
+Spec version 0.6 (package `openjev-mcp` 0.6.0, `openjev_mcp.__version__`; `openjev_mcp.SPEC_VERSION` stays 1.2, the build spec revision). Status: phases 1, 2 and 3 implemented, 2026-10-02. Written from the code as built.
 
 This is the MCP server's own spec, for upgrades (new SDK, new MCP revision, new tools). It does not repeat the build spec; where a rule is not written here, `docs/mcp-skill-spec/OPENJEV_MCP_SKILLS_SPEC.md` v1.2 ("build spec", cited "spec 2.x") and `docs/mcp-skill-spec/TASKS.md` stay normative. `mcp/docs/architecture.md` ("arch") is the build-time interface contract, `mcp/docs/tasks.md` the phase-1 package plan and `mcp/docs/tasks-phase2-3.md` the phase 2/3 plan ("plan", its numbered Decisions are cited "Decision N"); when they disagree with this file, this file (which follows the code) wins. Section 3 lists every difference from the build spec.
 
@@ -14,6 +14,7 @@ Change log (versions 1.2-1.4 below are the pre-release numbering; on 2026-10-02 
 - 1.3: phase 2 (TASKS 2.1-2.16): `filter`, `recipe`, `batch`, `batch_results`, 29 built-in recipes, hooks `stop`/`userprompt`/`posttooluse`, CLIs `openjev check`/`filter`, resources/templates/patterns/guide, prompts and completion, extension plumbing, `OPENJEV_MCP_RECIPES`/`_ROUTING`; gate-10 fixed by changing the `command_gate` combine (deviation 29). Section 2 "Not implemented" and the mismatch list re-checked.
 - 1.4 (verified 2026-10-02, no version bump): live re-run recorded in `docs/live-runs.md` and `tests/live/results/2026-10-verify.json`; `batch_results` export defect fixed; section 2 gains "Protocol research and upgrade notes"; sections 3, 8 and 10 updated.
 - 1.4: phase 3: `ask_image` (+ SSRF-safe fetch), `compile`, `calibrate`, `generate`, `batch.images`, audit store and `openjev://audits/{question_hash}`, prompts `author_question`/`audit_question`/`explain_answer`, the MCP Tasks extension (`OPENJEV_MCP_TASKS`, off by default), `OPENJEV_MCP_FETCH`/`_AUDIT_DIR`/`_CHAT_MODEL`; live results recorded (`tests/live/results/2026-10-phase2-3.json`); sections 1-4, 8-11 rewritten from the code.
+- 0.6: levelled with OpenJev 0.6.0 and the UI (versions only; no tool, resource or behaviour change).
 
 ## 1. Scope and the surface
 

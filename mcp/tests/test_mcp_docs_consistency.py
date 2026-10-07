@@ -113,7 +113,7 @@ def test_tool_registry_matches_names():
 
 def test_version_matches_pyproject():
     assert f'version = "{openjev_mcp.__version__}"' in read("mcp", "pyproject.toml")
-    assert openjev_mcp.__version__ == "0.5.0" and openjev_mcp.SPEC_VERSION == "1.2"
+    assert openjev_mcp.__version__ == "0.6.0" and openjev_mcp.SPEC_VERSION == "1.2"
 
 
 def test_resource_uris_in_listing_are_documented_in_spec():

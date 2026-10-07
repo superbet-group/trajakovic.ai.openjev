@@ -97,4 +97,4 @@ claude plugin validate --strict .             # marketplace; repeat for plugins/
 
 ## Versioning
 
-The plugin version in `.claude-plugin/plugin.json` is the same as the `openjev-mcp` plugin and the `openjev_mcp` package (currently 0.5.0). Bump all three together; Claude Code updates the install when the version changes. Measured effectiveness of each release comes from the evaluation suite described in `mcp/tests/skills_eval/README.md` of the repository.
+The plugin version in `.claude-plugin/plugin.json` is the same as the `openjev-mcp` plugin and the `openjev_mcp` package (currently 0.6.0). Bump all three together; Claude Code updates the install when the version changes. Measured effectiveness of each release comes from the evaluation suite described in `mcp/tests/skills_eval/README.md` of the repository.

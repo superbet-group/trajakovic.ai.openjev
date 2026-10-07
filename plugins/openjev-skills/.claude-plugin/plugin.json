@@ -1,6 +1,6 @@
 {
   "name": "openjev-skills",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Skills that guide Claude Code in preparing data for the OpenJev MCP server: states, questions, tool inputs and outputs, tool chaining and batch items files.",
   "author": { "name": "OpenJev maintainers" },
   "keywords": ["openjev", "mcp", "data-prep", "calibrated-probabilities", "classification"]

@@ -21,7 +21,7 @@ BASE = "http://oj.test:8080"
 KEY = "sk-test"
 MODELS = {"models": [{"name": "openjev-latest"}, {"name": "openjev-0.1"}, {"name": "diffusiongemma-26b"}]}
 LIMITS = {
-    "backend": "mlx", "server_version": "0.5.0", "logs_bodies": False,
+    "backend": "mlx", "server_version": "0.6.0", "logs_bodies": False,
     "request": {"max_questions": 256, "max_images": 8, "max_image_bytes": 5242880, "max_body_bytes": 67108864,
                 "steps": [1, 8], "samples": [1, 32], "think": [0, 4096]},
     "models": {"openjev-0.1": {"max_choices": 255, "max_score_levels": 10, "max_prompt_tokens": 32768,

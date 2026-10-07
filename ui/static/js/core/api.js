@@ -8,7 +8,7 @@ import { uid } from '/js/core/format.js';
 import { parseServerTiming, summarizeAnswers, sha256Hex, IMAGE_TOKENS_EST, chatThroughput } from '/js/core/metrics.js';
 
 const DEFAULT_CONFIG = {
-  uiVersion: '0.5.0',
+  uiVersion: '0.6.0',
   openjevUrl: 'http://127.0.0.1:8080',
   proxyBase: '',
   authConfigured: false,
