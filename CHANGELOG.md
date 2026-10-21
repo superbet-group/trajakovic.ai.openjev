@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.7.2 (2026-10-12)
+
+Only the new `openjev-clef` image is released at 0.7.2.
+
+- Clef and Clef-flash get their own image, `openjev-clef` (`docker/Dockerfile.clef`), instead of
+  running from the OpenJev image. It has the same vLLM commit without the DiffusionGemma patches,
+  so Clef can move to a newer vLLM independently. It serves Clef-flash by default.
+
+## 0.7.1 (2026-10-12)
+
+Only `openjev-jevk5` is released at 0.7.1; the other images stay at 0.7.0.
+
+- JevK5 moves to v0.3, the checkpoint alibiserikbay/JevK5 now publishes (since 2026-09-25), and
+  its id is `jevk5-0.3`; `jevk5-0.2` is no longer served. The image installs `jevk5` 0.3.3, whose
+  prompt is unchanged, and a question with more than 16 options now uses the checkpoint's
+  `knockout_temperature`, as JevK5's own runtime does. On JevBench's 231 public items OpenJev
+  matches JevK5's published v0.3 run: the same input tokens on all 231 and the same top answer
+  on 230 (the other is an exact tie).
+
+## 0.7.0 (2026-10-12)
+
+All five images (`openjev`, `openjev-laya`, `openjev-verdict`, `openjev-clm`, `openjev-jevk5`) are
+released at 0.7.0, so every backend answers `/v1/decisions`.
+
+
+- `POST /v1/decisions` serves OpenAI's
+  [Decisions API](https://developers.openai.com/api/docs/guides/decisions), so the OpenAI SDKs'
+  `client.decisions.create` works against OpenJev. A decision is translated into a
+  `/v1/systemone` request and read the same way, so the same questions get the same answers, on
+  every backend and through `OPENJEV_MODEL_ROUTES`. Its errors use OpenAI's shape.
+- New models: Cloudflare's [Clef](https://huggingface.co/Cloudflare/clef) (`clef-1.0`, 27B) and
+  [Clef-flash](https://huggingface.co/Cloudflare/clef-flash) (`clef-flash-1.0`, 9B), as
+  simonlehmann's and alpha-x-ai's NVFP4/FP8 quantizations, with `OPENJEV_BACKEND=clef` or
+  `clef-flash` in the OpenJev image. Each reads all of a request's questions in one forward pass:
+  vLLM runs the backbone in the API server, and Cloudflare's head runs in its pooler. They take
+  images.
+- `confidence()` of a one-option distribution is 1.0 (#11). No request reached it.
+
 ## 0.6.0 (2026-10-06)
 
 - vLLM is pinned to upstream main at
