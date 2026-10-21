@@ -38,7 +38,7 @@
      }
     },
     "mcp": {
-     "server_version": "0.5.0",
+     "server_version": "0.7.2",
      "transport": "http"
     },
     "warnings": []

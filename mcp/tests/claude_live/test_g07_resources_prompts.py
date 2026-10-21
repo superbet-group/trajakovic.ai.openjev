@@ -167,7 +167,8 @@ def _t071(t, ctx):
     r = _wire_prompt(t, "audit_question", schema_path=ctx.seed["schema"], labels_path=ctx.seed["labels"])
     text = r["messages"][0]["content"]["text"]
     assert "calibrate" in text and "lint" in text and ctx.seed["labels"] in text
-    first = next((c for c in t.calls if c.use.tool), None)
+    # The prompt hands over file paths, so the model needs Read for the question file before lint; judge its first openjev call.
+    first = next((c for c in t.calls if c.use.name.startswith("mcp__openjev__")), None)
     if first is not None:
         assert first.use.tool in ("calibrate", "lint", "batch"), f"first openjev call was {first.use.tool}"
 

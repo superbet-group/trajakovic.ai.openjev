@@ -5,7 +5,7 @@
 Set OPENJEV_API_KEY or OPENJEV_ORIGIN_SECRET too if the server wants one. Set OPENJEV_LIVE_GATEWAY=1 when a gateway
 (such as codiv's) sits in front and strips `Server-Timing`. Run it after building an image or
 before a cutover. The DiffusionGemma checks run when the server lists `openjev-latest`;
-the encoder checks run for whichever of `laya-1.0`, `verdict-1.4`, `clm-v0.1` and `jevk5-0.2` it lists.
+the encoder checks run for whichever of `laya-1.0`, `verdict-1.4`, `clm-v0.1` and `jevk5-0.3` it lists.
 """
 import base64
 import concurrent.futures
@@ -100,6 +100,23 @@ def test_many_questions_in_chunks(client, dgemma):
     assert len(ask(client, qs, state="Answer about numbers.")["answers"]) == 30
 
 
+def test_decisions(client, dgemma):
+    r = client.post("/v1/decisions", json={"model": "openjev-latest", "input": STATE, "questions": [
+        {"type": "predicate", "name": "urgent", "instructions": QUESTIONS["urgent"]["instructions"]},
+        {"type": "choice", "name": "team", "instructions": QUESTIONS["team"]["instructions"],
+         "choices": [{"value": v, "description": d} for v, d in QUESTIONS["team"]["criteria"].items()]},
+        {"type": "score", "name": "tone", "instructions": QUESTIONS["tone"]["instructions"],
+         "levels": [{"label": label} for label in QUESTIONS["tone"]["criteria"]]}]})
+    assert r.status_code == 200, r.text
+    urgent, team, tone = r.json()["answers"]
+    assert urgent["probability"] > 0.5, urgent
+    assert team["choice"] == "outage", team
+    assert tone["score"] > 1.0 and [p["label"] for p in tone["probabilities"]] == ["calm", "annoyed", "furious"], tone
+    r = client.post("/v1/decisions", json={"model": "nope", "input": STATE,
+                                           "questions": [{"type": "predicate", "instructions": "x"}]})
+    assert r.status_code == 400 and r.json()["error"]["type"] == "invalid_request_error", r.text
+
+
 def test_unknown_model(client):
     r = client.post("/v1/systemone", json={"model": "nope", "state": STATE, "questions": QUESTIONS})
     assert r.status_code == 400, r.text
@@ -134,7 +151,7 @@ def test_chat_stream(client, models):
     assert text.strip()
 
 
-@pytest.mark.parametrize("model", ["laya-1.0", "verdict-1.4", "clm-v0.1", "jevk5-0.2"])
+@pytest.mark.parametrize("model", ["laya-1.0", "verdict-1.4", "clm-v0.1", "jevk5-0.3"])
 def test_encoder(client, models, model):
     if model not in models:
         pytest.skip(f"the server does not serve {model}")

@@ -1,4 +1,4 @@
-__version__ = "0.5.0"
+__version__ = "0.7.2"
 SPEC_VERSION = "1.2"
 SERVER_NAME = "openjev-mcp"
 PROTOCOL_VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18")   # server/discover order
